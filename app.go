@@ -746,6 +746,15 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		bounds := app.messageBounds[ev.Target]
 		bounds.Update(&line)
 		app.messageBounds[ev.Target] = bounds
+	case irc.ReactEvent:
+		buffer := ev.Target
+		if !ev.TargetIsChannel {
+			buffer = ""
+		}
+		var ssb ui.StyledStringBuilder
+		ssb.WriteStyledString(ui.Styled(" ", tcell.StyleDefault))
+		ssb.WriteStyledString(ui.Styled(ev.Content, tcell.StyleDefault.Background(tcell.ColorGreen)))
+		app.win.AppendLine(s.NetID(), buffer, ev.MessageID, ssb.StyledString())
 	case irc.HistoryEvent:
 		var linesBefore []ui.Line
 		var linesAfter []ui.Line
@@ -990,6 +999,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		HeadColor: headColor,
 		Body:      body.StyledString(),
 		Highlight: hlLine,
+		MessageID: ev.MessageID,
 	}
 	return
 }

@@ -968,6 +968,23 @@ func (s *Session) handleRegistered(msg Message) (Event, error) {
 				s.typings.Done(targetCf, nickCf)
 			}
 		}
+		if t, ok := msg.Tags["+draft/react"]; ok {
+			id := msg.Tags["+draft/reply"]
+			if id != "" {
+				targetCf := s.Casemap(target)
+				targetIsChannel := false
+				if _, ok := s.channels[targetCf]; ok {
+					targetIsChannel = true
+				}
+				return ReactEvent{
+					User:            msg.Prefix.Name,
+					Target:          target,
+					TargetIsChannel: targetIsChannel,
+					MessageID:       id,
+					Content:         t,
+				}, nil
+			}
+		}
 	case "BATCH":
 		var id string
 		if err := msg.ParseParams(&id); err != nil {
@@ -1103,11 +1120,12 @@ func (s *Session) newMessageEvent(msg Message) (ev MessageEvent, err error) {
 	}
 
 	ev = MessageEvent{
-		User:    msg.Prefix.Name, // TODO correctly casemap
-		Target:  target,          // TODO correctly casemap
-		Command: msg.Command,
-		Content: content,
-		Time:    msg.TimeOrNow(),
+		User:      msg.Prefix.Name, // TODO correctly casemap
+		Target:    target,          // TODO correctly casemap
+		Command:   msg.Command,
+		Content:   content,
+		Time:      msg.TimeOrNow(),
+		MessageID: msg.Tags["msgid"],
 	}
 
 	targetCf := s.Casemap(target)

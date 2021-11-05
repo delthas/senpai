@@ -188,6 +188,10 @@ func (ui *UI) AddLines(netID, buffer string, before, after []Line) {
 	ui.bs.AddLines(netID, buffer, before, after)
 }
 
+func (ui *UI) AppendLine(netID, title string, messageID string, body StyledString) {
+	ui.bs.AppendLine(netID, title, messageID, body)
+}
+
 func (ui *UI) JumpBuffer(sub string) bool {
 	subLower := strings.ToLower(sub)
 	for i, b := range ui.bs.list {

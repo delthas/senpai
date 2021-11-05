@@ -66,9 +66,18 @@ type MessageEvent struct {
 	User            string
 	Target          string
 	TargetIsChannel bool
+	MessageID       string
 	Command         string
 	Content         string
 	Time            time.Time
+}
+
+type ReactEvent struct {
+	User            string
+	Target          string
+	TargetIsChannel bool
+	MessageID       string
+	Content         string
 }
 
 type HistoryEvent struct {

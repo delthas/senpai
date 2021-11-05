@@ -33,6 +33,7 @@ type Line struct {
 	HeadColor tcell.Color
 	Highlight bool
 	Mergeable bool
+	MessageID string
 
 	splitPoints []point
 	width       int
@@ -355,6 +356,31 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 	}
 	if len(after) != 0 {
 		b.lines = append(b.lines, after...)
+	}
+}
+
+func (bs *BufferList) AppendLine(netID, title string, messageID string, body StyledString) {
+	idx := bs.idx(netID, title)
+	if idx < 0 {
+		return
+	}
+
+	b := &bs.list[idx]
+
+	for i := len(b.lines) - 1; 0 <= i; i-- {
+		l := &b.lines[i]
+		if l.MessageID != messageID {
+			continue
+		}
+		newBody := new(StyledStringBuilder)
+		newBody.Grow(len(l.Body.string) + len(body.string))
+		newBody.WriteStyledString(l.Body)
+		newBody.WriteStyledString(body)
+		l.Body = newBody.StyledString()
+		l.computeSplitPoints()
+		l.width = 0
+		// TODO change b.scrollAmt if it's not 0 and bs.current is idx.
+		return
 	}
 }
 
