@@ -95,6 +95,8 @@ type App struct {
 	lastNetID     string
 	lastBuffer    string
 
+	monitor map[string]map[string]struct{} // set of targets we want to monitor per netID, best-effort. netID->target->{}
+
 	lastMessageTime time.Time
 	lastCloseTime   time.Time
 }
@@ -105,6 +107,7 @@ func NewApp(cfg Config) (app *App, err error) {
 		events:        make(chan event, eventChanSize),
 		cfg:           cfg,
 		messageBounds: map[boundKey]bound{},
+		monitor:       make(map[string]map[string]struct{}),
 	}
 
 	if cfg.Highlights != nil {
@@ -582,6 +585,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			s.Close()
 		}
 		app.sessions[netID] = s
+		if _, ok := app.monitor[netID]; !ok {
+			app.monitor[netID] = make(map[string]struct{})
+		}
 		return
 	}
 	if _, ok := ev.(irc.Typing); ok {
@@ -633,6 +639,10 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			Head: "--",
 			Body: ui.PlainString(body),
 		})
+		for target := range app.monitor[s.NetID()] {
+			// TODO: batch MONITOR +
+			s.MonitorAdd(target)
+		}
 	case irc.SelfNickEvent:
 		var body ui.StyledStringBuilder
 		body.WriteString(fmt.Sprintf("%s\u2192%s", ev.FormerNick, s.Nick()))
@@ -729,6 +739,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		buffer, line, notification := app.formatMessage(s, ev)
 		if buffer != "" && !s.IsChannel(buffer) {
 			if _, added := app.win.AddBuffer(netID, "", buffer); added {
+				app.monitor[netID][buffer] = struct{}{}
+				s.MonitorAdd(buffer)
 				s.NewHistoryRequest(buffer).
 					WithLimit(500).
 					Before(msg.TimeOrNow())
@@ -750,6 +762,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			if s.IsChannel(target) {
 				continue
 			}
+			s.MonitorAdd(target)
 			app.win.AddBuffer(netID, "", target)
 			// CHATHISTORY BEFORE excludes its bound, so add 1ms
 			// (precision of the time tag) to include that last message.

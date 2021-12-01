@@ -71,10 +71,11 @@ const (
 	TypingDone
 )
 
-// User is a known IRC user (we share a channel with it).
+// User is a known IRC user.
 type User struct {
-	Name *Prefix // the nick, user and hostname of the user if known.
-	Away bool    // whether the user is away or not
+	Name         *Prefix // the nick, user and hostname of the user if known.
+	Away         bool    // whether the user is away or not
+	Disconnected bool    // can only be true for monitored users.
 }
 
 // Channel is a joined channel.
@@ -124,6 +125,7 @@ type Session struct {
 	historyLimit  int
 	prefixSymbols string
 	prefixModes   string
+	monitor       bool
 
 	users          map[string]*User        // known users.
 	channels       map[string]Channel      // joined channels.
@@ -131,6 +133,7 @@ type Session struct {
 	chReqs         map[string]struct{}     // set of targets for which history is currently requested.
 	targetsBatchID string                  // ID of the channel history targets batch being processed.
 	targetsBatch   HistoryTargetsEvent     // channel history targets batch being processed.
+	monitors       map[string]struct{}     // set of users we want to monitor (and keep even if they are disconnected).
 
 	pendingChannels map[string]time.Time // set of join requests stamps for channels.
 }
@@ -158,6 +161,7 @@ func NewSession(out chan<- Message, params SessionParams) *Session {
 		channels:        map[string]Channel{},
 		chBatches:       map[string]HistoryEvent{},
 		chReqs:          map[string]struct{}{},
+		monitors:        map[string]struct{}{},
 		pendingChannels: map[string]time.Time{},
 	}
 
@@ -235,16 +239,18 @@ func (s *Session) Names(target string) []Member {
 			names = make([]Member, 0, len(c.Members))
 			for u, pl := range c.Members {
 				names = append(names, Member{
-					PowerLevel: pl,
-					Name:       u.Name.Copy(),
-					Away:       u.Away,
+					PowerLevel:   pl,
+					Name:         u.Name.Copy(),
+					Away:         u.Away,
+					Disconnected: u.Disconnected,
 				})
 			}
 		}
 	} else if u, ok := s.users[s.Casemap(target)]; ok {
 		names = append(names, Member{
-			Name: u.Name.Copy(),
-			Away: u.Away,
+			Name:         u.Name.Copy(),
+			Away:         u.Away,
+			Disconnected: u.Disconnected,
 		})
 		names = append(names, Member{
 			Name: &Prefix{
@@ -278,7 +284,7 @@ func (s *Session) TypingStops() <-chan Typing {
 
 func (s *Session) ChannelsSharedWith(name string) []string {
 	var user *User
-	if u, ok := s.users[s.Casemap(name)]; ok {
+	if u, ok := s.users[s.Casemap(name)]; ok && !u.Disconnected {
 		user = u
 	} else {
 		return nil
@@ -418,6 +424,26 @@ func (s *Session) TypingStop(target string) {
 		Limit: t.Limit,
 	}
 	s.out <- NewMessage("TAGMSG", target).WithTag("+typing", "done")
+}
+
+func (s *Session) MonitorAdd(target string) {
+	targetCf := s.casemap(target)
+	if _, ok := s.monitors[targetCf]; !ok {
+		s.monitors[targetCf] = struct{}{}
+		if s.monitor {
+			s.out <- NewMessage("MONITOR", "+", target)
+		}
+	}
+}
+
+func (s *Session) MonitorRemove(target string) {
+	targetCf := s.casemap(target)
+	if _, ok := s.monitors[targetCf]; ok {
+		delete(s.monitors, targetCf)
+		if s.monitor {
+			s.out <- NewMessage("MONITOR", "-", target)
+		}
+	}
 }
 
 type HistoryRequest struct {
@@ -603,12 +629,12 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		if s.host == "" {
 			s.out <- NewMessage("WHO", s.nick)
 		}
-		return RegisteredEvent{}, nil
 	case rplIsupport:
 		if len(msg.Params) < 3 {
 			return nil, msg.errNotEnoughParams(3)
 		}
 		s.updateFeatures(msg.Params[1 : len(msg.Params)-1])
+		return RegisteredEvent{}, nil
 	case rplWhoreply:
 		var nick, host, flags, username string
 		if err := msg.ParseParams(nil, nil, &username, &host, nil, &nick, &flags, nil); err != nil {
@@ -812,6 +838,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		nickCf := s.Casemap(msg.Prefix.Name)
 
 		if u, ok := s.users[nickCf]; ok {
+			u.Disconnected = true
 			var channels []string
 			for channelCf, c := range s.channels {
 				if _, ok := c.Members[u]; ok {
@@ -826,6 +853,54 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				Channels: channels,
 				Time:     msg.TimeOrNow(),
 			}, nil
+		}
+	case rplMononline:
+		for _, target := range strings.Split(msg.Params[1], ",") {
+			prefix := ParsePrefix(target)
+			if prefix == nil {
+				continue
+			}
+			nickCf := s.casemap(prefix.Name)
+
+			if _, ok := s.monitors[nickCf]; ok {
+				u, ok := s.users[nickCf]
+				if !ok {
+					u = &User{
+						Name: prefix,
+					}
+					s.users[nickCf] = u
+				}
+				if u.Disconnected {
+					u.Disconnected = false
+					return UserOnlineEvent{
+						User: u.Name.Name,
+					}, nil
+				}
+			}
+		}
+	case rplMonoffline:
+		for _, target := range strings.Split(msg.Params[1], ",") {
+			prefix := ParsePrefix(target)
+			if prefix == nil {
+				continue
+			}
+			nickCf := s.casemap(prefix.Name)
+
+			if _, ok := s.monitors[nickCf]; ok {
+				u, ok := s.users[nickCf]
+				if !ok {
+					u = &User{
+						Name: prefix,
+					}
+					s.users[nickCf] = u
+				}
+				if !u.Disconnected {
+					u.Disconnected = true
+					return UserOfflineEvent{
+						User: u.Name.Name,
+					}, nil
+				}
+			}
 		}
 	case rplNamreply:
 		var channel, names string
@@ -1205,6 +1280,8 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Code:     code,
 			Message:  strings.Join(msg.Params[2:], " "),
 		}, nil
+	case errMonlistisfull:
+		// silence monlist full error, we don't care because we do it best-effort
 	default:
 		if msg.IsReply() {
 			if len(msg.Params) < 2 {
@@ -1248,12 +1325,16 @@ func (s *Session) newMessageEvent(msg Message) (ev MessageEvent, err error) {
 }
 
 func (s *Session) cleanUser(parted *User) {
+	nameCf := s.Casemap(parted.Name.Name)
+	if _, ok := s.monitors[nameCf]; ok {
+		return
+	}
 	for _, c := range s.channels {
 		if _, ok := c.Members[parted]; ok {
 			return
 		}
 	}
-	delete(s.users, s.Casemap(parted.Name.Name))
+	delete(s.users, nameCf)
 }
 
 func (s *Session) updateFeatures(features []string) {
@@ -1314,6 +1395,11 @@ func (s *Session) updateFeatures(features []string) {
 			linelen, err := strconv.Atoi(value)
 			if err == nil && linelen != 0 {
 				s.linelen = linelen
+			}
+		case "MONITOR":
+			monitor, err := strconv.Atoi(value)
+			if err == nil && monitor > 0 {
+				s.monitor = true
 			}
 		case "PREFIX":
 			if value == "" {

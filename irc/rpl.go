@@ -87,6 +87,12 @@ const (
 	errUmodeunknownflag = "501" // :Unknown mode flag
 	errUsersdontmatch   = "502" // :Can't change mode for other users
 
+	rplMononline     = "730" // <nick> :target[!user@host][,target[!user@host]]*
+	rplMonoffline    = "731" // <nick> :target[,target2]*
+	rplMonlist       = "732" // <nick> :target[,target2]*
+	rplEndofmonlist  = "733" // <nick> :End of MONITOR list
+	errMonlistisfull = "734" // <nick> <limit> <targets> :Monitor list is full.
+
 	rplLoggedin    = "900" // <nick> <nick>!<ident>@<host> <account> :You are now logged in as <user>
 	rplLoggedout   = "901" // <nick> <nick>!<ident>@<host> :You are now logged out
 	errNicklocked  = "902" // :You must use a nick assigned to you

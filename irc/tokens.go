@@ -460,9 +460,10 @@ func ParseCaps(caps string) (diff []Cap) {
 
 // Member is a token in RPL_NAMREPLY's last parameter.
 type Member struct {
-	PowerLevel string
-	Name       *Prefix
-	Away       bool
+	PowerLevel   string
+	Name         *Prefix
+	Away         bool
+	Disconnected bool
 }
 
 type members []Member

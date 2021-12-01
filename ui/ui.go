@@ -403,15 +403,27 @@ func drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height int, memb
 	width--
 	clearArea(screen, x0, y0, width, height)
 
+	padding := 1
+	for _, m := range members {
+		if m.Disconnected {
+			padding = runeWidth(0x274C)
+			break
+		}
+	}
+
 	for i, m := range members[*offset:] {
 		x := x0
 		y := y0 + i
-		if m.PowerLevel != "" {
+		if m.Disconnected {
+			disconnectedSt := tcell.StyleDefault.Foreground(tcell.ColorRed)
+			printString(screen, &x, y, Styled("\u274C", disconnectedSt))
+		} else if m.PowerLevel != "" {
+			x += padding - 1
 			powerLevelText := m.PowerLevel[:1]
 			powerLevelSt := tcell.StyleDefault.Foreground(tcell.ColorGreen)
 			printString(screen, &x, y, Styled(powerLevelText, powerLevelSt))
 		} else {
-			x++
+			x += padding
 		}
 
 		var name StyledString

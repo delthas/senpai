@@ -341,6 +341,8 @@ func commandDoMsg(app *App, args []string) (err error) {
 			Time:            time.Now(),
 		})
 		if buffer != "" && !s.IsChannel(target) {
+			app.monitor[netID][buffer] = struct{}{}
+			s.MonitorAdd(buffer)
 			app.win.AddBuffer(netID, "", buffer)
 		}
 
@@ -449,6 +451,7 @@ func commandDoQuery(app *App, args []string) (err error) {
 	if s.IsChannel(target) {
 		return fmt.Errorf("cannot query a channel, use JOIN instead")
 	}
+	s.MonitorAdd(target)
 	i, _ := app.win.AddBuffer(netID, "", target)
 	s.NewHistoryRequest(target).WithLimit(200).Before(time.Now())
 	app.win.JumpBufferIndex(i)

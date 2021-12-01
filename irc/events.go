@@ -50,6 +50,14 @@ type UserQuitEvent struct {
 	Time     time.Time
 }
 
+type UserOnlineEvent struct {
+	User string
+}
+
+type UserOfflineEvent struct {
+	User string
+}
+
 type TopicChangeEvent struct {
 	Channel string
 	Topic   string
