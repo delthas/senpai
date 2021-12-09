@@ -251,39 +251,46 @@ func (bs *BufferList) Previous() {
 }
 
 func (bs *BufferList) Add(netID, netName, title string) (i int, added bool) {
+	i = 0
 	lTitle := strings.ToLower(title)
-	gotNetID := false
-	for i, b := range bs.list {
-		lbTitle := strings.ToLower(b.title)
-		if b.netID == netID {
-			gotNetID = true
-			if lbTitle == lTitle {
-				return i, false
-			}
-		} else if gotNetID || (b.netID == netID && lbTitle < lTitle) {
-			b := buffer{
-				netID:   netID,
-				netName: netName,
-				title:   title,
-			}
-			bs.list = append(bs.list[:i+1], bs.list[i:]...)
-			bs.list[i] = b
-			if i <= bs.current && bs.current < len(bs.list) {
-				bs.current++
-			}
-			return i, true
+	for bi, b := range bs.list {
+		if netName == "" && b.netID == netID {
+			netName = b.netName
 		}
+		if netName == "" || b.netName < netName {
+			i = bi + 1
+			continue
+		}
+		if b.netName > netName {
+			break
+		}
+		lbTitle := strings.ToLower(b.title)
+		if lbTitle < lTitle {
+			i = bi + 1
+			continue
+		}
+		if lbTitle == lTitle {
+			return i, false
+		}
+		break
 	}
 
-	if netName == "" {
-		netName = netID
+	if i <= bs.current && bs.current < len(bs.list) {
+		bs.current++
 	}
-	bs.list = append(bs.list, buffer{
+
+	b := buffer{
 		netID:   netID,
 		netName: netName,
 		title:   title,
-	})
-	return len(bs.list) - 1, true
+	}
+	if i == len(bs.list) {
+		bs.list = append(bs.list, b)
+	} else {
+		bs.list = append(bs.list[:i+1], bs.list[i:]...)
+		bs.list[i] = b
+	}
+	return i, true
 }
 
 func (bs *BufferList) Remove(netID, title string) bool {
