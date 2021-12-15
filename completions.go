@@ -99,6 +99,36 @@ func (app *App) completionsMsg(cs []ui.Completion, cursorIdx int, text []rune) [
 	return cs
 }
 
+func (app *App) completionsCommands(cs []ui.Completion, cursorIdx int, text []rune) []ui.Completion {
+	if !hasPrefix(text, []rune("/")) {
+		return cs
+	}
+	for i := 0; i < cursorIdx; i++ {
+		if text[i] == ' ' {
+			return cs
+		}
+	}
+	if cursorIdx < len(text) && text[cursorIdx] != ' ' {
+		return cs
+	}
+
+	uText := strings.ToUpper(string(text[1:cursorIdx]))
+	for name, _ := range commands {
+		if strings.HasPrefix(name, uText) {
+			c := make([]rune, len(text)+len(name)-len(uText))
+			copy(c[:1], []rune("/"))
+			copy(c[1:], []rune(strings.ToLower(name)))
+			copy(c[1+len(name):], text[cursorIdx:])
+
+			cs = append(cs, ui.Completion{
+				Text:      c,
+				CursorIdx: 1 + len(name),
+			})
+		}
+	}
+	return cs
+}
+
 func hasPrefix(s, prefix []rune) bool {
 	return len(prefix) <= len(s) && equal(prefix, s[:len(prefix)])
 }

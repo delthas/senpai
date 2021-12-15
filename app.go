@@ -951,6 +951,7 @@ func (app *App) completions(cursorIdx int, text []rune) []ui.Completion {
 		cs = app.completionsChannelMembers(cs, cursorIdx, text)
 	}
 	cs = app.completionsMsg(cs, cursorIdx, text)
+	cs = app.completionsCommands(cs, cursorIdx, text)
 
 	if cs != nil {
 		cs = append(cs, ui.Completion{
