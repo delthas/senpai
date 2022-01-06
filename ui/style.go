@@ -32,7 +32,7 @@ var baseCodes = []tcell.Color{
 	tcell.ColorWhite, tcell.ColorBlack, tcell.ColorBlue, tcell.ColorGreen,
 	tcell.ColorRed, tcell.ColorBrown, tcell.ColorPurple, tcell.ColorOrange,
 	tcell.ColorYellow, tcell.ColorLightGreen, tcell.ColorTeal, tcell.ColorLightCyan,
-	tcell.ColorLightBlue, tcell.ColorPink, tcell.ColorGrey, tcell.ColorLightGrey,
+	tcell.ColorLightBlue, tcell.ColorPink, tcell.ColorGray, tcell.ColorLightGray,
 }
 
 // unused

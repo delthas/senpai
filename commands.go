@@ -361,13 +361,13 @@ func commandDoNames(app *App, args []string) (err error) {
 		return fmt.Errorf("this is not a channel")
 	}
 	var sb ui.StyledStringBuilder
-	sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGrey))
+	sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
 	sb.WriteString("Names: ")
 	for _, name := range s.Names(buffer) {
 		if name.PowerLevel != "" {
 			sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGreen))
 			sb.WriteString(name.PowerLevel)
-			sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGrey))
+			sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
 		}
 		sb.WriteString(name.Name.Name)
 		sb.WriteByte(' ')
