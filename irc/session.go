@@ -60,6 +60,7 @@ var SupportedCapabilities = map[string]struct{}{
 	"draft/chathistory":        {},
 	"draft/event-playback":     {},
 	"soju.im/bouncer-networks": {},
+	"soju.im/read":             {},
 }
 
 // Values taken by the "@+typing=" client tag.  TypingUnspec means the value or
@@ -424,6 +425,18 @@ func (s *Session) TypingStop(target string) {
 		Limit: t.Limit,
 	}
 	s.out <- NewMessage("TAGMSG", target).WithTag("+typing", "done")
+}
+
+func (s *Session) ReadGet(target string) {
+	if _, ok := s.enabledCaps["soju.im/read"]; ok {
+		s.out <- NewMessage("READ", target)
+	}
+}
+
+func (s *Session) ReadSet(target string, timestamp time.Time) {
+	if _, ok := s.enabledCaps["soju.im/read"]; ok {
+		s.out <- NewMessage("READ", target, formatTimestamp(timestamp))
+	}
 }
 
 func (s *Session) MonitorAdd(target string) {
@@ -1237,6 +1250,26 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				Time:       msg.TimeOrNow(),
 			}, nil
 		}
+	case "READ":
+		if len(msg.Params) < 2 {
+			break
+		}
+		var target, timestamp string
+		if err := msg.ParseParams(&target, &timestamp); err != nil {
+			return nil, err
+		}
+		if !strings.HasPrefix(timestamp, "timestamp=") {
+			return nil, nil
+		}
+		timestamp = strings.TrimPrefix(timestamp, "timestamp=")
+		t, ok := parseTimestamp(timestamp)
+		if !ok {
+			return nil, nil
+		}
+		return ReadEvent{
+			Target:    target,
+			Timestamp: t,
+		}, nil
 	case "BOUNCER":
 		if len(msg.Params) < 3 {
 			break

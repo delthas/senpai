@@ -94,6 +94,11 @@ type HistoryTargetsEvent struct {
 	Targets map[string]time.Time
 }
 
+type ReadEvent struct {
+	Target    string
+	Timestamp time.Time
+}
+
 type BouncerNetworkEvent struct {
 	ID   string
 	Name string

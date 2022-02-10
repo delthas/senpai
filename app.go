@@ -221,6 +221,12 @@ func (app *App) eventLoop() {
 		}
 
 		if !app.pasting {
+			if netID, buffer, timestamp := app.win.UpdateRead(); buffer != "" {
+				s := app.sessions[netID]
+				if s != nil {
+					s.ReadSet(buffer, timestamp)
+				}
+			}
 			app.setStatus()
 			app.updatePrompt()
 			app.setBufferNumbers()
@@ -741,6 +747,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			if _, added := app.win.AddBuffer(netID, "", buffer); added {
 				app.monitor[netID][buffer] = struct{}{}
 				s.MonitorAdd(buffer)
+				s.ReadGet(buffer)
 				s.NewHistoryRequest(buffer).
 					WithLimit(500).
 					Before(msg.TimeOrNow())
@@ -763,6 +770,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				continue
 			}
 			s.MonitorAdd(target)
+			s.ReadGet(target)
 			app.win.AddBuffer(netID, "", target)
 			// CHATHISTORY BEFORE excludes its bound, so add 1ms
 			// (precision of the time tag) to include that last message.
@@ -809,6 +817,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if !bounds.IsZero() {
 			app.messageBounds[boundKey{netID, ev.Target}] = bounds
 		}
+	case irc.ReadEvent:
+		app.win.SetRead(netID, ev.Target, ev.Timestamp)
 	case irc.BouncerNetworkEvent:
 		_, added := app.win.AddBuffer(ev.ID, ev.Name, "")
 		if added {

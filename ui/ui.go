@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"git.sr.ht/~taiite/senpai/irc"
 
@@ -234,6 +235,14 @@ func (ui *UI) JumpBufferNetwork(netID, sub string) bool {
 
 func (ui *UI) SetTopic(netID, buffer string, topic string) {
 	ui.bs.SetTopic(netID, buffer, topic)
+}
+
+func (ui *UI) SetRead(netID, buffer string, timestamp time.Time) {
+	ui.bs.SetRead(netID, buffer, timestamp)
+}
+
+func (ui *UI) UpdateRead() (netID, buffer string, timestamp time.Time) {
+	return ui.bs.UpdateRead()
 }
 
 func (ui *UI) SetStatus(status string) {

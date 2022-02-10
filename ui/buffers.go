@@ -182,6 +182,7 @@ type buffer struct {
 	title      string
 	highlights int
 	unread     bool
+	read       time.Time
 
 	lines []Line
 	topic string
@@ -387,6 +388,39 @@ func (bs *BufferList) SetTopic(netID, title string, topic string) {
 	}
 	b := &bs.list[idx]
 	b.topic = topic
+}
+
+func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
+	idx := bs.idx(netID, title)
+	if idx < 0 {
+		return
+	}
+	b := &bs.list[idx]
+	if len(b.lines) > 0 && !b.lines[len(b.lines)-1].At.After(timestamp) {
+		b.highlights = 0
+		b.unread = false
+	}
+	if b.read.Before(timestamp) {
+		b.read = timestamp
+	}
+}
+
+func (bs *BufferList) UpdateRead() (netID, title string, timestamp time.Time) {
+	b := &bs.list[bs.current]
+	var line *Line
+	y := 0
+	for i := len(b.lines) - 1; 0 <= i; i-- {
+		line = &b.lines[i]
+		if y >= b.scrollAmt {
+			break
+		}
+		y += len(line.NewLines(bs.tlInnerWidth)) + 1
+	}
+	if line != nil && line.At.After(b.read) {
+		b.read = line.At
+		return b.netID, b.title, b.read
+	}
+	return "", "", time.Time{}
 }
 
 func (bs *BufferList) Current() (netID, title string) {
