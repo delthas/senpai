@@ -33,7 +33,7 @@ type Line struct {
 	HeadColor tcell.Color
 	Highlight bool
 	Mergeable bool
-	Data      []interface{}
+	Data      interface{}
 
 	splitPoints []point
 	width       int
