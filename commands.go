@@ -92,8 +92,8 @@ func init() {
 		"QUERY": {
 			AllowHome: true,
 			MinArgs:   1,
-			MaxArgs:   1,
-			Usage:     "[nick]",
+			MaxArgs:   2,
+			Usage:     "[nick] [message]",
 			Desc:      "opens a buffer to a user",
 			Handle:    commandDoQuery,
 		},
@@ -325,31 +325,7 @@ func commandDoMe(app *App, args []string) (err error) {
 func commandDoMsg(app *App, args []string) (err error) {
 	target := args[0]
 	content := args[1]
-	netID, _ := app.win.CurrentBuffer()
-	s := app.sessions[netID]
-	if s == nil {
-		return errOffline
-	}
-	s.PrivMsg(target, content)
-	if !s.HasCapability("echo-message") {
-		buffer, line, _ := app.formatMessage(s, irc.MessageEvent{
-			User:            s.Nick(),
-			Target:          target,
-			TargetIsChannel: s.IsChannel(target),
-			Command:         "PRIVMSG",
-			Content:         content,
-			Time:            time.Now(),
-		})
-		if buffer != "" && !s.IsChannel(target) {
-			app.monitor[netID][buffer] = struct{}{}
-			s.MonitorAdd(buffer)
-			s.ReadGet(buffer)
-			app.win.AddBuffer(netID, "", buffer)
-		}
-
-		app.win.AddLine(netID, buffer, ui.NotifyNone, line)
-	}
-	return nil
+	return commandSendMessage(app, target, content)
 }
 
 func commandDoNames(app *App, args []string) (err error) {
@@ -457,6 +433,11 @@ func commandDoQuery(app *App, args []string) (err error) {
 	i, _ := app.win.AddBuffer(netID, "", target)
 	s.NewHistoryRequest(target).WithLimit(200).Before(time.Now())
 	app.win.JumpBufferIndex(i)
+	if len(args) > 1 {
+		if err := commandSendMessage(app, target, args[1]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -647,6 +628,34 @@ func parseCommand(s string) (command, args string, isCommand bool) {
 	}
 
 	return strings.ToUpper(s[1:i]), strings.TrimLeft(s[i:], " "), true
+}
+
+func commandSendMessage(app *App, target string, content string) error {
+	netID, _ := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	s.PrivMsg(target, content)
+	if !s.HasCapability("echo-message") {
+		buffer, line, _ := app.formatMessage(s, irc.MessageEvent{
+			User:            s.Nick(),
+			Target:          target,
+			TargetIsChannel: s.IsChannel(target),
+			Command:         "PRIVMSG",
+			Content:         content,
+			Time:            time.Now(),
+		})
+		if buffer != "" && !s.IsChannel(target) {
+			app.monitor[netID][buffer] = struct{}{}
+			s.MonitorAdd(buffer)
+			s.ReadGet(buffer)
+			app.win.AddBuffer(netID, "", buffer)
+		}
+
+		app.win.AddLine(netID, buffer, ui.NotifyNone, line)
+	}
+	return nil
 }
 
 func (app *App) handleInput(buffer, content string) error {
