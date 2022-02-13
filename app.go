@@ -448,6 +448,8 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 	case tcell.KeyCtrlC:
 		if app.win.InputClear() {
 			app.typing()
+		} else {
+			app.win.InputSet("/quit")
 		}
 	case tcell.KeyCtrlL:
 		app.win.Resize()

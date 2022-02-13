@@ -214,6 +214,19 @@ func (e *Editor) Clear() bool {
 	return true
 }
 
+func (e *Editor) Set(text string) {
+	r := []rune(text)
+	e.text[e.lineIdx] = r
+	e.cursorIdx = len(r)
+	e.computeTextWidth()
+	e.offsetIdx = 0
+	for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
+		e.offsetIdx++
+	}
+	e.autoCache = nil
+	e.backsearchEnd()
+}
+
 func (e *Editor) Right() {
 	e.right()
 	e.autoCache = nil

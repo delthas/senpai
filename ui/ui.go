@@ -318,6 +318,10 @@ func (ui *UI) InputClear() bool {
 	return ui.e.Clear()
 }
 
+func (ui *UI) InputSet(text string) {
+	ui.e.Set(text)
+}
+
 func (ui *UI) InputBackSearch() {
 	ui.e.BackSearch()
 }
