@@ -428,15 +428,17 @@ func commandDoQuery(app *App, args []string) (err error) {
 	if s.IsChannel(target) {
 		return fmt.Errorf("cannot query a channel, use JOIN instead")
 	}
-	s.MonitorAdd(target)
-	s.ReadGet(target)
-	i, _ := app.win.AddBuffer(netID, "", target)
-	s.NewHistoryRequest(target).WithLimit(200).Before(time.Now())
+	i, added := app.win.AddBuffer(netID, "", target)
 	app.win.JumpBufferIndex(i)
 	if len(args) > 1 {
 		if err := commandSendMessage(app, target, args[1]); err != nil {
 			return err
 		}
+	}
+	if added {
+		s.MonitorAdd(target)
+		s.ReadGet(target)
+		s.NewHistoryRequest(target).WithLimit(200).Before(time.Now())
 	}
 	return nil
 }
