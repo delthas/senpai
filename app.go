@@ -430,16 +430,39 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 			app.win.ScrollDownBy(4)
 		}
 	}
-	if ev.Buttons()&tcell.ButtonPrimary != 0 && x < app.cfg.ChanColWidth {
-		app.win.ClickBuffer(y + app.win.ChannelOffset())
+	if ev.Buttons()&tcell.ButtonPrimary != 0 {
+		if x < app.cfg.ChanColWidth {
+			app.win.ClickBuffer(y + app.win.ChannelOffset())
+		} else if x > w-app.cfg.MemberColWidth {
+			app.win.ClickMember(y + app.win.MemberOffset())
+		}
 	}
 	if ev.Buttons() == 0 {
 		if x < app.cfg.ChanColWidth {
 			if i := y + app.win.ChannelOffset(); i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
 			}
+		} else if x > w-app.cfg.MemberColWidth {
+			if i := y + app.win.MemberOffset(); i == app.win.ClickedMember() {
+				netID, target := app.win.CurrentBuffer()
+				s := app.sessions[netID]
+				if s != nil && target != "" {
+					members := s.Names(target)
+					if i < len(members) {
+						buffer := members[i].Name.Name
+						i, added := app.win.AddBuffer(netID, "", buffer)
+						app.win.JumpBufferIndex(i)
+						if added {
+							s.MonitorAdd(buffer)
+							s.ReadGet(buffer)
+							s.NewHistoryRequest(buffer).WithLimit(500).Before(time.Now())
+						}
+					}
+				}
+			}
 		}
 		app.win.ClickBuffer(-1)
+		app.win.ClickMember(-1)
 	}
 }
 

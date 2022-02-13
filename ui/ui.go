@@ -31,6 +31,7 @@ type UI struct {
 	status string
 
 	channelOffset int
+	memberClicked int
 	memberOffset  int
 }
 
@@ -125,6 +126,14 @@ func (ui *UI) ShowBufferNumbers(enable bool) {
 	ui.bs.ShowBufferNumbers(enable)
 }
 
+func (ui *UI) ClickedMember() int {
+	return ui.memberClicked
+}
+
+func (ui *UI) ClickMember(i int) {
+	ui.memberClicked = i
+}
+
 func (ui *UI) ScrollUp() {
 	ui.bs.ScrollUp(ui.bs.tlHeight / 2)
 }
@@ -162,6 +171,10 @@ func (ui *UI) ScrollChannelDownBy(n int) {
 
 func (ui *UI) ChannelOffset() int {
 	return ui.channelOffset
+}
+
+func (ui *UI) MemberOffset() int {
+	return ui.memberOffset
 }
 
 func (ui *UI) ScrollMemberUpBy(n int) {
@@ -358,7 +371,7 @@ func (ui *UI) Draw(members []irc.Member) {
 		ui.bs.DrawVerticalBufferList(ui.screen, 0, 0, ui.config.ChanColWidth, h, &ui.channelOffset)
 	}
 	if ui.config.MemberColWidth != 0 {
-		drawVerticalMemberList(ui.screen, w-ui.config.MemberColWidth, 0, ui.config.MemberColWidth, h, members, &ui.memberOffset)
+		ui.drawVerticalMemberList(ui.screen, w-ui.config.MemberColWidth, 0, ui.config.MemberColWidth, h, members, &ui.memberOffset)
 	}
 	if ui.config.ChanColWidth == 0 {
 		ui.drawStatusBar(ui.config.ChanColWidth, h-3, w-ui.config.MemberColWidth)
@@ -403,12 +416,15 @@ func (ui *UI) drawStatusBar(x0, y, width int) {
 	printString(ui.screen, &x, y, s.StyledString())
 }
 
-func drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height int, members []irc.Member, offset *int) {
+func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height int, members []irc.Member, offset *int) {
 	if y0+len(members)-*offset < height {
 		*offset = y0 + len(members) - height
 		if *offset < 0 {
 			*offset = 0
 		}
+	}
+	if ui.memberClicked >= len(members) {
+		ui.memberClicked = len(members) - 1
 	}
 
 	drawVerticalLine(screen, x0, y0, height)
@@ -425,15 +441,16 @@ func drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height int, memb
 	}
 
 	for i, m := range members[*offset:] {
+		reverse := i+*offset == ui.memberClicked
 		x := x0
 		y := y0 + i
 		if m.Disconnected {
-			disconnectedSt := tcell.StyleDefault.Foreground(tcell.ColorRed)
+			disconnectedSt := tcell.StyleDefault.Foreground(tcell.ColorRed).Reverse(reverse)
 			printString(screen, &x, y, Styled("\u274C", disconnectedSt))
 		} else if m.PowerLevel != "" {
 			x += padding - 1
 			powerLevelText := m.PowerLevel[:1]
-			powerLevelSt := tcell.StyleDefault.Foreground(tcell.ColorGreen)
+			powerLevelSt := tcell.StyleDefault.Foreground(tcell.ColorGreen).Reverse(reverse)
 			printString(screen, &x, y, Styled(powerLevelText, powerLevelSt))
 		} else {
 			x += padding
@@ -442,9 +459,9 @@ func drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height int, memb
 		var name StyledString
 		nameText := truncate(m.Name.Name, width-1, "\u2026")
 		if m.Away {
-			name = Styled(nameText, tcell.StyleDefault.Foreground(tcell.ColorGray))
+			name = Styled(nameText, tcell.StyleDefault.Foreground(tcell.ColorGray).Reverse(reverse))
 		} else {
-			name = PlainString(nameText)
+			name = Styled(nameText, tcell.StyleDefault.Reverse(reverse))
 		}
 
 		printString(screen, &x, y, name)
