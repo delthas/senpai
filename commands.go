@@ -1,6 +1,7 @@
 package senpai
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -374,11 +375,19 @@ func commandDoNick(app *App, args []string) (err error) {
 }
 
 func commandDoMode(app *App, args []string) (err error) {
-	if strings.HasPrefix(args[0], "+") || strings.HasPrefix(args[0], "-") {
+	hasModePrefix := strings.HasPrefix(args[0], "+") || strings.HasPrefix(args[0], "-")
+	hasChanPrefix := strings.HasPrefix(args[0], "#")
+
+	if !hasModePrefix && !hasChanPrefix {
+		return errors.New("invalid argument")
+	}
+
+	if hasModePrefix {
 		// if we do eg /MODE +P, automatically insert the current channel: /MODE #<current-chan> +P
 		_, channel := app.win.CurrentBuffer()
 		args = append([]string{channel}, args...)
 	}
+
 	channel := args[0]
 	flags := args[1]
 	modeArgs := args[2:]
