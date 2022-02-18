@@ -11,6 +11,8 @@ import (
 	"time"
 	"unicode"
 
+	"golang.org/x/net/proxy"
+
 	"git.sr.ht/~taiite/senpai/irc"
 	"git.sr.ht/~taiite/senpai/ui"
 	"github.com/gdamore/tcell/v2"
@@ -339,7 +341,7 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 		}
 	}
 
-	conn, err = net.Dial("tcp", addr)
+	conn, err = proxy.FromEnvironment().Dial("tcp", addr)
 	if err != nil {
 		return
 	}
