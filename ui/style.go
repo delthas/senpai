@@ -120,6 +120,11 @@ func (s StyledString) Truncate(w int, tail StyledString) StyledString {
 var urlRegex = xurls.Relaxed()
 
 func (s StyledString) ParseURLs() StyledString {
+	if !strings.ContainsRune(s.string, '.') {
+		// fast path: no dot means no URL
+		return s
+	}
+
 	styles := make([]rangedStyle, 0, len(s.styles))
 
 	urls := urlRegex.FindAllStringIndex(s.string, -1)
