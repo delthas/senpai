@@ -241,6 +241,11 @@ func (app *App) eventLoop() {
 			app.win.Draw(currentMembers)
 		}
 	}
+	go func() {
+		// drain events until we close
+		for range app.events {
+		}
+	}()
 }
 
 // ircLoop maintains a connection to the IRC server by connecting and then
