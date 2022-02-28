@@ -970,11 +970,11 @@ func (app *App) notifyHighlight(buffer, nick, content string) {
 	}
 
 	netID, curBuffer := app.win.CurrentBuffer()
-	if _, err := os.Stat(app.cfg.OnHighlightPath); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		// only error out if the user specified a highlight path
 		// if default path unreachable, simple bail
 		if app.cfg.OnHighlightPath != "" {
-			body := fmt.Sprintf("Unable to find on-highlight command at path: %q", app.cfg.OnHighlightPath)
+			body := fmt.Sprintf("Unable to find on-highlight command at path: %q", path)
 			app.addStatusLine(netID, ui.Line{
 				At:        time.Now(),
 				Head:      "!!",
@@ -988,7 +988,7 @@ func (app *App) notifyHighlight(buffer, nick, content string) {
 	if buffer == curBuffer { // TODO also check netID
 		here = "1"
 	}
-	cmd := exec.Command(app.cfg.OnHighlightPath)
+	cmd := exec.Command(path)
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("BUFFER=%s", buffer),
 		fmt.Sprintf("HERE=%s", here),
