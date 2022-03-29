@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -137,6 +138,9 @@ func (s StyledString) ParseURLs() StyledString {
 		u := urls[i]
 		ub, ue := u[0], u[1]
 		link := s.string[u[0]:u[1]]
+		if u, err := url.Parse(link); err != nil || u.Scheme == "" {
+			link = "https://" + link
+		}
 		// find last style starting before or at url begin
 		for ; j < len(s.styles); j++ {
 			st := s.styles[j]
