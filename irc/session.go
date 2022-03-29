@@ -61,6 +61,7 @@ var SupportedCapabilities = map[string]struct{}{
 	"draft/event-playback":     {},
 	"soju.im/bouncer-networks": {},
 	"soju.im/read":             {},
+	"soju.im/search":           {},
 }
 
 // Values taken by the "@+typing=" client tag.  TypingUnspec means the value or
@@ -134,6 +135,8 @@ type Session struct {
 	chReqs         map[string]struct{}     // set of targets for which history is currently requested.
 	targetsBatchID string                  // ID of the channel history targets batch being processed.
 	targetsBatch   HistoryTargetsEvent     // channel history targets batch being processed.
+	searchBatchID  string                  // ID of the search targets batch being processed.
+	searchBatch    SearchEvent             // search batch being processed.
 	monitors       map[string]struct{}     // set of users we want to monitor (and keep even if they are disconnected).
 
 	pendingChannels map[string]time.Time // set of join requests stamps for channels.
@@ -342,6 +345,18 @@ func (s *Session) ChangeNick(nick string) {
 func (s *Session) ChangeMode(channel, flags string, args []string) {
 	args = append([]string{channel, flags}, args...)
 	s.out <- NewMessage("MODE", args...)
+}
+
+func (s *Session) Search(target, text string) {
+	if _, ok := s.enabledCaps["soju.im/search"]; !ok {
+		return
+	}
+	attrs := make(map[string]string)
+	attrs["text"] = text
+	if target != "" {
+		attrs["in"] = target
+	}
+	s.out <- NewMessage("SEARCH", formatTags(attrs))
 }
 
 func splitChunks(s string, chunkLen int) (chunks []string) {
@@ -578,6 +593,15 @@ func (s *Session) handleRegistered(msg Message) (Event, error) {
 				return nil, nil
 			}
 			s.targetsBatch.Targets[target] = t
+		} else if id == s.searchBatchID {
+			ev, err := s.handleMessageRegistered(msg, true)
+			if err != nil {
+				return nil, err
+			}
+			if ev, ok := ev.(MessageEvent); ok {
+				s.searchBatch.Messages = append(s.searchBatch.Messages, ev)
+				return nil, nil
+			}
 		} else if b, ok := s.chBatches[id]; ok {
 			ev, err := s.handleMessageRegistered(msg, true)
 			if err != nil {
@@ -1195,6 +1219,9 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			case "draft/chathistory-targets":
 				s.targetsBatchID = id
 				s.targetsBatch = HistoryTargetsEvent{Targets: make(map[string]time.Time)}
+			case "soju.im/search":
+				s.searchBatchID = id
+				s.searchBatch = SearchEvent{}
 			}
 		} else {
 			if b, ok := s.chBatches[id]; ok {
@@ -1205,6 +1232,9 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				s.targetsBatchID = ""
 				delete(s.chReqs, "")
 				return s.targetsBatch, nil
+			} else if s.searchBatchID == id {
+				s.searchBatchID = ""
+				return s.searchBatch, nil
 			}
 		}
 	case "NICK":

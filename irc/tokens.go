@@ -150,6 +150,19 @@ func parseTags(s string) (tags map[string]string) {
 	return
 }
 
+func formatTags(tags map[string]string) string {
+	var sb strings.Builder
+	for k, v := range tags {
+		sb.WriteString(k)
+		if v != "" {
+			sb.WriteRune('=')
+			sb.WriteString(escapeTagValue(v))
+		}
+		sb.WriteRune(';')
+	}
+	return sb.String()
+}
+
 var (
 	errEmptyMessage      = errors.New("empty message")
 	errIncompleteMessage = errors.New("message is incomplete")
@@ -306,14 +319,7 @@ func (msg *Message) String() string {
 
 	if msg.Tags != nil {
 		sb.WriteRune('@')
-		for k, v := range msg.Tags {
-			sb.WriteString(k)
-			if v != "" {
-				sb.WriteRune('=')
-				sb.WriteString(escapeTagValue(v))
-			}
-			sb.WriteRune(';')
-		}
+		sb.WriteString(formatTags(msg.Tags))
 		sb.WriteRune(' ')
 	}
 

@@ -9,6 +9,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+const Overlay = "/overlay"
+
 func IsSplitRune(r rune) bool {
 	return r == ' ' || r == '\t'
 }
@@ -193,6 +195,7 @@ type buffer struct {
 
 type BufferList struct {
 	list    []buffer
+	overlay *buffer
 	current int
 	clicked int
 
@@ -219,7 +222,24 @@ func (bs *BufferList) ResizeTimeline(tlInnerWidth, tlHeight int) {
 	bs.tlHeight = tlHeight - 2
 }
 
+func (bs *BufferList) OpenOverlay() {
+	bs.overlay = &buffer{
+		netID:   "",
+		netName: "",
+		title:   Overlay,
+	}
+}
+
+func (bs *BufferList) CloseOverlay() {
+	bs.overlay = nil
+}
+
+func (bs *BufferList) HasOverlay() bool {
+	return bs.overlay != nil
+}
+
 func (bs *BufferList) To(i int) bool {
+	bs.overlay = nil
 	if i == bs.current {
 		return false
 	}
@@ -240,15 +260,19 @@ func (bs *BufferList) ShowBufferNumbers(enabled bool) {
 }
 
 func (bs *BufferList) Next() {
+	bs.overlay = nil
 	bs.current = (bs.current + 1) % len(bs.list)
-	bs.list[bs.current].highlights = 0
-	bs.list[bs.current].unread = false
+	b := bs.cur()
+	b.highlights = 0
+	b.unread = false
 }
 
 func (bs *BufferList) Previous() {
+	bs.overlay = nil
 	bs.current = (bs.current - 1 + len(bs.list)) % len(bs.list)
-	bs.list[bs.current].highlights = 0
-	bs.list[bs.current].unread = false
+	b := bs.cur()
+	b.highlights = 0
+	b.unread = false
 }
 
 func (bs *BufferList) Add(netID, netName, title string) (i int, added bool) {
@@ -295,7 +319,11 @@ func (bs *BufferList) Add(netID, netName, title string) (i int, added bool) {
 }
 
 func (bs *BufferList) Remove(netID, title string) bool {
-	idx := bs.idx(netID, title)
+	idx, b := bs.at(netID, title)
+	if b == bs.overlay {
+		bs.overlay = nil
+		return false
+	}
 	if idx < 0 {
 		return false
 	}
@@ -318,12 +346,12 @@ func (bs *BufferList) mergeLine(former *Line, addition Line) (keepLine bool) {
 }
 
 func (bs *BufferList) AddLine(netID, title string, notify NotifyType, line Line) {
-	idx := bs.idx(netID, title)
-	if idx < 0 {
+	_, b := bs.at(netID, title)
+	if b == nil {
 		return
 	}
+	current := bs.cur()
 
-	b := &bs.list[idx]
 	n := len(b.lines)
 	line.At = line.At.UTC()
 
@@ -340,26 +368,24 @@ func (bs *BufferList) AddLine(netID, title string, notify NotifyType, line Line)
 	} else {
 		line.computeSplitPoints()
 		b.lines = append(b.lines, line)
-		if idx == bs.current && 0 < b.scrollAmt {
+		if b == current && 0 < b.scrollAmt {
 			b.scrollAmt += len(line.NewLines(bs.tlInnerWidth)) + 1
 		}
 	}
 
-	if notify != NotifyNone && idx != bs.current {
+	if notify != NotifyNone && b != current {
 		b.unread = true
 	}
-	if notify == NotifyHighlight && idx != bs.current {
+	if notify == NotifyHighlight && b != current {
 		b.highlights++
 	}
 }
 
 func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
-	idx := bs.idx(netID, title)
-	if idx < 0 {
+	_, b := bs.at(netID, title)
+	if b == nil {
 		return
 	}
-
-	b := &bs.list[idx]
 
 	lines := make([]Line, 0, len(before)+len(b.lines)+len(after))
 	for _, buf := range []*[]Line{&before, &b.lines, &after} {
@@ -382,20 +408,18 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 }
 
 func (bs *BufferList) SetTopic(netID, title string, topic string) {
-	idx := bs.idx(netID, title)
-	if idx < 0 {
+	_, b := bs.at(netID, title)
+	if b == nil {
 		return
 	}
-	b := &bs.list[idx]
 	b.topic = topic
 }
 
 func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
-	idx := bs.idx(netID, title)
-	if idx < 0 {
+	_, b := bs.at(netID, title)
+	if b == nil {
 		return
 	}
-	b := &bs.list[idx]
 	if len(b.lines) > 0 && !b.lines[len(b.lines)-1].At.After(timestamp) {
 		b.highlights = 0
 		b.unread = false
@@ -406,7 +430,7 @@ func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 }
 
 func (bs *BufferList) UpdateRead() (netID, title string, timestamp time.Time) {
-	b := &bs.list[bs.current]
+	b := bs.cur()
 	var line *Line
 	y := 0
 	for i := len(b.lines) - 1; 0 <= i; i-- {
@@ -429,7 +453,7 @@ func (bs *BufferList) Current() (netID, title string) {
 }
 
 func (bs *BufferList) ScrollUp(n int) {
-	b := &bs.list[bs.current]
+	b := bs.cur()
 	if b.isAtTop {
 		return
 	}
@@ -437,7 +461,7 @@ func (bs *BufferList) ScrollUp(n int) {
 }
 
 func (bs *BufferList) ScrollDown(n int) {
-	b := &bs.list[bs.current]
+	b := bs.cur()
 	b.scrollAmt -= n
 
 	if b.scrollAmt < 0 {
@@ -446,7 +470,7 @@ func (bs *BufferList) ScrollDown(n int) {
 }
 
 func (bs *BufferList) ScrollUpHighlight() bool {
-	b := &bs.list[bs.current]
+	b := bs.cur()
 	ymin := b.scrollAmt + bs.tlHeight
 	y := 0
 	for i := len(b.lines) - 1; 0 <= i; i-- {
@@ -461,7 +485,7 @@ func (bs *BufferList) ScrollUpHighlight() bool {
 }
 
 func (bs *BufferList) ScrollDownHighlight() bool {
-	b := &bs.list[bs.current]
+	b := bs.cur()
 	yLastHighlight := 0
 	y := 0
 	for i := len(b.lines) - 1; 0 <= i && y < b.scrollAmt; i-- {
@@ -476,18 +500,28 @@ func (bs *BufferList) ScrollDownHighlight() bool {
 }
 
 func (bs *BufferList) IsAtTop() bool {
-	b := &bs.list[bs.current]
+	b := bs.cur()
 	return b.isAtTop
 }
 
-func (bs *BufferList) idx(netID, title string) int {
+func (bs *BufferList) at(netID, title string) (int, *buffer) {
+	if netID == "" && title == Overlay {
+		return -1, bs.overlay
+	}
 	lTitle := strings.ToLower(title)
 	for i, b := range bs.list {
 		if b.netID == netID && strings.ToLower(b.title) == lTitle {
-			return i
+			return i, &bs.list[i]
 		}
 	}
-	return -1
+	return -1, nil
+}
+
+func (bs *BufferList) cur() *buffer {
+	if bs.overlay != nil {
+		return bs.overlay
+	}
+	return &bs.list[bs.current]
 }
 
 func (bs *BufferList) DrawVerticalBufferList(screen tcell.Screen, x0, y0, width, height int, offset *int) {
@@ -599,7 +633,7 @@ func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, widt
 func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int) {
 	clearArea(screen, x0, y0, bs.tlInnerWidth+nickColWidth+9, bs.tlHeight+2)
 
-	b := &bs.list[bs.current]
+	b := bs.cur()
 
 	xTopic := x0
 	printString(screen, &xTopic, y0, Styled(b.topic, tcell.StyleDefault))

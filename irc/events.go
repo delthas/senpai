@@ -99,6 +99,10 @@ type ReadEvent struct {
 	Timestamp time.Time
 }
 
+type SearchEvent struct {
+	Messages []MessageEvent
+}
+
 type BouncerNetworkEvent struct {
 	ID   string
 	Name string

@@ -565,6 +565,8 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		if ok {
 			app.typing()
 		}
+	case tcell.KeyEscape:
+		app.win.CloseOverlay()
 	case tcell.KeyCR, tcell.KeyLF:
 		netID, buffer := app.win.CurrentBuffer()
 		input := app.win.InputEnter()
@@ -599,6 +601,9 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 // requestHistory is a wrapper around irc.Session.RequestHistory to only request
 // history when needed.
 func (app *App) requestHistory() {
+	if app.win.HasOverlay() {
+		return
+	}
 	netID, buffer := app.win.CurrentBuffer()
 	s := app.sessions[netID]
 	if s == nil {
@@ -854,6 +859,17 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if !bounds.IsZero() {
 			app.messageBounds[boundKey{netID, ev.Target}] = bounds
 		}
+	case irc.SearchEvent:
+		app.win.OpenOverlay()
+		lines := make([]ui.Line, 0, len(ev.Messages))
+		for _, m := range ev.Messages {
+			_, line, _ := app.formatMessage(s, m)
+			if line.IsZero() {
+				continue
+			}
+			lines = append(lines, line)
+		}
+		app.win.AddLines("", ui.Overlay, lines, nil)
 	case irc.ReadEvent:
 		app.win.SetRead(netID, ev.Target, ev.Timestamp)
 	case irc.BouncerNetworkEvent:

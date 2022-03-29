@@ -192,6 +192,18 @@ func (ui *UI) IsAtTop() bool {
 	return ui.bs.IsAtTop()
 }
 
+func (ui *UI) OpenOverlay() {
+	ui.bs.OpenOverlay()
+}
+
+func (ui *UI) CloseOverlay() {
+	ui.bs.CloseOverlay()
+}
+
+func (ui *UI) HasOverlay() bool {
+	return ui.bs.HasOverlay()
+}
+
 func (ui *UI) AddBuffer(netID, netName, title string) (i int, added bool) {
 	return ui.bs.Add(netID, netName, title)
 }

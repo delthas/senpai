@@ -167,6 +167,13 @@ func init() {
 			Desc:      "remove effect of a ban from the user",
 			Handle:    commandDoUnban,
 		},
+		"SEARCH": {
+			AllowHome: true,
+			MaxArgs:   1,
+			Usage:     "<text>",
+			Desc:      "searches messages in a target",
+			Handle:    commandDoSearch,
+		},
 	}
 }
 
@@ -576,6 +583,21 @@ func commandDoUnban(app *App, args []string) (err error) {
 		return fmt.Errorf("either send this command from a channel, or specify the channel")
 	}
 	s.ChangeMode(channel, "-b", []string{nick})
+	return nil
+}
+
+func commandDoSearch(app *App, args []string) (err error) {
+	if len(args) == 0 {
+		app.win.CloseOverlay()
+		return nil
+	}
+	text := args[0]
+	netID, channel := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	s.Search(channel, text)
 	return nil
 }
 

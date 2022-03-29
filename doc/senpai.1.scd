@@ -174,6 +174,10 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *UNBAN* <nick> [channel]
 	Allow _nick_ to enter _channel_ again (the current channel if not given).
 
+*SEARCH* <text>
+	Search messages matching the given text, in the current channel or server.
+	This open a temporary list, which can be closed with the escape key.
+
 # SEE ALSO
 
 *senpai*(5)
