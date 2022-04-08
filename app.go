@@ -351,6 +351,11 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 		return
 	}
 
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		tcpConn.SetKeepAlive(true)
+		tcpConn.SetKeepAlivePeriod(15 * time.Second)
+	}
+
 	if app.cfg.TLS {
 		host, _, _ := net.SplitHostPort(addr) // should succeed since net.Dial did.
 		conn = tls.Client(conn, &tls.Config{
