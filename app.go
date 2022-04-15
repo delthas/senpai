@@ -18,7 +18,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-const eventChanSize = 64
+const eventChanSize = 1024
 
 func isCommand(input []rune) bool {
 	// Command can't start with two slashes because that's an escape for
@@ -194,31 +194,26 @@ func (app *App) SetLastClose(t time.Time) {
 func (app *App) eventLoop() {
 	defer app.win.Close()
 
-	evs := make([]event, 0, eventChanSize)
 	for !app.win.ShouldExit() {
 		ev := <-app.events
-		evs = evs[:0]
-		evs = append(evs, ev)
-	Batch:
-		for i := 0; i < eventChanSize; i++ {
-			select {
-			case ev := <-app.events:
-				evs = append(evs, ev)
-			default:
-				break Batch
-			}
+		if !app.handleEvent(ev) {
+			return
 		}
-
-		for _, ev := range evs {
-			if ev.src == "*" {
-				if ev.content == nil {
+		deadline := time.NewTimer(200 * time.Millisecond)
+	outer:
+		for {
+			select {
+			case <-deadline.C:
+				break outer
+			case ev := <-app.events:
+				if !app.handleEvent(ev) {
 					return
 				}
-				if !app.handleUIEvent(ev.content) {
-					return
+			default:
+				if !deadline.Stop() {
+					<-deadline.C
 				}
-			} else {
-				app.handleIRCEvent(ev.src, ev.content)
+				break outer
 			}
 		}
 
@@ -246,6 +241,19 @@ func (app *App) eventLoop() {
 		for range app.events {
 		}
 	}()
+}
+func (app *App) handleEvent(ev event) bool {
+	if ev.src == "*" {
+		if ev.content == nil {
+			return false
+		}
+		if !app.handleUIEvent(ev.content) {
+			return false
+		}
+	} else {
+		app.handleIRCEvent(ev.src, ev.content)
+	}
+	return true
 }
 
 // ircLoop maintains a connection to the IRC server by connecting and then
