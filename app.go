@@ -705,6 +705,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			HeadColor: tcell.ColorGray,
 			Body:      body.StyledString(),
 			Highlight: true,
+			Readable:  true,
 		})
 	case irc.UserNickEvent:
 		line := app.formatEvent(ev)
@@ -782,6 +783,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			HeadColor: tcell.ColorGray,
 			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
 			Highlight: notify == ui.NotifyHighlight,
+			Readable:  true,
 		})
 	case irc.MessageEvent:
 		buffer, line, notification := app.formatMessage(s, ev)
@@ -1044,6 +1046,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
+			Readable:  true,
 		}
 	case irc.UserJoinEvent:
 		var body ui.StyledStringBuilder
@@ -1059,6 +1062,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
+			Readable:  true,
 		}
 	case irc.UserPartEvent:
 		var body ui.StyledStringBuilder
@@ -1074,6 +1078,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
+			Readable:  true,
 		}
 	case irc.UserQuitEvent:
 		var body ui.StyledStringBuilder
@@ -1089,6 +1094,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
+			Readable:  true,
 		}
 	case irc.TopicChangeEvent:
 		topic := ui.IRCString(ev.Topic).String()
@@ -1098,6 +1104,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Head:      "--",
 			HeadColor: tcell.ColorGray,
 			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
+			Readable:  true,
 		}
 	case irc.ModeChangeEvent:
 		body := fmt.Sprintf("[%s]", ev.Mode)
@@ -1110,6 +1117,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
 			Mergeable: mergeable,
 			Data:      []irc.Event{ev},
+			Readable:  true,
 		}
 	default:
 		return ui.Line{}
@@ -1189,6 +1197,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		HeadColor: headColor,
 		Body:      body.StyledString(),
 		Highlight: hlLine,
+		Readable:  true,
 	}
 	return
 }

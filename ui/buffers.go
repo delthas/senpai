@@ -34,6 +34,7 @@ type Line struct {
 	Body      StyledString
 	HeadColor tcell.Color
 	Highlight bool
+	Readable  bool
 	Mergeable bool
 	Data      interface{}
 
@@ -420,9 +421,15 @@ func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 	if b == nil {
 		return
 	}
-	if len(b.lines) > 0 && !b.lines[len(b.lines)-1].At.After(timestamp) {
-		b.highlights = 0
-		b.unread = false
+	for i := len(b.lines) - 1; i >= 0; i-- {
+		line := &b.lines[i]
+		if line.Readable {
+			if line.At.After(timestamp) {
+				b.highlights = 0
+				b.unread = false
+			}
+			break
+		}
 	}
 	if b.read.Before(timestamp) {
 		b.read = timestamp
@@ -435,7 +442,7 @@ func (bs *BufferList) UpdateRead() (netID, title string, timestamp time.Time) {
 	y := 0
 	for i := len(b.lines) - 1; 0 <= i; i-- {
 		line = &b.lines[i]
-		if y >= b.scrollAmt {
+		if y >= b.scrollAmt && line.Readable {
 			break
 		}
 		y += len(line.NewLines(bs.tlInnerWidth)) + 1
