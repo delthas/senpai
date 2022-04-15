@@ -118,7 +118,7 @@ func (s StyledString) Truncate(w int, tail StyledString) StyledString {
 	return sb.StyledString()
 }
 
-var urlRegex = xurls.Relaxed()
+var urlRegex, _ = xurls.StrictMatchingScheme(xurls.AnyScheme)
 
 func (s StyledString) ParseURLs() StyledString {
 	if !strings.ContainsRune(s.string, '.') {
