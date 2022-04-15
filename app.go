@@ -547,7 +547,12 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 			app.win.InputEnd()
 		}
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		ok := app.win.InputBackspace()
+		var ok bool
+		if ev.Modifiers() == tcell.ModAlt {
+			ok = app.win.InputDeleteWord()
+		} else {
+			ok = app.win.InputBackspace()
+		}
 		if ok {
 			app.typing()
 		}
