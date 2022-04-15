@@ -9,7 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-const welcomeMessage = "senpai dev build. See senpai(1) for a list of keybindings and commands. Private messages and status notices go here."
+const welcomeMessage = "senpai dev build. See senpai(1) for a list of keybindings and commands."
 
 func (app *App) initWindow() {
 	app.win.AddBuffer("", "(home)", "")

@@ -42,8 +42,8 @@ For information about the configuration format, see *senpai*(5).
 The user interface of senpai consists of 4 parts.  Starting from the bottom:
 
 The *buffer list*, shows joined channels.  The special buffer *home* is where
-private messages and server notices are shown.  This list can be put on the left
-of the screen with the _chan-column-width_ configuration option.
+server notices are shown.  This list can be put on the left of the screen with
+the _chan-column-width_ configuration option.
 
 On the row above, the *input field* is where you type in messages or commands
 (see *COMMANDS*).  By default, when you type a message, senpai will inform
