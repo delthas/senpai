@@ -593,10 +593,29 @@ func (bs *BufferList) DrawVerticalBufferList(screen tcell.Screen, x0, y0, width,
 	}
 }
 
-func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, width int) {
-	x := x0
+func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, width int, offset *int) {
+	x := width
+	for i := len(bs.list) - 1; i >= 0; i-- {
+		b := &bs.list[i]
+		x--
+		if b.title == "" {
+			x -= stringWidth(b.netName)
+		} else {
+			x -= stringWidth(b.title)
+		}
+		if 0 < b.highlights {
+			x -= 2 + len(fmt.Sprintf("%d", b.highlights))
+		}
+		if x <= 10 {
+			break
+		}
+		if *offset > i {
+			*offset = i
+		}
+	}
+	x = x0
 
-	for i, b := range bs.list {
+	for i, b := range bs.list[*offset:] {
 		if width <= x-x0 {
 			break
 		}

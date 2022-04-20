@@ -415,7 +415,7 @@ func (ui *UI) Draw(members []irc.Member) {
 
 	ui.bs.DrawTimeline(ui.screen, ui.channelWidth, 0, ui.config.NickColWidth)
 	if ui.channelWidth == 0 {
-		ui.bs.DrawHorizontalBufferList(ui.screen, 0, h-1, w-ui.memberWidth)
+		ui.bs.DrawHorizontalBufferList(ui.screen, 0, h-1, w-ui.memberWidth, &ui.channelOffset)
 	} else {
 		ui.bs.DrawVerticalBufferList(ui.screen, 0, 0, ui.channelWidth, h, &ui.channelOffset)
 	}
