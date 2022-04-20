@@ -186,6 +186,7 @@ type buffer struct {
 	highlights int
 	unread     bool
 	read       time.Time
+	openedOnce bool
 
 	lines []Line
 	topic string
@@ -359,7 +360,7 @@ func (bs *BufferList) AddLine(netID, title string, notify NotifyType, line Line)
 	n := len(b.lines)
 	line.At = line.At.UTC()
 
-	if !line.Mergeable {
+	if !line.Mergeable && current.openedOnce {
 		line.Body = line.Body.ParseURLs()
 	}
 
@@ -401,7 +402,9 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 				}
 			} else {
 				if buf != &b.lines {
-					line.Body = line.Body.ParseURLs()
+					if b.openedOnce {
+						line.Body = line.Body.ParseURLs()
+					}
 					line.computeSplitPoints()
 				}
 				lines = append(lines, line)
@@ -686,6 +689,12 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 	clearArea(screen, x0, y0, bs.tlInnerWidth+nickColWidth+9, bs.tlHeight+2)
 
 	b := bs.cur()
+	if !b.openedOnce {
+		b.openedOnce = true
+		for i := 0; i < len(b.lines); i++ {
+			b.lines[i].Body = b.lines[i].Body.ParseURLs()
+		}
+	}
 
 	xTopic := x0
 	printString(screen, &xTopic, y0, Styled(b.topic, tcell.StyleDefault))
