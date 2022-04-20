@@ -180,6 +180,10 @@ func (ui *UI) ScrollChannelDownBy(n int) {
 	ui.channelOffset += n
 }
 
+func (ui *UI) HorizontalBufferOffset(x int) int {
+	return ui.bs.HorizontalBufferOffset(x, ui.channelOffset)
+}
+
 func (ui *UI) ChannelOffset() int {
 	return ui.channelOffset
 }
