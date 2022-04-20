@@ -837,19 +837,34 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		bounds.Update(&line)
 		app.messageBounds[boundKey{netID, buffer}] = bounds
 	case irc.HistoryTargetsEvent:
-		for target, last := range ev.Targets {
-			if s.IsChannel(target) {
+		type target struct {
+			name string
+			last time.Time
+		}
+		// try to fetch the history of the last opened buffer first
+		targets := make([]target, 0, len(ev.Targets))
+		if app.lastNetID == netID {
+			if last, ok := ev.Targets[app.lastBuffer]; ok {
+				targets = append(targets, target{app.lastBuffer, last})
+				delete(ev.Targets, app.lastBuffer)
+			}
+		}
+		for name, last := range ev.Targets {
+			targets = append(targets, target{name, last})
+		}
+		for _, target := range targets {
+			if s.IsChannel(target.name) {
 				continue
 			}
-			s.MonitorAdd(target)
-			s.ReadGet(target)
-			app.win.AddBuffer(netID, "", target)
+			s.MonitorAdd(target.name)
+			s.ReadGet(target.name)
+			app.win.AddBuffer(netID, "", target.name)
 			// CHATHISTORY BEFORE excludes its bound, so add 1ms
 			// (precision of the time tag) to include that last message.
-			last = last.Add(1 * time.Millisecond)
-			s.NewHistoryRequest(target).
+			target.last = target.last.Add(1 * time.Millisecond)
+			s.NewHistoryRequest(target.name).
 				WithLimit(500).
-				Before(last)
+				Before(target.last)
 		}
 	case irc.HistoryEvent:
 		var linesBefore []ui.Line
