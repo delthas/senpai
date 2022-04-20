@@ -195,6 +195,8 @@ type buffer struct {
 }
 
 type BufferList struct {
+	colors ConfigColors
+
 	list    []buffer
 	overlay *buffer
 	current int
@@ -210,8 +212,9 @@ type BufferList struct {
 
 // NewBufferList returns a new BufferList.
 // Call Resize() once before using it.
-func NewBufferList(mergeLine func(*Line, Line)) BufferList {
+func NewBufferList(colors ConfigColors, mergeLine func(*Line, Line)) BufferList {
 	return BufferList{
+		colors:      colors,
 		list:        []buffer{},
 		clicked:     -1,
 		doMergeLine: mergeLine,
@@ -550,7 +553,7 @@ func (bs *BufferList) DrawVerticalBufferList(screen tcell.Screen, x0, y0, width,
 		y := y0 + i
 		st := tcell.StyleDefault
 		if b.unread {
-			st = st.Bold(true)
+			st = st.Bold(true).Foreground(bs.colors.Unread)
 		}
 		if bi == bs.current || bi == bs.clicked {
 			st = st.Reverse(true)
@@ -644,7 +647,7 @@ func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, widt
 		}
 		st := tcell.StyleDefault
 		if b.unread {
-			st = st.Bold(true)
+			st = st.Bold(true).Foreground(bs.colors.Unread)
 		} else if i == bs.current {
 			st = st.Underline(true)
 		}

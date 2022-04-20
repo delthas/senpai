@@ -150,6 +150,8 @@ colors {
 :< *Description*
 |  prompt
 :  color for ">"-prompt that appears in command mode
+|  unread
+:  foreground color for unread buffer names in buffer lists
 
 *debug*
 	Dump all sent and received data to the home buffer, useful for debugging.

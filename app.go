@@ -134,6 +134,9 @@ func NewApp(cfg Config) (app *App, err error) {
 		MergeLine: func(former *ui.Line, addition ui.Line) {
 			app.mergeLine(former, addition)
 		},
+		Colors: ui.ConfigColors{
+			Unread: cfg.Colors.Unread,
+		},
 	})
 	if err != nil {
 		return

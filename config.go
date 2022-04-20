@@ -14,16 +14,14 @@ import (
 	"git.sr.ht/~emersion/go-scfg"
 )
 
-type Color tcell.Color
-
-func parseColor(s string, c *Color) error {
+func parseColor(s string, c *tcell.Color) error {
 	if strings.HasPrefix(s, "#") {
 		hex, err := strconv.ParseInt(s[1:], 16, 32)
 		if err != nil {
 			return err
 		}
 
-		*c = Color(tcell.NewHexColor(int32(hex)))
+		*c = tcell.NewHexColor(int32(hex))
 		return nil
 	}
 
@@ -33,7 +31,7 @@ func parseColor(s string, c *Color) error {
 	}
 
 	if code == -1 {
-		*c = Color(tcell.ColorDefault)
+		*c = tcell.ColorDefault
 		return nil
 	}
 
@@ -41,13 +39,14 @@ func parseColor(s string, c *Color) error {
 		return fmt.Errorf("color code must be between 0-255. If you meant to use true colors, use #aabbcc notation")
 	}
 
-	*c = Color(tcell.PaletteColor(code))
+	*c = tcell.PaletteColor(code)
 
 	return nil
 }
 
 type ConfigColors struct {
-	Prompt Color
+	Prompt tcell.Color
+	Unread tcell.Color
 }
 
 type Config struct {
@@ -102,7 +101,8 @@ func Defaults() (cfg Config, err error) {
 		MemberColWidth:   16,
 		MemberColEnabled: true,
 		Colors: ConfigColors{
-			Prompt: Color(tcell.ColorDefault),
+			Prompt: tcell.ColorDefault,
+			Unread: tcell.ColorDefault,
 		},
 		Debug: false,
 	}
@@ -268,16 +268,20 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			}
 		case "colors":
 			for _, child := range d.Children {
+				var colorStr string
+				if err := child.ParseParams(&colorStr); err != nil {
+					return err
+				}
+
+				var color tcell.Color
+				if err = parseColor(colorStr, &color); err != nil {
+					return err
+				}
 				switch child.Name {
 				case "prompt":
-					var prompt string
-					if err := child.ParseParams(&prompt); err != nil {
-						return err
-					}
-
-					if err = parseColor(prompt, &cfg.Colors.Prompt); err != nil {
-						return err
-					}
+					cfg.Colors.Prompt = color
+				case "unread":
+					cfg.Colors.Unread = color
 				default:
 					return fmt.Errorf("unknown directive %q", child.Name)
 				}
