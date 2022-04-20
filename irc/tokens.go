@@ -366,17 +366,14 @@ func (msg *Message) ParseParams(out ...*string) error {
 	return nil
 }
 
+const serverTimeLayout = "2006-01-02T15:04:05.000Z"
+
 func parseTimestamp(timestamp string) (time.Time, bool) {
-	var year, month, day, hour, minute, second, millis int
-
-	timestamp = strings.TrimSuffix(timestamp, "Z")
-
-	_, err := fmt.Sscanf(timestamp, "%4d-%2d-%2dT%2d:%2d:%2d.%3d", &year, &month, &day, &hour, &minute, &second, &millis)
-	if err != nil || month < 1 || 12 < month {
+	t, err := time.Parse(serverTimeLayout, timestamp)
+	if err != nil {
 		return time.Time{}, false
 	}
-
-	return time.Date(year, time.Month(month), day, hour, minute, second, millis*1e6, time.UTC), true
+	return t.UTC(), true
 }
 
 // Time returns the time when the message has been sent, if present.
