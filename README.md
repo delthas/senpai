@@ -56,4 +56,4 @@ Copyright (C) 2021 The senpai Contributors
 [CHATHISTORY]: https://ircv3.net/specs/extensions/chathistory
 [Github]: https://github.com/hhirtz/senpai/pulls
 [Libera.Chat]: https://libera.chat/
-[ml]: https://lists.sr.ht/~taiite/public-inbox
+[ml]: https://lists.sr.ht/~delthas/senpai-dev
