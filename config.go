@@ -62,11 +62,13 @@ type Config struct {
 	Typings bool
 	Mouse   bool
 
-	Highlights      []string
-	OnHighlightPath string
-	NickColWidth    int
-	ChanColWidth    int
-	MemberColWidth  int
+	Highlights       []string
+	OnHighlightPath  string
+	NickColWidth     int
+	ChanColWidth     int
+	ChanColEnabled   bool
+	MemberColWidth   int
+	MemberColEnabled bool
 
 	Colors ConfigColors
 
@@ -83,20 +85,22 @@ func DefaultHighlightPath() (string, error) {
 
 func Defaults() (cfg Config, err error) {
 	cfg = Config{
-		Addr:            "",
-		Nick:            "",
-		Real:            "",
-		User:            "",
-		Password:        nil,
-		TLS:             true,
-		Channels:        nil,
-		Typings:         true,
-		Mouse:           true,
-		Highlights:      nil,
-		OnHighlightPath: "",
-		NickColWidth:    16,
-		ChanColWidth:    0,
-		MemberColWidth:  0,
+		Addr:             "",
+		Nick:             "",
+		Real:             "",
+		User:             "",
+		Password:         nil,
+		TLS:              true,
+		Channels:         nil,
+		Typings:          true,
+		Mouse:            true,
+		Highlights:       nil,
+		OnHighlightPath:  "",
+		NickColWidth:     14,
+		ChanColWidth:     16,
+		ChanColEnabled:   true,
+		MemberColWidth:   16,
+		MemberColEnabled: true,
 		Colors: ConfigColors{
 			Prompt: Color(tcell.ColorDefault),
 		},
@@ -204,22 +208,32 @@ func unmarshal(filename string, cfg *Config) (err error) {
 						return err
 					}
 				case "channels":
-					var channels string
-					if err := child.ParseParams(&channels); err != nil {
+					var channelsStr string
+					if err := child.ParseParams(&channelsStr); err != nil {
 						return err
 					}
-
-					if cfg.ChanColWidth, err = strconv.Atoi(channels); err != nil {
+					channels, err := strconv.Atoi(channelsStr)
+					if err != nil {
 						return err
+					}
+					if channels == 0 {
+						cfg.ChanColEnabled = false
+					} else {
+						cfg.ChanColWidth = channels
 					}
 				case "members":
-					var members string
-					if err := child.ParseParams(&members); err != nil {
+					var membersStr string
+					if err := child.ParseParams(&membersStr); err != nil {
 						return err
 					}
-
-					if cfg.MemberColWidth, err = strconv.Atoi(members); err != nil {
+					members, err := strconv.Atoi(membersStr)
+					if err != nil {
 						return err
+					}
+					if members == 0 {
+						cfg.MemberColEnabled = false
+					} else {
+						cfg.MemberColWidth = members
 					}
 				default:
 					return fmt.Errorf("unknown directive %q", child.Name)

@@ -122,9 +122,11 @@ func NewApp(cfg Config) (app *App, err error) {
 	mouse := cfg.Mouse
 
 	app.win, err = ui.New(ui.Config{
-		NickColWidth:   cfg.NickColWidth,
-		ChanColWidth:   cfg.ChanColWidth,
-		MemberColWidth: cfg.MemberColWidth,
+		NickColWidth:     cfg.NickColWidth,
+		ChanColWidth:     cfg.ChanColWidth,
+		ChanColEnabled:   cfg.ChanColEnabled,
+		MemberColWidth:   cfg.MemberColWidth,
+		MemberColEnabled: cfg.MemberColEnabled,
 		AutoComplete: func(cursorIdx int, text []rune) []ui.Completion {
 			return app.completions(cursorIdx, text)
 		},
@@ -432,9 +434,9 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 	x, y := ev.Position()
 	w, _ := app.win.Size()
 	if ev.Buttons()&tcell.WheelUp != 0 {
-		if x < app.cfg.ChanColWidth {
+		if x < app.win.ChannelWidth() {
 			app.win.ScrollChannelUpBy(4)
-		} else if x > w-app.cfg.MemberColWidth {
+		} else if x > w-app.win.MemberWidth() {
 			app.win.ScrollMemberUpBy(4)
 		} else {
 			app.win.ScrollUpBy(4)
@@ -442,27 +444,27 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 		}
 	}
 	if ev.Buttons()&tcell.WheelDown != 0 {
-		if x < app.cfg.ChanColWidth {
+		if x < app.win.ChannelWidth() {
 			app.win.ScrollChannelDownBy(4)
-		} else if x > w-app.cfg.MemberColWidth {
+		} else if x > w-app.win.MemberWidth() {
 			app.win.ScrollMemberDownBy(4)
 		} else {
 			app.win.ScrollDownBy(4)
 		}
 	}
 	if ev.Buttons()&tcell.ButtonPrimary != 0 {
-		if x < app.cfg.ChanColWidth {
+		if x < app.win.ChannelWidth() {
 			app.win.ClickBuffer(y + app.win.ChannelOffset())
-		} else if x > w-app.cfg.MemberColWidth {
+		} else if x > w-app.win.MemberWidth() {
 			app.win.ClickMember(y + app.win.MemberOffset())
 		}
 	}
 	if ev.Buttons() == 0 {
-		if x < app.cfg.ChanColWidth {
+		if x < app.win.ChannelWidth() {
 			if i := y + app.win.ChannelOffset(); i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
 			}
-		} else if x > w-app.cfg.MemberColWidth {
+		} else if x > w-app.win.MemberWidth() {
 			if i := y + app.win.MemberOffset(); i == app.win.ClickedMember() {
 				netID, target := app.win.CurrentBuffer()
 				s := app.sessions[netID]
@@ -580,6 +582,10 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		}
 	case tcell.KeyEscape:
 		app.win.CloseOverlay()
+	case tcell.KeyF7:
+		app.win.ToggleChannelList()
+	case tcell.KeyF8:
+		app.win.ToggleMemberList()
 	case tcell.KeyCR, tcell.KeyLF:
 		netID, buffer := app.win.CurrentBuffer()
 		input := app.win.InputEnter()

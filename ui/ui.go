@@ -11,12 +11,14 @@ import (
 )
 
 type Config struct {
-	NickColWidth   int
-	ChanColWidth   int
-	MemberColWidth int
-	AutoComplete   func(cursorIdx int, text []rune) []Completion
-	Mouse          bool
-	MergeLine      func(former *Line, addition Line)
+	NickColWidth     int
+	ChanColWidth     int
+	ChanColEnabled   bool
+	MemberColWidth   int
+	MemberColEnabled bool
+	AutoComplete     func(cursorIdx int, text []rune) []Completion
+	Mouse            bool
+	MergeLine        func(former *Line, addition Line)
 }
 
 type UI struct {
@@ -33,11 +35,20 @@ type UI struct {
 	channelOffset int
 	memberClicked int
 	memberOffset  int
+
+	channelWidth int
+	memberWidth  int
 }
 
 func New(config Config) (ui *UI, err error) {
 	ui = &UI{
 		config: config,
+	}
+	if config.ChanColEnabled {
+		ui.channelWidth = config.ChanColWidth
+	}
+	if config.MemberColEnabled {
+		ui.memberWidth = config.MemberColWidth
 	}
 
 	ui.screen, err = tcell.NewScreen()
@@ -175,6 +186,32 @@ func (ui *UI) ChannelOffset() int {
 
 func (ui *UI) MemberOffset() int {
 	return ui.memberOffset
+}
+
+func (ui *UI) ChannelWidth() int {
+	return ui.channelWidth
+}
+
+func (ui *UI) MemberWidth() int {
+	return ui.memberWidth
+}
+
+func (ui *UI) ToggleChannelList() {
+	if ui.channelWidth == 0 {
+		ui.channelWidth = ui.config.ChanColWidth
+	} else {
+		ui.channelWidth = 0
+	}
+	ui.Resize()
+}
+
+func (ui *UI) ToggleMemberList() {
+	if ui.memberWidth == 0 {
+		ui.memberWidth = ui.config.MemberColWidth
+	} else {
+		ui.memberWidth = 0
+	}
+	ui.Resize()
 }
 
 func (ui *UI) ScrollMemberUpBy(n int) {
@@ -353,9 +390,9 @@ func (ui *UI) InputBackSearch() {
 
 func (ui *UI) Resize() {
 	w, h := ui.screen.Size()
-	innerWidth := w - 9 - ui.config.ChanColWidth - ui.config.NickColWidth - ui.config.MemberColWidth
+	innerWidth := w - 9 - ui.channelWidth - ui.config.NickColWidth - ui.memberWidth
 	ui.e.Resize(innerWidth)
-	if ui.config.ChanColWidth == 0 {
+	if ui.channelWidth == 0 {
 		ui.bs.ResizeTimeline(innerWidth, h-3)
 	} else {
 		ui.bs.ResizeTimeline(innerWidth, h-2)
@@ -370,37 +407,37 @@ func (ui *UI) Size() (int, int) {
 func (ui *UI) Draw(members []irc.Member) {
 	w, h := ui.screen.Size()
 
-	if ui.config.ChanColWidth == 0 {
+	if ui.channelWidth == 0 {
 		ui.e.Draw(ui.screen, 9+ui.config.NickColWidth, h-2)
 	} else {
-		ui.e.Draw(ui.screen, 9+ui.config.ChanColWidth+ui.config.NickColWidth, h-1)
+		ui.e.Draw(ui.screen, 9+ui.channelWidth+ui.config.NickColWidth, h-1)
 	}
 
-	ui.bs.DrawTimeline(ui.screen, ui.config.ChanColWidth, 0, ui.config.NickColWidth)
-	if ui.config.ChanColWidth == 0 {
-		ui.bs.DrawHorizontalBufferList(ui.screen, 0, h-1, w-ui.config.MemberColWidth)
+	ui.bs.DrawTimeline(ui.screen, ui.channelWidth, 0, ui.config.NickColWidth)
+	if ui.channelWidth == 0 {
+		ui.bs.DrawHorizontalBufferList(ui.screen, 0, h-1, w-ui.memberWidth)
 	} else {
-		ui.bs.DrawVerticalBufferList(ui.screen, 0, 0, ui.config.ChanColWidth, h, &ui.channelOffset)
+		ui.bs.DrawVerticalBufferList(ui.screen, 0, 0, ui.channelWidth, h, &ui.channelOffset)
 	}
-	if ui.config.MemberColWidth != 0 {
-		ui.drawVerticalMemberList(ui.screen, w-ui.config.MemberColWidth, 0, ui.config.MemberColWidth, h, members, &ui.memberOffset)
+	if ui.memberWidth != 0 {
+		ui.drawVerticalMemberList(ui.screen, w-ui.memberWidth, 0, ui.memberWidth, h, members, &ui.memberOffset)
 	}
-	if ui.config.ChanColWidth == 0 {
-		ui.drawStatusBar(ui.config.ChanColWidth, h-3, w-ui.config.MemberColWidth)
+	if ui.channelWidth == 0 {
+		ui.drawStatusBar(ui.channelWidth, h-3, w-ui.memberWidth)
 	} else {
-		ui.drawStatusBar(ui.config.ChanColWidth, h-2, w-ui.config.ChanColWidth-ui.config.MemberColWidth)
+		ui.drawStatusBar(ui.channelWidth, h-2, w-ui.channelWidth-ui.memberWidth)
 	}
 
-	if ui.config.ChanColWidth == 0 {
+	if ui.channelWidth == 0 {
 		for x := 0; x < 9+ui.config.NickColWidth; x++ {
 			ui.screen.SetContent(x, h-2, ' ', nil, tcell.StyleDefault)
 		}
 		printIdent(ui.screen, 7, h-2, ui.config.NickColWidth, ui.prompt)
 	} else {
-		for x := ui.config.ChanColWidth; x < 9+ui.config.ChanColWidth+ui.config.NickColWidth; x++ {
+		for x := ui.channelWidth; x < 9+ui.channelWidth+ui.config.NickColWidth; x++ {
 			ui.screen.SetContent(x, h-1, ' ', nil, tcell.StyleDefault)
 		}
-		printIdent(ui.screen, ui.config.ChanColWidth+7, h-1, ui.config.NickColWidth, ui.prompt)
+		printIdent(ui.screen, ui.channelWidth+7, h-1, ui.config.NickColWidth, ui.prompt)
 	}
 
 	ui.screen.Show()

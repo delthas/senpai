@@ -109,6 +109,12 @@ of messages are in the timeline:
 *CTRL-L*
 	Refresh the window.
 
+*F7*
+	Show/hide the vertical channel list.
+
+*F8*
+	Show/hide the vertical member list.
+
 # COMMANDS
 
 If you type and send a message that starts with a slash (*/*), it will instead
