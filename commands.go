@@ -597,6 +597,9 @@ func commandDoSearch(app *App, args []string) (err error) {
 	if s == nil {
 		return errOffline
 	}
+	if !s.HasCapability("soju.im/search") {
+		return errors.New("server does not support searching")
+	}
 	s.Search(channel, text)
 	return nil
 }
