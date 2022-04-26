@@ -430,7 +430,7 @@ func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 	for i := len(b.lines) - 1; i >= 0; i-- {
 		line := &b.lines[i]
 		if line.Readable {
-			if line.At.After(timestamp) {
+			if !line.At.After(timestamp) {
 				b.highlights = 0
 				b.unread = false
 			}
