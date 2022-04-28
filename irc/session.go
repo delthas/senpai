@@ -1402,6 +1402,11 @@ func (s *Session) newMessageEvent(msg Message) (ev MessageEvent, err error) {
 		Time:    msg.TimeOrNow(),
 	}
 
+	if s.IsMe(target) {
+		if context := msg.Tags["+draft/channel-context"]; context != "" {
+			target = context
+		}
+	}
 	targetCf := s.Casemap(target)
 	if c, ok := s.channels[targetCf]; ok {
 		ev.Target = c.Name
