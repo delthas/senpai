@@ -20,7 +20,7 @@ doc/senpai.5: doc/senpai.5.scd
 
 clean:
 	$(RM) -rf senpai doc/senpai.1 doc/senpai.5
-install: all
+install:
 	mkdir -p $(DESTDIR)$(PREFIX)/$(BINDIR)
 	mkdir -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
 	mkdir -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
