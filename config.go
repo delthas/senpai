@@ -216,8 +216,11 @@ func unmarshal(filename string, cfg *Config) (err error) {
 					if err != nil {
 						return err
 					}
-					if channels == 0 {
+					if channels <= 0 {
 						cfg.ChanColEnabled = false
+						if channels < 0 {
+							cfg.ChanColWidth = -channels
+						}
 					} else {
 						cfg.ChanColWidth = channels
 					}
@@ -230,8 +233,11 @@ func unmarshal(filename string, cfg *Config) (err error) {
 					if err != nil {
 						return err
 					}
-					if members == 0 {
+					if members <= 0 {
 						cfg.MemberColEnabled = false
+						if members < 0 {
+							cfg.MemberColWidth = -members
+						}
 					} else {
 						cfg.MemberColWidth = members
 					}

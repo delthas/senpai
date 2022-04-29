@@ -116,10 +116,14 @@ pane-widths {
 	*channels*
 		The number of cells that the column for channels occupies on screen.
 		By default, 16. Use special value 0 to make the channel list horizontal.
+		If the value is negative, the channel list will be horizontal by default
+		and will take the positive (opposite) width value when toggled with F7.
 
 	*members*
 		The number of cells that that the column for the list of channel members
 		occupies on screen. By default, 16. Use special value 0 to disable.
+		If the value is negative, the member list will be disabled by default
+		and will take the positive (opposite) width value when toggled with F8.
 
 *tls*
 	Enable TLS encryption.  Defaults to true.
