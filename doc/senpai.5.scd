@@ -111,15 +111,15 @@ pane-widths {
 
 	*nicknames*
 		The number of cells that the column for nicknames occupies in the
-		timeline. By default, 16.
+		timeline. By default, 14.
 
 	*channels*
-		Make the channel list vertical, with a width equals to the given amount
-		of cells.  By default, the channel list is horizontal.
+		The number of cells that the column for channels occupies on screen.
+		By default, 16. Use special value 0 to make the channel list horizontal.
 
 	*members*
-		Show the list of channel members on the right of the screen, with a
-		width equals to the given amount of cells.
+		The number of cells that that the column for the list of channel members
+		occupies on screen. By default, 16. Use special value 0 to disable.
 
 *tls*
 	Enable TLS encryption.  Defaults to true.
