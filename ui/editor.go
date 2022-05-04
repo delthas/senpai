@@ -490,6 +490,10 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 		if i == autoStart {
 			autoX = x
 		}
+		if r == '\n' {
+			r = '↲'
+			s = s.Background(tcell.ColorRed).Foreground(tcell.ColorBlack)
+		}
 		screen.SetContent(x, y, r, nil, s)
 		x += runeWidth(r)
 		i++
