@@ -645,6 +645,7 @@ func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, widt
 	x = x0
 
 	for i, b := range bs.list[*offset:] {
+		i := i + *offset
 		if width <= x-x0 {
 			break
 		}
