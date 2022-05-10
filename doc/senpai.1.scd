@@ -76,6 +76,12 @@ senpai eats these events for eg selecting channels.*
 
 # KEYBOARD SHORTCUTS
 
+*CTRL-A*
+	Move the cursor to the beginning of the input field.
+
+*CTRL-E*
+	Move the cursor to the end of the input field.
+
 *CTRL-C*
 	Clear input line.
 

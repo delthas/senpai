@@ -571,6 +571,10 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		} else {
 			app.win.InputSet("/quit")
 		}
+	case tcell.KeyCtrlA:
+		app.win.InputHome()
+	case tcell.KeyCtrlE:
+		app.win.InputEnd()
 	case tcell.KeyCtrlL:
 		app.win.Resize()
 	case tcell.KeyCtrlU, tcell.KeyPgUp:
