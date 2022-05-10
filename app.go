@@ -470,7 +470,7 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 				app.win.GoToBufferNo(i)
 			}
 		} else if app.win.ChannelWidth() == 0 && y == h-1 {
-			if i := app.win.HorizontalBufferOffset(x); i == app.win.ClickedBuffer() {
+			if i := app.win.HorizontalBufferOffset(x); i >= 0 && i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
 			}
 		} else if x > w-app.win.MemberWidth() {
