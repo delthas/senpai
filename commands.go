@@ -17,6 +17,8 @@ var (
 	errOffline = fmt.Errorf("you are disconnected from the server, retry later")
 )
 
+const maxArgsInfinite = -1
+
 type command struct {
 	AllowHome bool
 	MinArgs   int
@@ -77,9 +79,8 @@ func init() {
 		},
 		"MODE": {
 			AllowHome: true,
-			MinArgs:   1,
-			MaxArgs:   5, // <channel> <flags> <limit> <user> <ban mask>
-			Usage:     "[<nick/channel>] <flags> [args]",
+			MaxArgs:   maxArgsInfinite,
+			Usage:     "[<nick/channel>] [<flags>] [args]",
 			Desc:      "change channel or user modes",
 			Handle:    commandDoMode,
 		},
@@ -382,28 +383,23 @@ func commandDoNick(app *App, args []string) (err error) {
 }
 
 func commandDoMode(app *App, args []string) (err error) {
-	hasModePrefix := strings.HasPrefix(args[0], "+") || strings.HasPrefix(args[0], "-")
-	hasChanPrefix := strings.HasPrefix(args[0], "#")
-
-	if !hasModePrefix && !hasChanPrefix {
-		return errors.New("invalid argument")
+	_, target := app.win.CurrentBuffer()
+	if len(args) > 0 && !strings.HasPrefix(args[0], "+") && !strings.HasPrefix(args[0], "-") {
+		target = args[0]
+		args = args[1:]
 	}
-
-	if hasModePrefix {
-		// if we do eg /MODE +P, automatically insert the current channel: /MODE #<current-chan> +P
-		_, channel := app.win.CurrentBuffer()
-		args = append([]string{channel}, args...)
+	flags := ""
+	if len(args) > 0 {
+		flags = args[0]
+		args = args[1:]
 	}
-
-	channel := args[0]
-	flags := args[1]
-	modeArgs := args[2:]
+	modeArgs := args
 
 	s := app.CurrentSession()
 	if s == nil {
 		return errOffline
 	}
-	s.ChangeMode(channel, flags, modeArgs)
+	s.ChangeMode(target, flags, modeArgs)
 	return nil
 }
 
@@ -613,7 +609,9 @@ func fieldsN(s string, n int) []string {
 	if n == 1 {
 		return []string{s}
 	}
-	n--
+	if n == maxArgsInfinite {
+		n--
+	}
 	// Start of the ASCII fast path.
 	var a []string
 	na := 0
@@ -637,7 +635,7 @@ func fieldsN(s string, n int) []string {
 			i++
 		}
 		fieldStart = i
-		if n <= na {
+		if n != maxArgsInfinite && n <= na {
 			a = append(a, s[fieldStart:])
 			return a
 		}

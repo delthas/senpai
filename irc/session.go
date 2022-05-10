@@ -359,7 +359,11 @@ func (s *Session) ChangeNick(nick string) {
 }
 
 func (s *Session) ChangeMode(channel, flags string, args []string) {
-	args = append([]string{channel, flags}, args...)
+	if flags != "" {
+		args = append([]string{channel, flags}, args...)
+	} else {
+		args = append([]string{channel}, args...)
+	}
 	s.out <- NewMessage("MODE", args...)
 }
 
