@@ -122,7 +122,7 @@ func (e *Editor) RemRune() (ok bool) {
 	e.left()
 	e.autoCache = nil
 	if e.backsearch {
-		if e.TextLen() == 0 {
+		if e.TextLen() == 0 || len(e.backsearchPattern) == 0 {
 			e.backsearchEnd()
 		} else {
 			e.backsearchPattern = e.backsearchPattern[:len(e.backsearchPattern)-1]
