@@ -16,6 +16,11 @@ type Editor struct {
 	// text contains the written runes. An empty slice means no text is written.
 	text [][]rune
 
+	// history contains the original content of each previously sent message.
+	// It gets out of sync with text when history is modified à la readline,
+	// then overwrites text when a new message is added.
+	history [][]rune
+
 	lineIdx int
 
 	// textWidth[i] contains the width of string(text[:i]). Therefore
@@ -40,7 +45,10 @@ type Editor struct {
 
 	backsearch        bool
 	backsearchPattern []rune // pre-lowercased
-	backsearchIdx     int
+
+	// oldest (lowest) index in text of lines that were changed.
+	// used as an optimization to reduce copying when flushing lines.
+	oldestTextChange int
 }
 
 // NewEditor returns a new Editor.
@@ -48,6 +56,7 @@ type Editor struct {
 func NewEditor(autoComplete func(cursorIdx int, text []rune) []Completion) Editor {
 	return Editor{
 		text:         [][]rune{{}},
+		history:      [][]rune{},
 		textWidth:    []int{0},
 		autoComplete: autoComplete,
 	}
@@ -89,11 +98,7 @@ func (e *Editor) PutRune(r rune) {
 		wasEmpty := len(e.backsearchPattern) == 0
 		e.backsearchPattern = append(e.backsearchPattern, lowerRune)
 		if wasEmpty {
-			clearLine := e.lineIdx == len(e.text)-1
 			e.backsearchUpdate(e.lineIdx - 1)
-			if clearLine && e.lineIdx < len(e.text)-1 {
-				e.text = e.text[:len(e.text)-1]
-			}
 		} else {
 			e.backsearchUpdate(e.lineIdx)
 		}
@@ -104,6 +109,7 @@ func (e *Editor) putRune(r rune) {
 	e.text[e.lineIdx] = append(e.text[e.lineIdx], ' ')
 	copy(e.text[e.lineIdx][e.cursorIdx+1:], e.text[e.lineIdx][e.cursorIdx:])
 	e.text[e.lineIdx][e.cursorIdx] = r
+	e.bumpOldestChange()
 
 	rw := runeWidth(r)
 	tw := e.textWidth[len(e.textWidth)-1]
@@ -154,6 +160,8 @@ func (e *Editor) remRuneAt(idx int) {
 
 	copy(e.text[e.lineIdx][idx:], e.text[e.lineIdx][idx+1:])
 	e.text[e.lineIdx] = e.text[e.lineIdx][:len(e.text[e.lineIdx])-1]
+
+	e.bumpOldestChange()
 }
 
 func (e *Editor) RemWord() (ok bool) {
@@ -186,20 +194,29 @@ func (e *Editor) RemWord() (ok bool) {
 	return
 }
 
-func (e *Editor) Flush() (content string) {
-	content = string(e.text[e.lineIdx])
-	if len(e.text[len(e.text)-1]) == 0 {
-		e.lineIdx = len(e.text) - 1
-	} else {
-		e.lineIdx = len(e.text)
-		e.text = append(e.text, []rune{})
+func (e *Editor) Flush() string {
+	content := string(e.text[e.lineIdx])
+	if len(content) > 0 {
+		// intended []rune -> string -> []rune conversion to make copies
+		e.history = append(e.history, []rune(content))
 	}
+	for i, line := range e.history[e.oldestTextChange:] {
+		i := i + e.oldestTextChange
+		e.text[i] = append(e.text[i][:0], line...)
+	}
+	if len(content) > 0 {
+		e.text = append(e.text, []rune{})
+	} else {
+		e.text[len(e.text)-1] = []rune{}
+	}
+	e.lineIdx = len(e.text) - 1
 	e.textWidth = e.textWidth[:1]
 	e.cursorIdx = 0
 	e.offsetIdx = 0
 	e.autoCache = nil
 	e.backsearchEnd()
-	return
+	e.oldestTextChange = len(e.text) - 1
+	return content
 }
 
 func (e *Editor) Clear() bool {
@@ -207,6 +224,7 @@ func (e *Editor) Clear() bool {
 		return false
 	}
 	e.text[e.lineIdx] = []rune{}
+	e.bumpOldestChange()
 	e.textWidth = e.textWidth[:1]
 	e.cursorIdx = 0
 	e.offsetIdx = 0
@@ -217,6 +235,7 @@ func (e *Editor) Clear() bool {
 func (e *Editor) Set(text string) {
 	r := []rune(text)
 	e.text[e.lineIdx] = r
+	e.bumpOldestChange()
 	e.cursorIdx = len(r)
 	e.computeTextWidth()
 	e.offsetIdx = 0
@@ -335,9 +354,6 @@ func (e *Editor) Up() {
 
 func (e *Editor) Down() {
 	if e.lineIdx == len(e.text)-1 {
-		if len(e.text[e.lineIdx]) == 0 {
-			return
-		}
 		e.Flush()
 		return
 	}
@@ -363,6 +379,7 @@ func (e *Editor) AutoComplete(offset int) (ok bool) {
 	}
 
 	e.text[e.lineIdx] = e.autoCache[e.autoCacheIdx].Text
+	e.bumpOldestChange()
 	e.cursorIdx = e.autoCache[e.autoCacheIdx].CursorIdx
 	e.computeTextWidth()
 	if len(e.textWidth) <= e.offsetIdx {
@@ -377,16 +394,11 @@ func (e *Editor) AutoComplete(offset int) (ok bool) {
 }
 
 func (e *Editor) BackSearch() {
-	clearLine := false
 	if !e.backsearch {
 		e.backsearch = true
 		e.backsearchPattern = []rune(strings.ToLower(string(e.text[e.lineIdx])))
-		clearLine = e.lineIdx == len(e.text)-1
 	}
 	e.backsearchUpdate(e.lineIdx - 1)
-	if clearLine && e.lineIdx < len(e.text)-1 {
-		e.text = e.text[:len(e.text)-1]
-	}
 }
 
 func (e *Editor) backsearchUpdate(start int) {
@@ -419,6 +431,13 @@ func (e *Editor) computeTextWidth() {
 	for _, r := range e.text[e.lineIdx] {
 		rw += runeWidth(r)
 		e.textWidth = append(e.textWidth, rw)
+	}
+}
+
+// call this everytime e.text is modified
+func (e *Editor) bumpOldestChange() {
+	if e.oldestTextChange > e.lineIdx {
+		e.oldestTextChange = e.lineIdx
 	}
 }
 
