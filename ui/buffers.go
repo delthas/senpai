@@ -607,14 +607,7 @@ func (bs *BufferList) HorizontalBufferOffset(x int, offset int) int {
 				return -1
 			}
 		}
-		if b.title == "" {
-			x -= stringWidth(b.netName)
-		} else {
-			x -= stringWidth(b.title)
-		}
-		if 0 < b.highlights {
-			x -= 2 + len(fmt.Sprintf("%d", b.highlights))
-		}
+		x -= bufferWidth(&b)
 		if x < 0 {
 			return offset + i
 		}
@@ -622,19 +615,42 @@ func (bs *BufferList) HorizontalBufferOffset(x int, offset int) int {
 	return -1
 }
 
+func (bs *BufferList) GetLeftMost(screenWidth int) int {
+	width := 0
+	var leftMost int
+
+	for leftMost = bs.current; leftMost >= 0; leftMost-- {
+		if leftMost < bs.current {
+			width++
+		}
+		width += bufferWidth(&bs.list[leftMost])
+		if width > screenWidth {
+			return leftMost + 1 // Went offscreen, need to go one step back
+		}
+	}
+
+	return 0
+}
+
+func bufferWidth(b *buffer) int {
+	width := 0
+	if b.title == "" {
+		width += stringWidth(b.netName)
+	} else {
+		width += stringWidth(b.title)
+	}
+	if 0 < b.highlights {
+		width += 2 + len(fmt.Sprintf("%d", b.highlights))
+	}
+	return width
+}
+
 func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, width int, offset *int) {
 	x := width
 	for i := len(bs.list) - 1; i >= 0; i-- {
 		b := &bs.list[i]
 		x--
-		if b.title == "" {
-			x -= stringWidth(b.netName)
-		} else {
-			x -= stringWidth(b.title)
-		}
-		if 0 < b.highlights {
-			x -= 2 + len(fmt.Sprintf("%d", b.highlights))
-		}
+		x -= bufferWidth(b)
 		if x <= 10 {
 			break
 		}

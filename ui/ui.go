@@ -452,6 +452,22 @@ func (ui *UI) Draw(members []irc.Member) {
 	ui.screen.Show()
 }
 
+func (ui *UI) HorizontalBufferScrollTo() {
+	w, _ := ui.screen.Size()
+	screenWidth := w - ui.memberWidth
+	if ui.bs.current < ui.channelOffset {
+		ui.channelOffset = ui.bs.current
+		return
+	}
+
+	leftMost := ui.bs.GetLeftMost(screenWidth)
+
+	if ui.channelOffset >= leftMost {
+		return
+	}
+	ui.channelOffset = leftMost
+}
+
 func (ui *UI) drawStatusBar(x0, y, width int) {
 	clearArea(ui.screen, x0, y, width, 1)
 

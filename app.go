@@ -514,8 +514,10 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		app.win.ScrollDown()
 	case tcell.KeyCtrlN:
 		app.win.NextBuffer()
+		app.win.HorizontalBufferScrollTo()
 	case tcell.KeyCtrlP:
 		app.win.PreviousBuffer()
+		app.win.HorizontalBufferScrollTo()
 	case tcell.KeyRight:
 		if ev.Modifiers() == tcell.ModAlt {
 			app.win.NextBuffer()
