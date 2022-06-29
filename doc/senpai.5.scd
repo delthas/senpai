@@ -44,7 +44,7 @@ Some settings are required, the others are optional.
 	used for login.
 
 *channel*
-	A spaced separated list of channel names that senpai will automatically join
+	A space separated list of channel names that senpai will automatically join
 	at startup and server reconnect. This directive can be specified multiple
 	times.
 
@@ -54,6 +54,10 @@ Some settings are required, the others are optional.
 	multiple times.
 
 	By default, senpai will use your current nickname.
+
+*on-highlight-beep*
+	Enable sending the bell character (BEL) when you are highlighted.
+	Defaults to disabled.
 
 *on-highlight-path*
 	Alternative path to a shell script to be executed when you are highlighted.

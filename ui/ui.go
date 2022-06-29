@@ -421,6 +421,10 @@ func (ui *UI) Size() (int, int) {
 	return ui.screen.Size()
 }
 
+func (ui *UI) Beep() {
+	ui.screen.Beep()
+}
+
 func (ui *UI) Draw(members []irc.Member) {
 	w, h := ui.screen.Size()
 

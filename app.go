@@ -978,6 +978,10 @@ func (app *App) isHighlight(s *irc.Session, content string) bool {
 // notifyHighlight executes the script at "on-highlight-path" according to the given
 // message context.
 func (app *App) notifyHighlight(buffer, nick, content string) {
+	if app.cfg.OnHighlightBeep {
+		app.win.Beep()
+	}
+
 	path := app.cfg.OnHighlightPath
 	if path == "" {
 		defaultHighlightPath, err := DefaultHighlightPath()

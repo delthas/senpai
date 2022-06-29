@@ -63,6 +63,7 @@ type Config struct {
 
 	Highlights       []string
 	OnHighlightPath  string
+	OnHighlightBeep  bool
 	NickColWidth     int
 	ChanColWidth     int
 	ChanColEnabled   bool
@@ -96,6 +97,7 @@ func Defaults() (cfg Config, err error) {
 		Mouse:            true,
 		Highlights:       nil,
 		OnHighlightPath:  "",
+		OnHighlightBeep:  false,
 		NickColWidth:     14,
 		ChanColWidth:     16,
 		ChanColEnabled:   true,
@@ -195,6 +197,15 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			cfg.Highlights = append(cfg.Highlights, d.Params...)
 		case "on-highlight-path":
 			if err := d.ParseParams(&cfg.OnHighlightPath); err != nil {
+				return err
+			}
+		case "on-highlight-beep":
+			var onHighlightBeep string
+			if err := d.ParseParams(&onHighlightBeep); err != nil {
+				return err
+			}
+
+			if cfg.OnHighlightBeep, err = strconv.ParseBool(onHighlightBeep); err != nil {
 				return err
 			}
 		case "pane-widths":
