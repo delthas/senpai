@@ -564,6 +564,10 @@ func (s *Session) NewHistoryRequest(target string) *HistoryRequest {
 	}
 }
 
+func (s *Session) Whois(nick string) {
+	s.out <- NewMessage("WHOIS", nick)
+}
+
 func (s *Session) Invite(nick, channel string) {
 	s.out <- NewMessage("INVITE", nick, channel)
 }

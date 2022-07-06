@@ -136,6 +136,14 @@ func init() {
 			Desc:      "switch to the buffer containing a substring",
 			Handle:    commandDoBuffer,
 		},
+		"WHOIS": {
+			AllowHome: false,
+			MinArgs:   0,
+			MaxArgs:   1,
+			Usage:     "<nick>",
+			Desc:      "get information about someone",
+			Handle:    commandDoWhois,
+		},
 		"INVITE": {
 			AllowHome: true,
 			MinArgs:   1,
@@ -511,6 +519,25 @@ func commandDoTopic(app *App, args []string) (err error) {
 	if !ok {
 		return errOffline
 	}
+	return nil
+}
+
+func commandDoWhois(app *App, args []string) (err error) {
+	netID, channel := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	var nick string
+	if len(args) == 0 {
+		if s.IsChannel(channel) {
+			return fmt.Errorf("either send this command from a DM, or specify the user")
+		}
+		nick = channel
+	} else {
+		nick = args[0]
+	}
+	s.Whois(nick)
 	return nil
 }
 
