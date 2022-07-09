@@ -64,8 +64,8 @@ var SupportedCapabilities = map[string]struct{}{
 
 	"draft/chathistory":        {},
 	"draft/event-playback":     {},
+	"draft/read-marker":        {},
 	"soju.im/bouncer-networks": {},
-	"soju.im/read":             {},
 	"soju.im/search":           {},
 }
 
@@ -463,14 +463,14 @@ func (s *Session) TypingStop(target string) {
 }
 
 func (s *Session) ReadGet(target string) {
-	if _, ok := s.enabledCaps["soju.im/read"]; ok {
-		s.out <- NewMessage("READ", target)
+	if _, ok := s.enabledCaps["draft/read-marker"]; ok {
+		s.out <- NewMessage("MARKREAD", target)
 	}
 }
 
 func (s *Session) ReadSet(target string, timestamp time.Time) {
-	if _, ok := s.enabledCaps["soju.im/read"]; ok {
-		s.out <- NewMessage("READ", target, formatTimestamp(timestamp))
+	if _, ok := s.enabledCaps["draft/read-marker"]; ok {
+		s.out <- NewMessage("MARKREAD", target, formatTimestamp(timestamp))
 	}
 }
 
@@ -1308,7 +1308,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				Time:       msg.TimeOrNow(),
 			}, nil
 		}
-	case "READ":
+	case "MARKREAD":
 		if len(msg.Params) < 2 {
 			break
 		}
