@@ -636,9 +636,6 @@ func fieldsN(s string, n int) []string {
 	if n == 1 {
 		return []string{s}
 	}
-	if n == maxArgsInfinite {
-		n--
-	}
 	// Start of the ASCII fast path.
 	var a []string
 	na := 0
@@ -662,7 +659,7 @@ func fieldsN(s string, n int) []string {
 			i++
 		}
 		fieldStart = i
-		if n != maxArgsInfinite && n <= na {
+		if n != maxArgsInfinite && na+1 >= n {
 			a = append(a, s[fieldStart:])
 			return a
 		}
