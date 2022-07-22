@@ -400,6 +400,9 @@ func (ui *UI) InputBackSearch() {
 func (ui *UI) Resize() {
 	w, h := ui.screen.Size()
 	innerWidth := w - 9 - ui.channelWidth - ui.config.NickColWidth - ui.memberWidth
+	if innerWidth <= 0 {
+		innerWidth = 1 // will break display somewhat, but this is an edge case
+	}
 	ui.e.Resize(innerWidth)
 	if ui.channelWidth == 0 {
 		ui.bs.ResizeTimeline(innerWidth, h-3)
