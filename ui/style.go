@@ -231,6 +231,40 @@ func parseColor(raw string) (fg, bg tcell.Color, n int) {
 	return fg, bg, n
 }
 
+func parseHexColorNumber(raw string) (color tcell.Color, n int) {
+	if len(raw) < 6 {
+		return
+	}
+	if raw[0] == '+' || raw[0] == '-' {
+		return
+	}
+	value, err := strconv.ParseInt(raw[:6], 16, 32)
+	if err != nil {
+		return
+	}
+	return tcell.NewHexColor(int32(value)), 6
+}
+
+func parseHexColor(raw string) (fg, bg tcell.Color, n int) {
+	fg, n = parseHexColorNumber(raw)
+	raw = raw[n:]
+
+	if len(raw) == 0 || raw[0] != ',' {
+		return fg, tcell.ColorDefault, n
+	}
+
+	n++
+	bg, p := parseHexColorNumber(raw[1:])
+	n += p
+
+	if bg == tcell.ColorDefault {
+		// Lone comma, do not parse as part of a color code.
+		return fg, tcell.ColorDefault, n - 1
+	}
+
+	return fg, bg, n
+}
+
 func IRCString(raw string) StyledString {
 	var formatted strings.Builder
 	var styles []rangedStyle
@@ -248,8 +282,15 @@ func IRCString(raw string) StyledString {
 		} else if r == 0x02 {
 			lastWasBold := lastAttrs&tcell.AttrBold != 0
 			current = last.Bold(!lastWasBold)
-		} else if r == 0x03 {
-			fg, bg, n := parseColor(raw[1:])
+		} else if r == 0x03 || r == 0x04 {
+			var fg tcell.Color
+			var bg tcell.Color
+			var n int
+			if r == 0x03 {
+				fg, bg, n = parseColor(raw[1:])
+			} else {
+				fg, bg, n = parseHexColor(raw[1:])
+			}
 			raw = raw[n:]
 			if n == 0 {
 				// Both `fg` and `bg` are equal to
