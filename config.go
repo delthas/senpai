@@ -68,6 +68,7 @@ type Config struct {
 	ChanColEnabled   bool
 	MemberColWidth   int
 	MemberColEnabled bool
+	TextMaxWidth     int
 
 	Colors ConfigColors
 
@@ -100,6 +101,7 @@ func Defaults() (cfg Config, err error) {
 		ChanColEnabled:   true,
 		MemberColWidth:   16,
 		MemberColEnabled: true,
+		TextMaxWidth:     0,
 		Colors: ConfigColors{
 			Prompt: tcell.ColorDefault,
 			Unread: tcell.ColorDefault,
@@ -240,6 +242,15 @@ func unmarshal(filename string, cfg *Config) (err error) {
 						}
 					} else {
 						cfg.MemberColWidth = members
+					}
+				case "text":
+					var text string
+					if err := child.ParseParams(&text); err != nil {
+						return err
+					}
+
+					if cfg.TextMaxWidth, err = strconv.Atoi(text); err != nil {
+						return err
 					}
 				default:
 					return fmt.Errorf("unknown directive %q", child.Name)

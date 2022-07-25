@@ -205,6 +205,7 @@ type BufferList struct {
 
 	tlInnerWidth int
 	tlHeight     int
+	textWidth    int
 
 	showBufferNumbers bool
 
@@ -222,9 +223,10 @@ func NewBufferList(colors ConfigColors, mergeLine func(*Line, Line)) BufferList 
 	}
 }
 
-func (bs *BufferList) ResizeTimeline(tlInnerWidth, tlHeight int) {
+func (bs *BufferList) ResizeTimeline(tlInnerWidth, tlHeight, textWidth int) {
 	bs.tlInnerWidth = tlInnerWidth
 	bs.tlHeight = tlHeight - 2
+	bs.textWidth = textWidth
 }
 
 func (bs *BufferList) OpenOverlay() {
@@ -374,7 +376,7 @@ func (bs *BufferList) AddLine(netID, title string, notify NotifyType, line Line)
 		line.computeSplitPoints()
 		b.lines = append(b.lines, line)
 		if b == current && 0 < b.scrollAmt {
-			b.scrollAmt += len(line.NewLines(bs.tlInnerWidth)) + 1
+			b.scrollAmt += len(line.NewLines(bs.textWidth)) + 1
 		}
 	}
 
@@ -451,7 +453,7 @@ func (bs *BufferList) UpdateRead() (netID, title string, timestamp time.Time) {
 		if y >= b.scrollAmt && line.Readable {
 			break
 		}
-		y += len(line.NewLines(bs.tlInnerWidth)) + 1
+		y += len(line.NewLines(bs.textWidth)) + 1
 	}
 	if line != nil && line.At.After(b.read) {
 		b.read = line.At
@@ -492,7 +494,7 @@ func (bs *BufferList) ScrollUpHighlight() bool {
 			b.scrollAmt = y - bs.tlHeight + 1
 			return true
 		}
-		y += len(line.NewLines(bs.tlInnerWidth)) + 1
+		y += len(line.NewLines(bs.textWidth)) + 1
 	}
 	return false
 }
@@ -506,7 +508,7 @@ func (bs *BufferList) ScrollDownHighlight() bool {
 		if line.Highlight {
 			yLastHighlight = y
 		}
-		y += len(line.NewLines(bs.tlInnerWidth)) + 1
+		y += len(line.NewLines(bs.textWidth)) + 1
 	}
 	b.scrollAmt = yLastHighlight
 	return b.scrollAmt != 0
@@ -722,6 +724,10 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 	}
 	y0++
 
+	if bs.textWidth < bs.tlInnerWidth {
+		x0 += (bs.tlInnerWidth - bs.textWidth) / 2
+	}
+
 	yi := b.scrollAmt + y0 + bs.tlHeight
 	for i := len(b.lines) - 1; 0 <= i; i-- {
 		if yi < y0 {
@@ -731,7 +737,7 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 		x1 := x0 + 9 + nickColWidth
 
 		line := &b.lines[i]
-		nls := line.NewLines(bs.tlInnerWidth)
+		nls := line.NewLines(bs.textWidth)
 		yi -= len(nls) + 1
 		if y0+bs.tlHeight <= yi {
 			continue

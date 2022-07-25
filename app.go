@@ -127,6 +127,7 @@ func NewApp(cfg Config) (app *App, err error) {
 		ChanColEnabled:   cfg.ChanColEnabled,
 		MemberColWidth:   cfg.MemberColWidth,
 		MemberColEnabled: cfg.MemberColEnabled,
+		TextMaxWidth:     cfg.TextMaxWidth,
 		AutoComplete: func(cursorIdx int, text []rune) []ui.Completion {
 			return app.completions(cursorIdx, text)
 		},

@@ -125,6 +125,11 @@ pane-widths {
 		If the value is negative, the member list will be disabled by default
 		and will take the positive (opposite) width value when toggled with F8.
 
+	*text*
+		The maximum message text line width for messages, in number of cells.
+		By default, the value is zero, which means that there is no maximum.
+		Useful for keeping a readable line width on large screens.
+
 *tls*
 	Enable TLS encryption.  Defaults to true.
 

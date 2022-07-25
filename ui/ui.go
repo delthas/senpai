@@ -16,6 +16,7 @@ type Config struct {
 	ChanColEnabled   bool
 	MemberColWidth   int
 	MemberColEnabled bool
+	TextMaxWidth     int
 	AutoComplete     func(cursorIdx int, text []rune) []Completion
 	Mouse            bool
 	MergeLine        func(former *Line, addition Line)
@@ -404,10 +405,14 @@ func (ui *UI) Resize() {
 		innerWidth = 1 // will break display somewhat, but this is an edge case
 	}
 	ui.e.Resize(innerWidth)
+	textWidth := innerWidth
+	if ui.config.TextMaxWidth > 0 && ui.config.TextMaxWidth < textWidth {
+		textWidth = ui.config.TextMaxWidth
+	}
 	if ui.channelWidth == 0 {
-		ui.bs.ResizeTimeline(innerWidth, h-3)
+		ui.bs.ResizeTimeline(innerWidth, h-3, textWidth)
 	} else {
-		ui.bs.ResizeTimeline(innerWidth, h-2)
+		ui.bs.ResizeTimeline(innerWidth, h-2, textWidth)
 	}
 	ui.screen.Sync()
 }
