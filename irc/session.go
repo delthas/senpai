@@ -1373,6 +1373,8 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}, nil
 	case errMonlistisfull:
 		// silence monlist full error, we don't care because we do it best-effort
+	case rplAway:
+		// we display user away status, we don't care about automatic AWAY replies
 	default:
 		if msg.IsReply() {
 			if len(msg.Params) < 2 {
