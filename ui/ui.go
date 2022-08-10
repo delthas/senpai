@@ -552,7 +552,8 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 		if m.Away {
 			name = Styled(nameText, tcell.StyleDefault.Foreground(tcell.ColorGray).Reverse(reverse))
 		} else {
-			name = Styled(nameText, tcell.StyleDefault.Reverse(reverse))
+			color := IdentColor(m.Name.Name)
+			name = Styled(nameText, tcell.StyleDefault.Foreground(color).Reverse(reverse))
 		}
 
 		printString(screen, &x, y, name)

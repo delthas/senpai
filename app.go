@@ -1259,7 +1259,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	if isAction || isNotice {
 		head = "*"
 	} else {
-		headColor = identColor(head)
+		headColor = ui.IdentColor(head)
 	}
 
 	content := strings.TrimSuffix(ev.Content, "\x01")
@@ -1269,14 +1269,14 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	}
 	var body ui.StyledStringBuilder
 	if isNotice {
-		color := identColor(ev.User)
+		color := ui.IdentColor(ev.User)
 		body.SetStyle(tcell.StyleDefault.Foreground(color))
 		body.WriteString(ev.User)
 		body.SetStyle(tcell.StyleDefault)
 		body.WriteString(": ")
 		body.WriteStyledString(ui.IRCString(content))
 	} else if isAction {
-		color := identColor(ev.User)
+		color := ui.IdentColor(ev.User)
 		body.SetStyle(tcell.StyleDefault.Foreground(color))
 		body.WriteString(ev.User)
 		body.SetStyle(tcell.StyleDefault)
@@ -1416,7 +1416,7 @@ func (app *App) updatePrompt() {
 				Foreground(tcell.ColorRed),
 		)
 	} else {
-		prompt = identString(s.Nick())
+		prompt = ui.IdentString(s.Nick())
 	}
 	app.win.SetPrompt(prompt)
 }

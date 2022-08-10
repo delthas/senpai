@@ -1,12 +1,10 @@
 package senpai
 
 import (
-	"hash/fnv"
 	"strings"
 	"time"
 
 	"git.sr.ht/~taiite/senpai/ui"
-	"github.com/gdamore/tcell/v2"
 )
 
 const welcomeMessage = "senpai dev build. See senpai(1) for a list of keybindings and commands."
@@ -85,16 +83,4 @@ func (app *App) setBufferNumbers() {
 	command := string(input[1:commandEnd])
 	showBufferNumbers := len(command) != 0 && strings.HasPrefix("buffer", command)
 	app.win.ShowBufferNumbers(showBufferNumbers)
-}
-
-func identColor(ident string) tcell.Color {
-	h := fnv.New32()
-	_, _ = h.Write([]byte(ident))
-	return tcell.Color((h.Sum32()%15)+1) + tcell.ColorValid
-}
-
-func identString(ident string) ui.StyledString {
-	color := identColor(ident)
-	style := tcell.StyleDefault.Foreground(color)
-	return ui.Styled(ident, style)
 }
