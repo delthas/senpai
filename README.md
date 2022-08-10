@@ -1,6 +1,8 @@
 # NOTICE me :senpai!
 
-Welcome home, desune~
+*Welcome home, desune~*
+
+**A modern terminal IRC client.**
 
 ![a screenshot of your senpai feat. simon!](https://taiite.srht.site/senpai.png)
 
