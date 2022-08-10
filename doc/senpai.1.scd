@@ -63,6 +63,12 @@ of messages are in the timeline:
 - Notices are shown with an asterisk (*\**) followed by the user nickname and a
   colon
 
+# SELECTING TEXT
+
+In order to select text with a mouse, hold SHIFT while clicking and dragging
+the mouse. *Clicking and dragging without holding SHIFT will not work, as
+senpai eats these events for eg selecting channels.*
+
 # KEYBOARD SHORTCUTS
 
 *CTRL-C*
