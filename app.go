@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -84,7 +85,7 @@ type boundKey struct {
 
 type App struct {
 	win      *ui.UI
-	sessions map[string]*irc.Session
+	sessions map[string]*irc.Session // map of network IDs to their current session
 	pasting  bool
 	events   chan event
 
@@ -99,12 +100,18 @@ type App struct {
 
 	monitor map[string]map[string]struct{} // set of targets we want to monitor per netID, best-effort. netID->target->{}
 
+	networkLock sync.RWMutex        // locks networks
+	networks    map[string]struct{} // set of network IDs we want to connect to; to be locked with networkLock
+
 	lastMessageTime time.Time
 	lastCloseTime   time.Time
 }
 
 func NewApp(cfg Config) (app *App, err error) {
 	app = &App{
+		networks: map[string]struct{}{
+			"": {}, // add the master network by default
+		},
 		sessions:      map[string]*irc.Session{},
 		events:        make(chan event, eventChanSize),
 		cfg:           cfg,
@@ -262,6 +269,16 @@ func (app *App) handleEvent(ev event) bool {
 	return true
 }
 
+func (app *App) wantsNetwork(netID string) bool {
+	if app.win.ShouldExit() {
+		return false
+	}
+	app.networkLock.RLock()
+	_, ok := app.networks[netID]
+	app.networkLock.RUnlock()
+	return ok
+}
+
 // ircLoop maintains a connection to the IRC server by connecting and then
 // forwarding IRC events to app.events repeatedly.
 func (app *App) ircLoop(netID string) {
@@ -279,8 +296,11 @@ func (app *App) ircLoop(netID string) {
 		NetID:    netID,
 		Auth:     auth,
 	}
-	for !app.win.ShouldExit() {
+	for app.wantsNetwork(netID) {
 		conn := app.connect(netID)
+		if conn == nil {
+			break
+		}
 		in, out := irc.ChanInOut(conn)
 		if app.cfg.Debug {
 			out = app.debugOutputMessages(netID, out)
@@ -320,7 +340,7 @@ func (app *App) ircLoop(netID string) {
 			HeadColor: tcell.ColorRed,
 			Body:      ui.PlainString("Connection lost"),
 		})
-		if app.win.ShouldExit() {
+		if !app.wantsNetwork(netID) {
 			break
 		}
 		time.Sleep(10 * time.Second)
@@ -328,7 +348,7 @@ func (app *App) ircLoop(netID string) {
 }
 
 func (app *App) connect(netID string) net.Conn {
-	for {
+	for app.wantsNetwork(netID) {
 		app.queueStatusLine(netID, ui.Line{
 			Head: "--",
 			Body: ui.PlainSprintf("Connecting to %s...", app.cfg.Addr),
@@ -344,6 +364,7 @@ func (app *App) connect(netID string) net.Conn {
 		})
 		time.Sleep(1 * time.Minute)
 	}
+	return nil
 }
 
 func (app *App) tryConnect() (conn net.Conn, err error) {
@@ -663,6 +684,12 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if s, ok := app.sessions[netID]; ok {
 			s.Close()
 		}
+		if !app.wantsNetwork(netID) {
+			delete(app.sessions, netID)
+			delete(app.monitor, netID)
+			s.Close()
+			return
+		}
 		app.sessions[netID] = s
 		if _, ok := app.monitor[netID]; !ok {
 			app.monitor[netID] = make(map[string]struct{})
@@ -921,9 +948,26 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	case irc.ReadEvent:
 		app.win.SetRead(netID, ev.Target, ev.Timestamp)
 	case irc.BouncerNetworkEvent:
-		_, added := app.win.AddBuffer(ev.ID, ev.Name, "")
-		if added {
-			go app.ircLoop(ev.ID)
+		if !ev.Delete {
+			_, added := app.win.AddBuffer(ev.ID, ev.Name, "")
+			if added {
+				app.networkLock.Lock()
+				app.networks[ev.ID] = struct{}{}
+				app.networkLock.Unlock()
+				go app.ircLoop(ev.ID)
+			}
+		} else {
+			app.networkLock.Lock()
+			delete(app.networks, ev.ID)
+			app.networkLock.Unlock()
+			// if a session was already opened, close it now.
+			// otherwise, we'll close it when it sends a new session event.
+			if s, ok := app.sessions[ev.ID]; ok {
+				s.Close()
+				delete(app.sessions, ev.ID)
+				delete(app.monitor, ev.ID)
+			}
+			app.win.RemoveNetworkBuffers(ev.ID)
 		}
 	case irc.ErrorEvent:
 		if isBlackListed(msg.Command) {

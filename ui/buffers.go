@@ -342,6 +342,20 @@ func (bs *BufferList) Remove(netID, title string) bool {
 	return true
 }
 
+func (bs *BufferList) RemoveNetwork(netID string) {
+	for idx := 0; idx < len(bs.list); idx++ {
+		b := &bs.list[idx]
+		if b.netID != netID {
+			continue
+		}
+		bs.list = append(bs.list[:idx], bs.list[idx+1:]...)
+		if len(bs.list) <= bs.current {
+			bs.current--
+		}
+		idx--
+	}
+}
+
 func (bs *BufferList) mergeLine(former *Line, addition Line) (keepLine bool) {
 	bs.doMergeLine(former, addition)
 	if former.Body.string == "" {

@@ -62,11 +62,12 @@ var SupportedCapabilities = map[string]struct{}{
 	"sasl":          {},
 	"setname":       {},
 
-	"draft/chathistory":        {},
-	"draft/event-playback":     {},
-	"draft/read-marker":        {},
-	"soju.im/bouncer-networks": {},
-	"soju.im/search":           {},
+	"draft/chathistory":               {},
+	"draft/event-playback":            {},
+	"draft/read-marker":               {},
+	"soju.im/bouncer-networks-notify": {},
+	"soju.im/bouncer-networks":        {},
+	"soju.im/search":                  {},
 }
 
 // Values taken by the "@+typing=" client tag.  TypingUnspec means the value or
@@ -1336,11 +1337,16 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			break
 		}
 		id := msg.Params[1]
-		attrs := parseTags(msg.Params[2])
-		return BouncerNetworkEvent{
-			ID:   id,
-			Name: attrs["name"],
-		}, nil
+		event := BouncerNetworkEvent{
+			ID: id,
+		}
+		if msg.Params[2] != "*" {
+			attrs := parseTags(msg.Params[2])
+			event.Name = attrs["name"]
+		} else {
+			event.Delete = true
+		}
+		return event, nil
 	case "PING":
 		var payload string
 		if err := msg.ParseParams(&payload); err != nil {

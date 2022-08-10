@@ -104,6 +104,7 @@ type SearchEvent struct {
 }
 
 type BouncerNetworkEvent struct {
-	ID   string
-	Name string
+	ID     string
+	Name   string
+	Delete bool
 }
