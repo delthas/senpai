@@ -196,6 +196,7 @@ _name_ is matched case-insensitively.  It can be one of the following:
 
 # AUTHORS
 
-Your home-made senpai by Hubert Hirtz <hubert@hirtzfr.eu>!++
+Creator/Sensei: Hubert Hirtz <hubert@hirtzfr.eu>!++
+Current maintainer: delthas <delthas@dille.cc>.++
 Sources are available at <https://git.sr.ht/~taiite/senpai>.++
-Patches are welcome by email at <~taiite/public-inbox@lists.sr.ht>.
+Patches are welcome by email at <~delthas/senpai-dev@lists.sr.ht>.
