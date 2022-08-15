@@ -7,7 +7,7 @@ import (
 	"git.sr.ht/~taiite/senpai/ui"
 )
 
-const welcomeMessage = "senpai dev build. See senpai(1) for a list of keybindings and commands."
+const welcomeMessage = "senpai dev build. Enter /help for a list of commands."
 
 func (app *App) initWindow() {
 	app.win.AddBuffer("", "(home)", "")
