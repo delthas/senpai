@@ -25,6 +25,7 @@ type Config struct {
 
 type ConfigColors struct {
 	Unread tcell.Color
+	Nicks  ColorScheme
 }
 
 type UI struct {
@@ -552,7 +553,7 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 		if m.Away {
 			name = Styled(nameText, tcell.StyleDefault.Foreground(tcell.ColorGray).Reverse(reverse))
 		} else {
-			color := IdentColor(m.Name.Name)
+			color := IdentColor(ui.config.Colors.Nicks, m.Name.Name)
 			name = Styled(nameText, tcell.StyleDefault.Foreground(color).Reverse(reverse))
 		}
 

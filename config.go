@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"git.sr.ht/~taiite/senpai/ui"
+
 	"github.com/gdamore/tcell/v2"
 
 	"git.sr.ht/~emersion/go-scfg"
@@ -47,6 +49,7 @@ func parseColor(s string, c *tcell.Color) error {
 type ConfigColors struct {
 	Prompt tcell.Color
 	Unread tcell.Color
+	Nicks  ui.ColorScheme
 }
 
 type Config struct {
@@ -107,6 +110,7 @@ func Defaults() (cfg Config, err error) {
 		Colors: ConfigColors{
 			Prompt: tcell.ColorDefault,
 			Unread: tcell.ColorDefault,
+			Nicks:  ui.ColorSchemeBase,
 		},
 		Debug: false,
 	}
@@ -299,6 +303,19 @@ func unmarshal(filename string, cfg *Config) (err error) {
 				var colorStr string
 				if err := child.ParseParams(&colorStr); err != nil {
 					return err
+				}
+
+				switch child.Name {
+				case "nicks":
+					switch colorStr {
+					case "base":
+						cfg.Colors.Nicks = ui.ColorSchemeBase
+					case "extended":
+						cfg.Colors.Nicks = ui.ColorSchemeExtended
+					default:
+						return fmt.Errorf("unknown nick color scheme %q", colorStr)
+					}
+					continue
 				}
 
 				var color tcell.Color

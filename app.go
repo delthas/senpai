@@ -144,6 +144,7 @@ func NewApp(cfg Config) (app *App, err error) {
 		},
 		Colors: ui.ConfigColors{
 			Unread: cfg.Colors.Unread,
+			Nicks:  cfg.Colors.Nicks,
 		},
 	})
 	if err != nil {
@@ -1259,7 +1260,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	if isAction || isNotice {
 		head = "*"
 	} else {
-		headColor = ui.IdentColor(head)
+		headColor = ui.IdentColor(app.cfg.Colors.Nicks, head)
 	}
 
 	content := strings.TrimSuffix(ev.Content, "\x01")
@@ -1269,14 +1270,14 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	}
 	var body ui.StyledStringBuilder
 	if isNotice {
-		color := ui.IdentColor(ev.User)
+		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User)
 		body.SetStyle(tcell.StyleDefault.Foreground(color))
 		body.WriteString(ev.User)
 		body.SetStyle(tcell.StyleDefault)
 		body.WriteString(": ")
 		body.WriteStyledString(ui.IRCString(content))
 	} else if isAction {
-		color := ui.IdentColor(ev.User)
+		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User)
 		body.SetStyle(tcell.StyleDefault.Foreground(color))
 		body.WriteString(ev.User)
 		body.SetStyle(tcell.StyleDefault)
@@ -1416,7 +1417,7 @@ func (app *App) updatePrompt() {
 				Foreground(tcell.ColorRed),
 		)
 	} else {
-		prompt = ui.IdentString(s.Nick())
+		prompt = ui.IdentString(app.cfg.Colors.Nicks, s.Nick())
 	}
 	app.win.SetPrompt(prompt)
 }

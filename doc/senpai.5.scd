@@ -165,6 +165,8 @@ colors {
 :  color for ">"-prompt that appears in command mode
 |  unread
 :  foreground color for unread buffer names in buffer lists
+|  nicks
+:  color scheme for user nicks, either "base" (the default, 16 colors) or "extended" (256 colors)
 
 *debug*
 	Dump all sent and received data to the home buffer, useful for debugging.
