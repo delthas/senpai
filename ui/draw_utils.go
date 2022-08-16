@@ -42,6 +42,19 @@ func printNumber(screen tcell.Screen, x *int, y int, st tcell.Style, n int) {
 	printString(screen, x, y, s)
 }
 
+func printDate(screen tcell.Screen, x int, y int, st tcell.Style, t time.Time) {
+	_, m, d := t.Date()
+	d0 := rune(d/10) + '0'
+	d1 := rune(d%10) + '0'
+	m0 := rune(m/10) + '0'
+	m1 := rune(m%10) + '0'
+	screen.SetContent(x+0, y, d0, nil, st)
+	screen.SetContent(x+1, y, d1, nil, st)
+	screen.SetContent(x+2, y, '/', nil, st)
+	screen.SetContent(x+3, y, m0, nil, st)
+	screen.SetContent(x+4, y, m1, nil, st)
+}
+
 func printTime(screen tcell.Screen, x int, y int, st tcell.Style, t time.Time) {
 	hr0 := rune(t.Hour()/10) + '0'
 	hr1 := rune(t.Hour()%10) + '0'
