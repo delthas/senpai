@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/net/proxy"
 
@@ -1006,14 +1007,40 @@ func isBlackListed(command string) bool {
 	return false
 }
 
+func isWordBoundary(r rune) bool {
+	switch r {
+	case '-', '_', '|': // inspired from weechat.look.highlight_regex
+		return false
+	default:
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	}
+}
+
+func isHighlight(text, nick string) bool {
+	for {
+		i := strings.Index(text, nick)
+		if i < 0 {
+			return false
+		}
+
+		left, _ := utf8.DecodeLastRuneInString(text[:i])
+		right, _ := utf8.DecodeRuneInString(text[i+len(nick):])
+		if isWordBoundary(left) && isWordBoundary(right) {
+			return true
+		}
+
+		text = text[i+len(nick):]
+	}
+}
+
 // isHighlight reports whether the given message content is a highlight.
 func (app *App) isHighlight(s *irc.Session, content string) bool {
 	contentCf := s.Casemap(content)
 	if app.highlights == nil {
-		return strings.Contains(contentCf, s.NickCf())
+		return isHighlight(contentCf, s.NickCf())
 	}
 	for _, h := range app.highlights {
-		if strings.Contains(contentCf, s.Casemap(h)) {
+		if isHighlight(contentCf, s.Casemap(h)) {
 			return true
 		}
 	}
