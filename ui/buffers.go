@@ -757,23 +757,28 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 			continue
 		}
 
-		if yi >= y0 {
-			var showDate bool
-			if i == 0 || yi == y0 {
-				showDate = true
-			} else {
-				yb, mb, dd := b.lines[i-1].At.Local().Date()
-				ya, ma, da := b.lines[i].At.Local().Date()
-				showDate = yb != ya || mb != ma || dd != da
+		var showDate bool
+		if i == 0 || yi <= y0 {
+			showDate = true
+		} else {
+			yb, mb, dd := b.lines[i-1].At.Local().Date()
+			ya, ma, da := b.lines[i].At.Local().Date()
+			showDate = yb != ya || mb != ma || dd != da
+		}
+		if showDate {
+			st := tcell.StyleDefault.Bold(true)
+			// as a special case, always draw the first visible message date, even if it is a continuation line
+			yd := yi
+			if yd < y0 {
+				yd = y0
 			}
-			if showDate {
-				st := tcell.StyleDefault.Bold(true)
-				printDate(screen, x0, yi, st, line.At.Local())
-			} else if b.lines[i-1].At.Truncate(time.Minute) != line.At.Truncate(time.Minute) {
-				st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-				printTime(screen, x0, yi, st, line.At.Local())
-			}
+			printDate(screen, x0, yd, st, line.At.Local())
+		} else if b.lines[i-1].At.Truncate(time.Minute) != line.At.Truncate(time.Minute) && yi >= y0 {
+			st := tcell.StyleDefault.Foreground(tcell.ColorGray)
+			printTime(screen, x0, yi, st, line.At.Local())
+		}
 
+		if yi >= y0 {
 			identSt := tcell.StyleDefault.
 				Foreground(line.HeadColor).
 				Reverse(line.Highlight)
