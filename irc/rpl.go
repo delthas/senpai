@@ -43,6 +43,7 @@ const (
 	rplVersion         = "351" // <version> <servername> :<comments>
 	rplWhoreply        = "352" // <channel> <user> <host> <server> <nick> "H"/"G" ["*"] [("@"/"+")] :<hop count> <nick>
 	rplNamreply        = "353" // <=/*/@> <channel> :1*(@/ /+user)
+	rplWhospecialreply = "354" // [token] [channel] [user] [ip] [host] [server] [nick] [flags] [hopcount] [idle] [account] [oplevel] [:realname]
 	rplEndofnames      = "366" // <channel> :End of names list
 	rplBanlist         = "367" // <channel> <ban mask>
 	rplEndofbanlist    = "368" // <channel> :End of ban list

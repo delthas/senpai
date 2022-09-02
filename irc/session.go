@@ -134,6 +134,7 @@ type Session struct {
 	prefixSymbols string
 	prefixModes   string
 	monitor       bool
+	whox          bool
 
 	users          map[string]*User        // known users.
 	channels       map[string]Channel      // joined channels.
@@ -357,6 +358,15 @@ func (s *Session) Quit(reason string) {
 
 func (s *Session) ChangeNick(nick string) {
 	s.out <- NewMessage("NICK", nick)
+}
+
+func (s *Session) Who(target string) {
+	if s.whox {
+		// only request what we need, to optimize server who cache hits and reduce traffic
+		s.out <- NewMessage("WHO", target, "%uhnf")
+	} else {
+		s.out <- NewMessage("WHO", target)
+	}
 }
 
 func (s *Session) ChangeMode(channel, flags string, args []string) {
@@ -693,7 +703,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Name: s.nick, User: s.user, Host: s.host,
 		}}
 		if s.host == "" {
-			s.out <- NewMessage("WHO", s.nick)
+			s.Who(s.nick)
 		}
 	case rplIsupport:
 		if len(msg.Params) < 3 {
@@ -701,14 +711,21 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		s.updateFeatures(msg.Params[1 : len(msg.Params)-1])
 		return RegisteredEvent{}, nil
-	case rplWhoreply:
+	case rplWhoreply, rplWhospecialreply:
 		var nick, host, flags, username string
-		if err := msg.ParseParams(nil, nil, &username, &host, nil, &nick, &flags, nil); err != nil {
+		var err error
+		if msg.Command == rplWhoreply {
+			err = msg.ParseParams(nil, nil, &username, &host, nil, &nick, &flags, nil)
+		} else {
+			// we always request WHOX with %uhnf
+			err = msg.ParseParams(nil, &username, &host, &nick, &flags)
+		}
+		if err != nil {
 			return nil, err
 		}
 
 		nickCf := s.Casemap(nick)
-		away := flags[0] == 'G' // flags is not empty because it's not the trailing parameter
+		away := strings.ContainsRune(flags, 'G')
 
 		if s.nickCf == nickCf {
 			s.user = username
@@ -794,7 +811,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				// Only try to know who is away if the list is
 				// updated by the server via away-notify.
 				// Otherwise, it'll become outdated over time.
-				s.out <- NewMessage("WHO", channel)
+				s.Who(channel)
 			}
 		} else if c, ok := s.channels[channelCf]; ok {
 			if _, ok := s.users[nickCf]; !ok {
@@ -1525,6 +1542,8 @@ func (s *Session) updateFeatures(features []string) {
 			numPrefixes := len(value)/2 - 1
 			s.prefixModes = value[1 : numPrefixes+1]
 			s.prefixSymbols = value[numPrefixes+2:]
+		case "WHOX":
+			s.whox = true
 		}
 	}
 }
