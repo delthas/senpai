@@ -253,7 +253,11 @@ func (ui *UI) HasOverlay() bool {
 }
 
 func (ui *UI) AddBuffer(netID, netName, title string) (i int, added bool) {
-	return ui.bs.Add(netID, netName, title)
+	i, added = ui.bs.Add(netID, netName, title)
+	if added {
+		ui.HorizontalBufferScrollTo()
+	}
+	return
 }
 
 func (ui *UI) RemoveBuffer(netID, title string) {

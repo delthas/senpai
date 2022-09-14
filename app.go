@@ -795,6 +795,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		// Restore last buffer
 		if netID == app.lastNetID && ev.Channel == app.lastBuffer {
 			app.win.JumpBufferNetwork(app.lastNetID, app.lastBuffer)
+			app.win.HorizontalBufferScrollTo()
 			app.lastNetID = ""
 			app.lastBuffer = ""
 		}
