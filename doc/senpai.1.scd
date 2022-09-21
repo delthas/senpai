@@ -200,6 +200,9 @@ _name_ is matched case-insensitively.  It can be one of the following:
 	Search messages matching the given text, in the current channel or server.
 	This opens a temporary list, which can be closed with the escape key.
 
+*SHRUG*
+	Send a shrug to the current channel. ¯\\\_(ツ)\_/¯
+
 # SEE ALSO
 
 *senpai*(5)
