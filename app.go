@@ -848,6 +848,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		})
 	case irc.MessageEvent:
 		buffer, line, notification := app.formatMessage(s, ev)
+		if line.IsZero() {
+			break
+		}
 		if buffer != "" && !s.IsChannel(buffer) {
 			if _, added := app.win.AddBuffer(netID, "", buffer); added {
 				app.monitor[netID][buffer] = struct{}{}
@@ -1256,17 +1259,32 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer string, line ui.Line, notification ui.NotifyType) {
 	isFromSelf := s.IsMe(ev.User)
 	isToSelf := s.IsMe(ev.Target)
-	isHighlight := app.isHighlight(s, ev.Content)
-	isAction := strings.HasPrefix(ev.Content, "\x01ACTION")
+	isHighlight := ev.TargetIsChannel && app.isHighlight(s, ev.Content)
 	isQuery := !ev.TargetIsChannel && ev.Command == "PRIVMSG"
 	isNotice := ev.Command == "NOTICE"
+
+	content := strings.TrimSuffix(ev.Content, "\x01")
+	content = strings.TrimRightFunc(content, unicode.IsSpace)
+
+	isAction := false
+	if strings.HasPrefix(ev.Content, "\x01") {
+		parts := strings.SplitN(ev.Content[1:], " ", 2)
+		if len(parts) < 2 {
+			return
+		}
+		switch parts[0] {
+		case "ACTION":
+			isAction = true
+		default:
+			return
+		}
+		content = parts[1]
+	}
 
 	if !ev.TargetIsChannel && isNotice {
 		curNetID, curBuffer := app.win.CurrentBuffer()
 		if curNetID == s.NetID() {
 			buffer = curBuffer
-		} else {
-			isHighlight = true
 		}
 	} else if isToSelf {
 		buffer = ev.User
@@ -1291,11 +1309,6 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		headColor = ui.IdentColor(app.cfg.Colors.Nicks, head)
 	}
 
-	content := strings.TrimSuffix(ev.Content, "\x01")
-	content = strings.TrimRightFunc(content, unicode.IsSpace)
-	if isAction {
-		content = content[7:]
-	}
 	var body ui.StyledStringBuilder
 	if isNotice {
 		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User)
@@ -1309,6 +1322,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		body.SetStyle(tcell.StyleDefault.Foreground(color))
 		body.WriteString(ev.User)
 		body.SetStyle(tcell.StyleDefault)
+		body.WriteString(" ")
 		body.WriteStyledString(ui.IRCString(content))
 	} else {
 		body.WriteStyledString(ui.IRCString(content))
