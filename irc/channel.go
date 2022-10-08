@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strings"
+	"unicode"
 )
 
 const chanCapacity = 64
@@ -16,6 +18,7 @@ func ChanInOut(conn net.Conn) (in <-chan Message, out chan<- Message) {
 		r := bufio.NewScanner(conn)
 		for r.Scan() {
 			line := r.Text()
+			line = strings.ToValidUTF8(line, string([]rune{unicode.ReplacementChar}))
 			msg, err := ParseMessage(line)
 			if err != nil {
 				continue
