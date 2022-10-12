@@ -1530,6 +1530,7 @@ func (s *Session) updateFeatures(features []string) {
 			if value == "" {
 				s.prefixModes = ""
 				s.prefixSymbols = ""
+				break Switch
 			}
 			if len(value)%2 != 0 {
 				break Switch
