@@ -632,6 +632,10 @@ func (bs *BufferList) HorizontalBufferOffset(x int, offset int) int {
 }
 
 func (bs *BufferList) GetLeftMost(screenWidth int) int {
+	if len(bs.list) == 0 {
+		return 0
+	}
+
 	width := 0
 	var leftMost int
 

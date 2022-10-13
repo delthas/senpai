@@ -424,6 +424,7 @@ func (ui *UI) Resize() {
 	} else {
 		ui.bs.ResizeTimeline(innerWidth, h-2, textWidth)
 	}
+	ui.HorizontalBufferScrollTo()
 	ui.screen.Sync()
 }
 
