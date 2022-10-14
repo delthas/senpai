@@ -149,7 +149,7 @@ func (s StyledString) ParseURLs() StyledString {
 			}
 			if st.Start == ub {
 				// a style already starts at this position, edit it
-				lastStyle.Style = lastStyle.Style.Hyperlink(link)
+				lastStyle.Style = lastStyle.Style.Url(link)
 			}
 			lastStyle = st
 			styles = append(styles, st)
@@ -158,7 +158,7 @@ func (s StyledString) ParseURLs() StyledString {
 			// no style existed at this position, add one from the last style
 			styles = append(styles, rangedStyle{
 				Start: ub,
-				Style: lastStyle.Style.Hyperlink(link),
+				Style: lastStyle.Style.Url(link),
 			})
 		}
 		// find last style starting before or at url end
@@ -168,7 +168,7 @@ func (s StyledString) ParseURLs() StyledString {
 				break
 			}
 			if st.Start < ue {
-				st.Style = st.Style.Hyperlink(link)
+				st.Style = st.Style.Url(link)
 			}
 			lastStyle = st
 			styles = append(styles, st)
@@ -177,7 +177,7 @@ func (s StyledString) ParseURLs() StyledString {
 			// no style existed at this position, add one from the last style without the hyperlink
 			styles = append(styles, rangedStyle{
 				Start: ue,
-				Style: lastStyle.Style.Hyperlink(""),
+				Style: lastStyle.Style.Url(""),
 			})
 		}
 	}
