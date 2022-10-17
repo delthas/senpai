@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/signal"
 	"path"
@@ -23,6 +24,8 @@ func main() {
 	flag.StringVar(&configPath, "config", "", "path to the configuration file")
 	flag.BoolVar(&debug, "debug", false, "show raw protocol data in the home buffer")
 	flag.Parse()
+
+	rand.Seed(time.Now().UnixNano())
 
 	if configPath == "" {
 		configDir, err := os.UserConfigDir()

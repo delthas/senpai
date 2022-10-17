@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"strconv"
 	"strings"
@@ -141,6 +142,7 @@ func (s StyledString) ParseURLs() StyledString {
 		if u, err := url.Parse(link); err != nil || u.Scheme == "" {
 			link = "https://" + link
 		}
+		id := fmt.Sprintf("_%10d", rand.Int31())
 		// find last style starting before or at url begin
 		for ; j < len(s.styles); j++ {
 			st := s.styles[j]
@@ -149,7 +151,7 @@ func (s StyledString) ParseURLs() StyledString {
 			}
 			if st.Start == ub {
 				// a style already starts at this position, edit it
-				lastStyle.Style = lastStyle.Style.Url(link)
+				lastStyle.Style = lastStyle.Style.Url(link).UrlId(id)
 			}
 			lastStyle = st
 			styles = append(styles, st)
@@ -158,7 +160,7 @@ func (s StyledString) ParseURLs() StyledString {
 			// no style existed at this position, add one from the last style
 			styles = append(styles, rangedStyle{
 				Start: ub,
-				Style: lastStyle.Style.Url(link),
+				Style: lastStyle.Style.Url(link).UrlId(id),
 			})
 		}
 		// find last style starting before or at url end
@@ -168,7 +170,7 @@ func (s StyledString) ParseURLs() StyledString {
 				break
 			}
 			if st.Start < ue {
-				st.Style = st.Style.Url(link)
+				st.Style = st.Style.Url(link).UrlId(id)
 			}
 			lastStyle = st
 			styles = append(styles, st)
@@ -177,7 +179,7 @@ func (s StyledString) ParseURLs() StyledString {
 			// no style existed at this position, add one from the last style without the hyperlink
 			styles = append(styles, rangedStyle{
 				Start: ue,
-				Style: lastStyle.Style.Url(""),
+				Style: lastStyle.Style.Url("").UrlId(""),
 			})
 		}
 	}
