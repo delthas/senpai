@@ -89,7 +89,7 @@ func getLastBuffer() (netID, buffer string) {
 		return "", ""
 	}
 
-	fields := strings.SplitN(string(buf), " ", 2)
+	fields := strings.SplitN(strings.TrimSpace(string(buf)), " ", 2)
 	if len(fields) < 2 {
 		return "", ""
 	}
@@ -116,7 +116,8 @@ func getLastStamp() time.Time {
 		return time.Time{}
 	}
 
-	t, err := time.Parse(time.RFC3339Nano, string(buf))
+	stamp := strings.TrimSpace(string(buf))
+	t, err := time.Parse(time.RFC3339Nano, stamp)
 	if err != nil {
 		return time.Time{}
 	}
@@ -129,7 +130,7 @@ func writeLastStamp(app *senpai.App) {
 	if last.IsZero() {
 		return
 	}
-	err := os.WriteFile(lastStampPath, []byte(last.Format(time.RFC3339Nano)), 0666)
+	err := os.WriteFile(lastStampPath, []byte(last.UTC().Format(time.RFC3339Nano)), 0666)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write last stamp at %q: %s\n", lastStampPath, err)
 	}

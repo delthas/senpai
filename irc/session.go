@@ -514,6 +514,7 @@ type HistoryRequest struct {
 }
 
 func formatTimestamp(t time.Time) string {
+	t = t.UTC()
 	return fmt.Sprintf("timestamp=%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
 		t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1e6)
 }
