@@ -142,7 +142,7 @@ func (s StyledString) ParseURLs() StyledString {
 		if u, err := url.Parse(link); err != nil || u.Scheme == "" {
 			link = "https://" + link
 		}
-		id := fmt.Sprintf("_%10d", rand.Int31())
+		id := fmt.Sprintf("_%010d", rand.Int31())
 		// find last style starting before or at url begin
 		for ; j < len(s.styles); j++ {
 			st := s.styles[j]
