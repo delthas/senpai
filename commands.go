@@ -198,7 +198,7 @@ func noCommand(app *App, content string) error {
 
 	s.PrivMsg(buffer, content)
 	if !s.HasCapability("echo-message") {
-		buffer, line, _ := app.formatMessage(s, irc.MessageEvent{
+		buffer, line := app.formatMessage(s, irc.MessageEvent{
 			User:            s.Nick(),
 			Target:          buffer,
 			TargetIsChannel: s.IsChannel(buffer),
@@ -206,7 +206,7 @@ func noCommand(app *App, content string) error {
 			Content:         content,
 			Time:            time.Now(),
 		})
-		app.win.AddLine(netID, buffer, ui.NotifyNone, line)
+		app.win.AddLine(netID, buffer, line)
 	}
 
 	return nil
@@ -239,15 +239,15 @@ func commandDoHelp(app *App, args []string) (err error) {
 		sb.SetStyle(tcell.StyleDefault)
 		sb.WriteByte(' ')
 		sb.WriteString(cmd.Usage)
-		app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+		app.win.AddLine(netID, buffer, ui.Line{
 			At:   t,
 			Body: sb.StyledString(),
 		})
-		app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+		app.win.AddLine(netID, buffer, ui.Line{
 			At:   t,
 			Body: ui.PlainSprintf("  %s", cmd.Desc),
 		})
-		app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+		app.win.AddLine(netID, buffer, ui.Line{
 			At: t,
 		})
 	}
@@ -261,7 +261,7 @@ func commandDoHelp(app *App, args []string) (err error) {
 	}
 
 	if len(args) == 0 {
-		app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+		app.win.AddLine(netID, buffer, ui.Line{
 			At:   t,
 			Head: "--",
 			Body: ui.PlainString("Available commands:"),
@@ -274,7 +274,7 @@ func commandDoHelp(app *App, args []string) (err error) {
 		addLineCommands(cmdNames)
 	} else {
 		search := strings.ToUpper(args[0])
-		app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+		app.win.AddLine(netID, buffer, ui.Line{
 			At:   t,
 			Head: "--",
 			Body: ui.PlainSprintf("Commands that match \"%s\":", search),
@@ -288,7 +288,7 @@ func commandDoHelp(app *App, args []string) (err error) {
 			cmdNames = append(cmdNames, cmdName)
 		}
 		if len(cmdNames) == 0 {
-			app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+			app.win.AddLine(netID, buffer, ui.Line{
 				At:   t,
 				Body: ui.PlainSprintf("  no command matches %q", args[0]),
 			})
@@ -326,7 +326,7 @@ func commandDoMe(app *App, args []string) (err error) {
 	content := fmt.Sprintf("\x01ACTION %s\x01", args[0])
 	s.PrivMsg(buffer, content)
 	if !s.HasCapability("echo-message") {
-		buffer, line, _ := app.formatMessage(s, irc.MessageEvent{
+		buffer, line := app.formatMessage(s, irc.MessageEvent{
 			User:            s.Nick(),
 			Target:          buffer,
 			TargetIsChannel: s.IsChannel(buffer),
@@ -334,7 +334,7 @@ func commandDoMe(app *App, args []string) (err error) {
 			Content:         content,
 			Time:            time.Now(),
 		})
-		app.win.AddLine(netID, buffer, ui.NotifyNone, line)
+		app.win.AddLine(netID, buffer, line)
 	}
 	return nil
 }
@@ -368,7 +368,7 @@ func commandDoNames(app *App, args []string) (err error) {
 	}
 	body := sb.StyledString()
 	// TODO remove last space
-	app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+	app.win.AddLine(netID, buffer, ui.Line{
 		At:        time.Now(),
 		Head:      "--",
 		HeadColor: tcell.ColorGray,
@@ -491,7 +491,7 @@ func commandDoR(app *App, args []string) (err error) {
 	}
 	s.PrivMsg(app.lastQuery, args[0])
 	if !s.HasCapability("echo-message") {
-		buffer, line, _ := app.formatMessage(s, irc.MessageEvent{
+		buffer, line := app.formatMessage(s, irc.MessageEvent{
 			User:            s.Nick(),
 			Target:          app.lastQuery,
 			TargetIsChannel: s.IsChannel(app.lastQuery),
@@ -499,7 +499,7 @@ func commandDoR(app *App, args []string) (err error) {
 			Content:         args[0],
 			Time:            time.Now(),
 		})
-		app.win.AddLine(app.lastQueryNet, buffer, ui.NotifyNone, line)
+		app.win.AddLine(app.lastQueryNet, buffer, line)
 	}
 	return nil
 }
@@ -696,7 +696,7 @@ func commandSendMessage(app *App, target string, content string) error {
 	}
 	s.PrivMsg(target, content)
 	if !s.HasCapability("echo-message") {
-		buffer, line, _ := app.formatMessage(s, irc.MessageEvent{
+		buffer, line := app.formatMessage(s, irc.MessageEvent{
 			User:            s.Nick(),
 			Target:          target,
 			TargetIsChannel: s.IsChannel(target),
@@ -711,7 +711,7 @@ func commandSendMessage(app *App, target string, content string) error {
 			app.win.AddBuffer(netID, "", buffer)
 		}
 
-		app.win.AddLine(netID, buffer, ui.NotifyNone, line)
+		app.win.AddLine(netID, buffer, line)
 	}
 	return nil
 }

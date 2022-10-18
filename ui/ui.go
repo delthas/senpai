@@ -270,8 +270,8 @@ func (ui *UI) RemoveNetworkBuffers(netID string) {
 	ui.memberOffset = 0
 }
 
-func (ui *UI) AddLine(netID, buffer string, notify NotifyType, line Line) {
-	ui.bs.AddLine(netID, buffer, notify, line)
+func (ui *UI) AddLine(netID, buffer string, line Line) {
+	ui.bs.AddLine(netID, buffer, line)
 }
 
 func (ui *UI) AddLines(netID, buffer string, before, after []Line) {

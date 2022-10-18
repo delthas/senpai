@@ -626,10 +626,11 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		input := app.win.InputEnter()
 		err := app.handleInput(buffer, input)
 		if err != nil {
-			app.win.AddLine(netID, buffer, ui.NotifyUnread, ui.Line{
+			app.win.AddLine(netID, buffer, ui.Line{
 				At:        time.Now(),
 				Head:      "!!",
 				HeadColor: tcell.ColorRed,
+				Notify:    ui.NotifyUnread,
 				Body:      ui.PlainSprintf("%q: %s", input, err),
 			})
 		}
@@ -715,9 +716,10 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	// Mutate IRC state
 	ev, err := s.HandleMessage(msg)
 	if err != nil {
-		app.win.AddLine(netID, "", ui.NotifyUnread, ui.Line{
+		app.win.AddLine(netID, "", ui.Line{
 			Head:      "!!",
 			HeadColor: tcell.ColorRed,
+			Notify:    ui.NotifyUnread,
 			Body:      ui.PlainSprintf("Received corrupt message %q: %s", msg.String(), err),
 		})
 		return
@@ -742,7 +744,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if s.Nick() != app.cfg.Nick {
 			body = fmt.Sprintf("Connected to the server as %s", s.Nick())
 		}
-		app.win.AddLine(netID, "", ui.NotifyNone, ui.Line{
+		app.win.AddLine(netID, "", ui.Line{
 			At:   msg.TimeOrNow(),
 			Head: "--",
 			Body: ui.PlainString(body),
@@ -770,7 +772,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	case irc.UserNickEvent:
 		line := app.formatEvent(ev)
 		for _, c := range s.ChannelsSharedWith(ev.User) {
-			app.win.AddLine(netID, c, ui.NotifyNone, line)
+			app.win.AddLine(netID, c, line)
 		}
 	case irc.SelfJoinEvent:
 		i, added := app.win.AddBuffer(netID, "", ev.Channel)
@@ -801,26 +803,26 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 	case irc.UserJoinEvent:
 		line := app.formatEvent(ev)
-		app.win.AddLine(netID, ev.Channel, ui.NotifyNone, line)
+		app.win.AddLine(netID, ev.Channel, line)
 	case irc.SelfPartEvent:
 		app.win.RemoveBuffer(netID, ev.Channel)
 		delete(app.messageBounds, boundKey{netID, ev.Channel})
 	case irc.UserPartEvent:
 		line := app.formatEvent(ev)
-		app.win.AddLine(netID, ev.Channel, ui.NotifyNone, line)
+		app.win.AddLine(netID, ev.Channel, line)
 	case irc.UserQuitEvent:
 		line := app.formatEvent(ev)
 		for _, c := range ev.Channels {
-			app.win.AddLine(netID, c, ui.NotifyNone, line)
+			app.win.AddLine(netID, c, line)
 		}
 	case irc.TopicChangeEvent:
 		line := app.formatEvent(ev)
-		app.win.AddLine(netID, ev.Channel, ui.NotifyUnread, line)
+		app.win.AddLine(netID, ev.Channel, line)
 		topic := ui.IRCString(ev.Topic).String()
 		app.win.SetTopic(netID, ev.Channel, topic)
 	case irc.ModeChangeEvent:
 		line := app.formatEvent(ev)
-		app.win.AddLine(netID, ev.Channel, ui.NotifyNone, line)
+		app.win.AddLine(netID, ev.Channel, line)
 	case irc.InviteEvent:
 		var buffer string
 		var notify ui.NotifyType
@@ -838,16 +840,17 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			notify = ui.NotifyUnread
 			body = fmt.Sprintf("%s invited %s to join this channel", ev.Inviter, ev.Invitee)
 		}
-		app.win.AddLine(netID, buffer, notify, ui.Line{
+		app.win.AddLine(netID, buffer, ui.Line{
 			At:        msg.TimeOrNow(),
 			Head:      "--",
 			HeadColor: tcell.ColorGray,
+			Notify:    notify,
 			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
 			Highlight: notify == ui.NotifyHighlight,
 			Readable:  true,
 		})
 	case irc.MessageEvent:
-		buffer, line, notification := app.formatMessage(s, ev)
+		buffer, line := app.formatMessage(s, ev)
 		if line.IsZero() {
 			break
 		}
@@ -861,8 +864,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 					Before(msg.TimeOrNow())
 			}
 		}
-		app.win.AddLine(netID, buffer, notification, line)
-		if notification == ui.NotifyHighlight {
+		app.win.AddLine(netID, buffer, line)
+		if line.Notify == ui.NotifyHighlight {
 			app.notifyHighlight(buffer, ev.User, line.Body.String())
 		}
 		if !s.IsChannel(msg.Params[0]) && !s.IsMe(ev.User) {
@@ -910,7 +913,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			var line ui.Line
 			switch ev := m.(type) {
 			case irc.MessageEvent:
-				_, line, _ = app.formatMessage(s, ev)
+				_, line = app.formatMessage(s, ev)
 			default:
 				line = app.formatEvent(ev)
 			}
@@ -944,7 +947,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.win.OpenOverlay()
 		lines := make([]ui.Line, 0, len(ev.Messages))
 		for _, m := range ev.Messages {
-			_, line, _ := app.formatMessage(s, m)
+			_, line := app.formatMessage(s, m)
 			if line.IsZero() {
 				continue
 			}
@@ -1229,6 +1232,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			At:        ev.Time,
 			Head:      "--",
 			HeadColor: tcell.ColorGray,
+			Notify:    ui.NotifyUnread,
 			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
 			Readable:  true,
 		}
@@ -1254,9 +1258,8 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 //
 // It computes three things:
 // - which buffer the message must be added to,
-// - the UI line,
-// - what kind of notification senpai should send.
-func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer string, line ui.Line, notification ui.NotifyType) {
+// - the UI line.
+func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer string, line ui.Line) {
 	isFromSelf := s.IsMe(ev.User)
 	isToSelf := s.IsMe(ev.Target)
 	isHighlight := ev.TargetIsChannel && app.isHighlight(s, ev.Content)
@@ -1292,6 +1295,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		buffer = ev.Target
 	}
 
+	var notification ui.NotifyType
 	hlLine := ev.TargetIsChannel && isHighlight && !isFromSelf
 	if isFromSelf {
 		notification = ui.NotifyNone
@@ -1332,6 +1336,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		At:        ev.Time,
 		Head:      head,
 		HeadColor: headColor,
+		Notify:    notification,
 		Body:      body.StyledString(),
 		Highlight: hlLine,
 		Readable:  true,
@@ -1477,7 +1482,7 @@ func (app *App) printTopic(netID, buffer string) (ok bool) {
 	} else {
 		body = fmt.Sprintf("Topic (by %s, %s): %s", who, at.Local().Format("Mon Jan 2 15:04:05"), topic)
 	}
-	app.win.AddLine(netID, buffer, ui.NotifyNone, ui.Line{
+	app.win.AddLine(netID, buffer, ui.Line{
 		At:        time.Now(),
 		Head:      "--",
 		HeadColor: tcell.ColorGray,

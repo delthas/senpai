@@ -11,7 +11,7 @@ const welcomeMessage = "senpai dev build. Enter /help for a list of commands."
 
 func (app *App) initWindow() {
 	app.win.AddBuffer("", "(home)", "")
-	app.win.AddLine("", "", ui.NotifyNone, ui.Line{
+	app.win.AddLine("", "", ui.Line{
 		Head: "--",
 		Body: ui.PlainString(welcomeMessage),
 		At:   time.Now(),
@@ -39,9 +39,9 @@ func (app *App) queueStatusLine(netID string, line ui.Line) {
 func (app *App) addStatusLine(netID string, line ui.Line) {
 	currentNetID, buffer := app.win.CurrentBuffer()
 	if currentNetID == netID && buffer != "" {
-		app.win.AddLine(netID, buffer, ui.NotifyNone, line)
+		app.win.AddLine(netID, buffer, line)
 	}
-	app.win.AddLine(netID, "", ui.NotifyNone, line)
+	app.win.AddLine(netID, "", line)
 }
 
 func (app *App) setStatus() {

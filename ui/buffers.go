@@ -33,6 +33,7 @@ type Line struct {
 	Head      string
 	Body      StyledString
 	HeadColor tcell.Color
+	Notify    NotifyType
 	Highlight bool
 	Readable  bool
 	Mergeable bool
@@ -366,7 +367,7 @@ func (bs *BufferList) mergeLine(former *Line, addition Line) (keepLine bool) {
 	return true
 }
 
-func (bs *BufferList) AddLine(netID, title string, notify NotifyType, line Line) {
+func (bs *BufferList) AddLine(netID, title string, line Line) {
 	_, b := bs.at(netID, title)
 	if b == nil {
 		return
@@ -394,10 +395,10 @@ func (bs *BufferList) AddLine(netID, title string, notify NotifyType, line Line)
 		}
 	}
 
-	if notify != NotifyNone && b != current {
+	if line.Notify != NotifyNone && b != current {
 		b.unread = true
 	}
-	if notify == NotifyHighlight && b != current {
+	if line.Notify == NotifyHighlight && b != current {
 		b.highlights++
 	}
 }
@@ -443,15 +444,20 @@ func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 	if b == nil {
 		return
 	}
+	clearRead := true
 	for i := len(b.lines) - 1; i >= 0; i-- {
 		line := &b.lines[i]
-		if line.Readable {
-			if !line.At.After(timestamp) {
-				b.highlights = 0
-				b.unread = false
-			}
+		if !line.At.After(timestamp) {
 			break
 		}
+		if line.Readable && line.Notify != NotifyNone {
+			clearRead = false
+			break
+		}
+	}
+	if clearRead {
+		b.highlights = 0
+		b.unread = false
 	}
 	if b.read.Before(timestamp) {
 		b.read = timestamp
