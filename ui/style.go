@@ -274,9 +274,6 @@ func IRCString(raw string) StyledString {
 
 	for len(raw) != 0 {
 		r, runeSize := utf8.DecodeRuneInString(raw)
-		if r == utf8.RuneError {
-			break
-		}
 		_, _, lastAttrs := last.Decompose()
 		current := last
 		if r == 0x0F {
