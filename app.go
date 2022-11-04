@@ -13,11 +13,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"golang.org/x/net/proxy"
-
 	"git.sr.ht/~taiite/senpai/irc"
 	"git.sr.ht/~taiite/senpai/ui"
 	"github.com/gdamore/tcell/v2"
+	"golang.org/x/net/context"
+	"golang.org/x/net/proxy"
 )
 
 const eventChanSize = 1024
@@ -383,9 +383,14 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 		}
 	}
 
-	conn, err = proxy.FromEnvironment().Dial("tcp", addr)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+
+	dialer := &net.Dialer{
+		Timeout: 10 * time.Second,
+	}
+	conn, err = proxy.FromEnvironmentUsing(dialer).(proxy.ContextDialer).DialContext(ctx, "tcp", addr)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("connect: %v", err)
 	}
 
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
@@ -399,10 +404,10 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 			ServerName: host,
 			NextProtos: []string{"irc"},
 		})
-		err = conn.(*tls.Conn).Handshake()
+		err = conn.(*tls.Conn).HandshakeContext(ctx)
 		if err != nil {
 			conn.Close()
-			return nil, err
+			return nil, fmt.Errorf("tls handshake: %v", err)
 		}
 	}
 
