@@ -2,7 +2,11 @@ package ui
 
 import (
 	"fmt"
+	"strings"
+	"sync"
 	"time"
+
+	"github.com/delthas/go-localeinfo"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -42,17 +46,62 @@ func printNumber(screen tcell.Screen, x *int, y int, st tcell.Style, n int) {
 	printString(screen, x, y, s)
 }
 
+var dateConfig sync.Once
+var dateMonthFirst bool
+
+func loadDateInfo() {
+	// Very overkill, but I like it :)
+	// Try to extract from the user locale whether they'd rather have the date
+	// printed as dd/mm or mm/dd.
+	// If we're not sure, print dd/mm.
+	l, err := localeinfo.NewLocale("")
+	if err != nil {
+		return
+	}
+	format := l.DateFormat()
+	dayIndex := -1
+	for _, s := range []string{"%d", "%e"} {
+		dayIndex = strings.Index(format, s)
+		if dayIndex >= 0 {
+			break
+		}
+	}
+	if dayIndex == -1 {
+		return
+	}
+	monthIndex := -1
+	for _, s := range []string{"%m", "%b", "%B"} {
+		monthIndex = strings.Index(format, s)
+		if monthIndex >= 0 {
+			break
+		}
+	}
+	if monthIndex == -1 {
+		return
+	}
+	if monthIndex < dayIndex {
+		dateMonthFirst = true
+	}
+}
+
 func printDate(screen tcell.Screen, x int, y int, st tcell.Style, t time.Time) {
+	dateConfig.Do(loadDateInfo)
 	_, m, d := t.Date()
-	d0 := rune(d/10) + '0'
-	d1 := rune(d%10) + '0'
-	m0 := rune(m/10) + '0'
-	m1 := rune(m%10) + '0'
-	screen.SetContent(x+0, y, d0, nil, st)
-	screen.SetContent(x+1, y, d1, nil, st)
+	var left, right int
+	if dateMonthFirst {
+		left, right = int(m), d
+	} else {
+		left, right = d, int(m)
+	}
+	l0 := rune(left/10) + '0'
+	l1 := rune(left%10) + '0'
+	r0 := rune(right/10) + '0'
+	r1 := rune(right%10) + '0'
+	screen.SetContent(x+0, y, l0, nil, st)
+	screen.SetContent(x+1, y, l1, nil, st)
 	screen.SetContent(x+2, y, '/', nil, st)
-	screen.SetContent(x+3, y, m0, nil, st)
-	screen.SetContent(x+4, y, m1, nil, st)
+	screen.SetContent(x+3, y, r0, nil, st)
+	screen.SetContent(x+4, y, r1, nil, st)
 }
 
 func printTime(screen tcell.Screen, x int, y int, st tcell.Style, t time.Time) {

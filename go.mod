@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	git.sr.ht/~emersion/go-scfg v0.0.0-20201019143924-142a8aa629fc
-	github.com/gdamore/encoding v1.0.0
+	github.com/delthas/go-localeinfo v0.0.0-20221115102303-5a7785a1acc1
 	github.com/gdamore/tcell/v2 v2.5.4-0.20221017224006-ede1dd5ee680
 	github.com/mattn/go-runewidth v0.0.14
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
