@@ -51,16 +51,17 @@ func (auth *SASLPlain) Respond(challenge string) (res string, err error) {
 
 // SupportedCapabilities is the set of capabilities supported by this library.
 var SupportedCapabilities = map[string]struct{}{
-	"away-notify":   {},
-	"batch":         {},
-	"cap-notify":    {},
-	"echo-message":  {},
-	"invite-notify": {},
-	"message-tags":  {},
-	"multi-prefix":  {},
-	"server-time":   {},
-	"sasl":          {},
-	"setname":       {},
+	"away-notify":      {},
+	"batch":            {},
+	"cap-notify":       {},
+	"echo-message":     {},
+	"extended-monitor": {},
+	"invite-notify":    {},
+	"message-tags":     {},
+	"multi-prefix":     {},
+	"server-time":      {},
+	"sasl":             {},
+	"setname":          {},
 
 	"draft/chathistory":               {},
 	"draft/event-playback":            {},
