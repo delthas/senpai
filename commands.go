@@ -65,6 +65,10 @@ func init() {
 			Desc:      "send a message to the given target",
 			Handle:    commandDoMsg,
 		},
+		"MOTD": {
+			Desc:   "show the message of the day (MOTD)",
+			Handle: commandDoMOTD,
+		},
 		"NAMES": {
 			Desc:   "show the member list of the current channel",
 			Handle: commandDoNames,
@@ -343,6 +347,16 @@ func commandDoMsg(app *App, args []string) (err error) {
 	target := args[0]
 	content := args[1]
 	return commandSendMessage(app, target, content)
+}
+
+func commandDoMOTD(app *App, args []string) (err error) {
+	netID, _ := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	s.MOTD()
+	return nil
 }
 
 func commandDoNames(app *App, args []string) (err error) {

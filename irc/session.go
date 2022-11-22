@@ -361,6 +361,10 @@ func (s *Session) ChangeNick(nick string) {
 	s.out <- NewMessage("NICK", nick)
 }
 
+func (s *Session) MOTD() {
+	s.out <- NewMessage("MOTD")
+}
+
 func (s *Session) Who(target string) {
 	if s.whox {
 		// only request what we need, to optimize server who cache hits and reduce traffic
