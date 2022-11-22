@@ -3,6 +3,8 @@ package senpai
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -139,6 +141,20 @@ func LoadConfigFile(filename string) (cfg Config, err error) {
 	}
 	if cfg.Real == "" {
 		cfg.Real = cfg.Nick
+	}
+	var u *url.URL
+	if u, err = url.Parse(cfg.Addr); err == nil && u.Scheme != "" {
+		switch u.Scheme {
+		case "ircs":
+			cfg.TLS = true
+		case "irc+insecure":
+			cfg.TLS = false
+		case "irc":
+			// Could be TLS or plaintext, keep TLS as is.
+		default:
+			return cfg, fmt.Errorf("invalid IRC addr scheme: %v", cfg.Addr)
+		}
+		cfg.Addr = net.JoinHostPort(u.Hostname(), u.Port())
 	}
 	return
 }

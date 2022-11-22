@@ -18,6 +18,10 @@ Some settings are required, the others are optional.
 	by default unless you specify *tls* option to be *false*. TLS connections
 	default to port 6697, plain-text use port 6667.
 
+	ircs:// & irc:// & irc+insecure:// URLs are supported, in which case only
+	the hostname and port parts will be used. If the scheme is
+	ircs/irc+insecure, tls will be overriden and set to true/false accordingly.
+
 *nickname* (required)
 	Your nickname, sent with a _NICK_ IRC message. It mustn't contain spaces or
 	colons (*:*).
