@@ -142,6 +142,9 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *QUIT* [reason]
 	Quits senpai.
 
+*MOTD*
+	Show the message of the day (MOTD).
+
 *NAMES*
 	Show the member list of the current channel.  Powerlevels (such as _@_ for
 	"operator", or _+_ for "voice") are shown in green.
@@ -159,7 +162,7 @@ _name_ is matched case-insensitively.  It can be one of the following:
 	Reply to the last person who sent a private message.
 
 *ME* <content>
-	Send a message prefixed with your nick (a user action).  If sent from home,
+	Send a message prefixed with your nick (a user action). If sent from home,
 	reply to the last person who sent a private message.
 
 *QUOTE* <raw message>
