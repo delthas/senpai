@@ -165,6 +165,10 @@ _name_ is matched case-insensitively.  It can be one of the following:
 	Send a message prefixed with your nick (a user action). If sent from home,
 	reply to the last person who sent a private message.
 
+*NP*
+	Send the current song that is being played on the system. Uses DBus/MPRIS
+	internally.
+
 *QUOTE* <raw message>
 	Send _raw message_ verbatim.
 
