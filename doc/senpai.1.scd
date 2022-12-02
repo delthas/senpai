@@ -195,7 +195,7 @@ _name_ is matched case-insensitively.  It can be one of the following:
 
 *SEARCH* <text>
 	Search messages matching the given text, in the current channel or server.
-	This open a temporary list, which can be closed with the escape key.
+	This opens a temporary list, which can be closed with the escape key.
 
 # SEE ALSO
 
