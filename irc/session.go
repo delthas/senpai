@@ -655,8 +655,8 @@ func (s *Session) handleRegistered(msg Message) (Event, error) {
 					Target:   b.Target,
 					Messages: append(b.Messages, ev),
 				}
-				return nil, nil
 			}
+			return nil, nil
 		}
 	}
 	return s.handleMessageRegistered(msg, false)
