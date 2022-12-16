@@ -72,9 +72,10 @@ func (ts *Typings) Active(target, name string) {
 		time.Sleep(6 * time.Second)
 
 		ts.l.Lock()
-		defer ts.l.Unlock()
+		closed := ts.closed
+		ts.l.Unlock()
 
-		if !ts.closed {
+		if !closed {
 			ts.timeouts <- t
 		}
 	}()
