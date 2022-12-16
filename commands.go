@@ -11,8 +11,8 @@ import (
 
 	"git.sr.ht/~taiite/senpai/irc"
 	"git.sr.ht/~taiite/senpai/ui"
+	"github.com/delthas/go-libnp"
 	"github.com/gdamore/tcell/v2"
-	"github.com/godbus/dbus/v5"
 	"golang.org/x/net/context"
 )
 
@@ -795,77 +795,30 @@ func (app *App) handleInput(buffer, content string) error {
 func getSong() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-
-	bus, err := dbus.ConnectSessionBus(dbus.WithContext(ctx))
+	info, err := libnp.GetInfo(ctx)
 	if err != nil {
 		return ""
 	}
-	defer bus.Close()
-
-	var names []string
-	if err := bus.BusObject().CallWithContext(ctx, "org.freedesktop.DBus.ListNames", 0).Store(&names); err != nil {
+	if info == nil {
 		return ""
 	}
-	song := ""
-	for _, name := range names {
-		if !strings.HasPrefix(name, "org.mpris.MediaPlayer2.") {
-			continue
-		}
-		var playing bool
-		o := bus.Object(name, "/org/mpris/MediaPlayer2")
-		var status string
-		if err := o.CallWithContext(ctx, "org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "PlaybackStatus").Store(&status); err != nil {
-			continue
-		}
-		switch status {
-		case "Playing":
-			playing = true
-		case "Paused":
-			playing = false
-		default:
-			continue
-		}
-		var metadata map[string]dbus.Variant
-		if err := o.CallWithContext(ctx, "org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Metadata").Store(&metadata); err != nil {
-			continue
-		}
-		var trackURL string
-		var title string
-		var album string
-		var artist string
-		if e, ok := metadata["xesam:title"].Value().(string); ok {
-			title = e
-		}
-		if e, ok := metadata["xesam:album"].Value().(string); ok {
-			album = e
-		}
-		if e, ok := metadata["xesam:url"].Value().(string); ok {
-			trackURL = e
-		}
-		if e, ok := metadata["xesam:artist"].Value().([]string); ok && len(e) > 0 {
-			artist = e[0]
-		}
-		if title == "" {
-			continue
-		}
-		var sb strings.Builder
-		fmt.Fprintf(&sb, "\x02%s\x02", title)
-		if artist != "" {
-			fmt.Fprintf(&sb, " by \x02%s\x02", artist)
-		}
-		if album != "" {
-			fmt.Fprintf(&sb, " from \x02%s\x02", album)
-		}
-		if u, err := url.Parse(trackURL); err == nil {
-			switch u.Scheme {
-			case "http", "https":
-				fmt.Fprintf(&sb, " — %s", trackURL)
-			}
-		}
-		song = sb.String()
-		if playing {
-			return song
+	if info.Title == "" {
+		return ""
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "\x02%s\x02", info.Title)
+	if len(info.Artists) > 0 {
+		fmt.Fprintf(&sb, " by \x02%s\x02", info.Artists[0])
+	}
+	if info.Album != "" {
+		fmt.Fprintf(&sb, " from \x02%s\x02", info.Album)
+	}
+	if u, err := url.Parse(info.URL); err == nil {
+		switch u.Scheme {
+		case "http", "https":
+			fmt.Fprintf(&sb, " — %s", info.URL)
 		}
 	}
-	return song
+	return sb.String()
 }
