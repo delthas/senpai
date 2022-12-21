@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	git.sr.ht/~emersion/go-scfg v0.0.0-20201019143924-142a8aa629fc
-	github.com/delthas/go-libnp v0.0.0-20221216233833-93742f416e59
+	github.com/delthas/go-libnp v0.0.0-20221221144027-c473a063cc72
 	github.com/delthas/go-localeinfo v0.0.0-20221116001557-686a1e185118
 	github.com/gdamore/tcell/v2 v2.5.4-0.20221017224006-ede1dd5ee680
 	github.com/mattn/go-runewidth v0.0.14
