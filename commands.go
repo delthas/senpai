@@ -89,6 +89,14 @@ func init() {
 			Desc:      "change your nickname",
 			Handle:    commandDoNick,
 		},
+		"OPER": {
+			AllowHome: true,
+			MinArgs:   2,
+			MaxArgs:   2,
+			Usage:     "<username> <password>",
+			Desc:      "log in to an operator account",
+			Handle:    commandDoOper,
+		},
 		"MODE": {
 			AllowHome: true,
 			MaxArgs:   maxArgsInfinite,
@@ -417,6 +425,15 @@ func commandDoNick(app *App, args []string) (err error) {
 		return errOffline
 	}
 	s.ChangeNick(nick)
+	return
+}
+
+func commandDoOper(app *App, args []string) (err error) {
+	s := app.CurrentSession()
+	if s == nil {
+		return errOffline
+	}
+	s.Oper(args[0], args[1])
 	return
 }
 

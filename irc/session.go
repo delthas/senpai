@@ -361,6 +361,10 @@ func (s *Session) ChangeNick(nick string) {
 	s.out <- NewMessage("NICK", nick)
 }
 
+func (s *Session) Oper(username string, password string) {
+	s.out <- NewMessage("OPER", username, password)
+}
+
 func (s *Session) MOTD() {
 	s.out <- NewMessage("MOTD")
 }

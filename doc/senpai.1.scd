@@ -178,6 +178,9 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *NICK* <nickname>
 	Change your nickname.
 
+*OPER* <username> <password>
+	Log in to an operator account.
+
 *MODE* <nick/channel> <flags> [args]
 	Change channel or user modes.
 
