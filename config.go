@@ -141,8 +141,7 @@ func LoadConfigFile(filename string) (cfg Config, err error) {
 	if cfg.Real == "" {
 		cfg.Real = cfg.Nick
 	}
-	var u *url.URL
-	if u, err = url.Parse(cfg.Addr); err == nil && u.Scheme != "" {
+	if u, err := url.Parse(cfg.Addr); err == nil && u.Scheme != "" {
 		switch u.Scheme {
 		case "ircs":
 			cfg.TLS = true
