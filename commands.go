@@ -360,7 +360,10 @@ func commandDoMe(app *App, args []string) (err error) {
 }
 
 func commandDoNP(app *App, args []string) (err error) {
-	song := getSong()
+	song, err := getSong()
+	if err != nil {
+		return fmt.Errorf("failed detecting the song: %v", err)
+	}
 	if song == "" {
 		return fmt.Errorf("no song was detected")
 	}
@@ -809,18 +812,18 @@ func (app *App) handleInput(buffer, content string) error {
 	return cmd.Handle(app, args)
 }
 
-func getSong() string {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+func getSong() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	info, err := libnp.GetInfo(ctx)
 	if err != nil {
-		return ""
+		return "", err
 	}
 	if info == nil {
-		return ""
+		return "", nil
 	}
 	if info.Title == "" {
-		return ""
+		return "", nil
 	}
 
 	var sb strings.Builder
@@ -837,5 +840,5 @@ func getSong() string {
 			fmt.Fprintf(&sb, " — %s", info.URL)
 		}
 	}
-	return sb.String()
+	return sb.String(), nil
 }

@@ -2,8 +2,8 @@ git.sr.ht/~emersion/go-scfg v0.0.0-20201019143924-142a8aa629fc h1:51BD67xFX+bozd
 git.sr.ht/~emersion/go-scfg v0.0.0-20201019143924-142a8aa629fc/go.mod h1:t+Ww6SR24yYnXzEWiNlOY0AFo5E9B73X++10lrSpp4U=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/delthas/go-libnp v0.0.0-20221221144027-c473a063cc72 h1:CSoQd6Kw/fqPiXIEA9xnzdvyz0ZkplYUNGMBMQ7EGmw=
-github.com/delthas/go-libnp v0.0.0-20221221144027-c473a063cc72/go.mod h1:aGVXnhWpDlt5U4SphG97o1gszctZKvBTXy320E8Buw4=
+github.com/delthas/go-libnp v0.0.0-20221222161248-0e45ece1f878 h1:v8W8eW7eb2bHFXBA80UKcoe0TvEu46NlTHSDRvgAbMU=
+github.com/delthas/go-libnp v0.0.0-20221222161248-0e45ece1f878/go.mod h1:aGVXnhWpDlt5U4SphG97o1gszctZKvBTXy320E8Buw4=
 github.com/delthas/go-localeinfo v0.0.0-20221116001557-686a1e185118 h1:Xzf9ra1QRJXD62gwudjI2iBq7x9CusvHd83Dg2OnUmE=
 github.com/delthas/go-localeinfo v0.0.0-20221116001557-686a1e185118/go.mod h1:sG54BxlyQgIskYURLrg7mvhoGBe0Qq12DNtYRALwNa4=
 github.com/gdamore/encoding v1.0.0 h1:+7OoQ1Bc6eTm5niUzBa0Ctsh6JbMW6Ra+YNuAtDBdko=
