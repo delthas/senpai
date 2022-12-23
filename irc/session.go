@@ -149,6 +149,7 @@ type Session struct {
 
 	pendingChannels map[string]time.Time // set of join requests stamps for channels.
 
+	receivedISupport bool
 	receivedUserMode bool
 }
 
@@ -722,7 +723,12 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			return nil, msg.errNotEnoughParams(3)
 		}
 		s.updateFeatures(msg.Params[1 : len(msg.Params)-1])
-		return RegisteredEvent{}, nil
+		if !s.receivedISupport {
+			// notify only on first RPL_ISUPPORT
+			s.receivedISupport = true
+			return RegisteredEvent{}, nil
+		}
+		return nil, nil
 	case rplWhoreply, rplWhospecialreply:
 		var nick, host, flags, username string
 		var err error
