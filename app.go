@@ -751,7 +751,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if s.Nick() != app.cfg.Nick {
 			body = fmt.Sprintf("Connected to the server as %s", s.Nick())
 		}
-		app.win.AddLine(netID, "", ui.Line{
+		app.addStatusLine(netID, ui.Line{
 			At:   msg.TimeOrNow(),
 			Head: "--",
 			Body: ui.PlainString(body),
