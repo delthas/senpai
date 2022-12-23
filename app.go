@@ -987,6 +987,14 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if isBlackListed(msg.Command) {
 			break
 		}
+		if ev.Code == "372" {
+			app.win.AddLine(netID, "", ui.Line{
+				At:   msg.TimeOrNow(),
+				Head: "MOTD --",
+				Body: ui.PlainString(ev.Message),
+			})
+			break
+		}
 		var head string
 		var body string
 		switch ev.Severity {
@@ -1012,7 +1020,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 
 func isBlackListed(command string) bool {
 	switch command {
-	case "002", "003", "004", "422":
+	case "002", "003", "004", "375", "376", "422":
 		// useless connection messages
 		return true
 	}
