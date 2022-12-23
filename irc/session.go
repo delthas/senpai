@@ -148,6 +148,8 @@ type Session struct {
 	monitors       map[string]struct{}     // set of users we want to monitor (and keep even if they are disconnected).
 
 	pendingChannels map[string]time.Time // set of join requests stamps for channels.
+
+	receivedUserMode bool
 }
 
 func NewSession(out chan<- Message, params SessionParams) *Session {
@@ -1412,6 +1414,12 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		if msg.IsReply() {
 			if len(msg.Params) < 2 {
 				return nil, msg.errNotEnoughParams(2)
+			}
+			if msg.Command == rplUmodeis && !s.receivedUserMode {
+				// ignore the first RPL_UMODEIS on join
+				s.receivedUserMode = true
+				return nil, nil
+
 			}
 			if msg.Command == errUnknowncommand && msg.Params[1] == "BOUNCER" {
 				// ignore any error in response to unconditional BOUNCER LISTNETWORKS
