@@ -298,11 +298,20 @@ func (app *App) ircLoop(netID string) {
 		NetID:    netID,
 		Auth:     auth,
 	}
+	const throttleInterval = 6 * time.Second
+	const throttleMax = 1 * time.Minute
+	var delay time.Duration = 0
 	for app.wantsNetwork(netID) {
+		time.Sleep(delay)
+		if delay < throttleMax {
+			delay += throttleInterval
+		}
 		conn := app.connect(netID)
 		if conn == nil {
-			break
+			continue
 		}
+		delay = throttleInterval
+
 		in, out := irc.ChanInOut(conn)
 		if app.cfg.Debug {
 			out = app.debugOutputMessages(netID, out)
@@ -342,30 +351,23 @@ func (app *App) ircLoop(netID string) {
 			HeadColor: tcell.ColorRed,
 			Body:      ui.PlainString("Connection lost"),
 		})
-		if !app.wantsNetwork(netID) {
-			break
-		}
-		time.Sleep(10 * time.Second)
 	}
 }
 
 func (app *App) connect(netID string) net.Conn {
-	for app.wantsNetwork(netID) {
-		app.queueStatusLine(netID, ui.Line{
-			Head: "--",
-			Body: ui.PlainSprintf("Connecting to %s...", app.cfg.Addr),
-		})
-		conn, err := app.tryConnect()
-		if err == nil {
-			return conn
-		}
-		app.queueStatusLine(netID, ui.Line{
-			Head:      "!!",
-			HeadColor: tcell.ColorRed,
-			Body:      ui.PlainSprintf("Connection failed: %v", err),
-		})
-		time.Sleep(1 * time.Minute)
+	app.queueStatusLine(netID, ui.Line{
+		Head: "--",
+		Body: ui.PlainSprintf("Connecting to %s...", app.cfg.Addr),
+	})
+	conn, err := app.tryConnect()
+	if err == nil {
+		return conn
 	}
+	app.queueStatusLine(netID, ui.Line{
+		Head:      "!!",
+		HeadColor: tcell.ColorRed,
+		Body:      ui.PlainSprintf("Connection failed: %v", err),
+	})
 	return nil
 }
 
