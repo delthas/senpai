@@ -74,8 +74,9 @@ func init() {
 			Handle:    commandDoMsg,
 		},
 		"MOTD": {
-			Desc:   "show the message of the day (MOTD)",
-			Handle: commandDoMOTD,
+			AllowHome: true,
+			Desc:      "show the message of the day (MOTD)",
+			Handle:    commandDoMOTD,
 		},
 		"NAMES": {
 			Desc:   "show the member list of the current channel",
