@@ -62,6 +62,7 @@ var SupportedCapabilities = map[string]struct{}{
 	"server-time":      {},
 	"sasl":             {},
 	"setname":          {},
+	"standard-replies": {},
 
 	"draft/chathistory":               {},
 	"draft/event-playback":            {},
