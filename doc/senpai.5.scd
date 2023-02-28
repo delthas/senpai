@@ -169,6 +169,8 @@ colors {
 :  color for ">"-prompt that appears in command mode
 |  unread
 :  foreground color for unread buffer names in buffer lists
+|  status
+:  foreground color for status event lines (e.g. join, part, nick changes) in buffers
 |  nicks
 :  color scheme for user nicks, either "base" (the default, 16 colors) or "extended" (256 colors)
 

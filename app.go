@@ -143,10 +143,7 @@ func NewApp(cfg Config) (app *App, err error) {
 		MergeLine: func(former *ui.Line, addition ui.Line) {
 			app.mergeLine(former, addition)
 		},
-		Colors: ui.ConfigColors{
-			Unread: cfg.Colors.Unread,
-			Nicks:  cfg.Colors.Nicks,
-		},
+		Colors: cfg.Colors,
 	})
 	if err != nil {
 		return
@@ -154,7 +151,7 @@ func NewApp(cfg Config) (app *App, err error) {
 	app.win.SetPrompt(ui.Styled(">",
 		tcell.
 			StyleDefault.
-			Foreground(tcell.Color(app.cfg.Colors.Prompt))),
+			Foreground(app.cfg.Colors.Prompt)),
 	)
 
 	app.initWindow()
@@ -765,7 +762,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	case irc.SelfNickEvent:
 		var body ui.StyledStringBuilder
 		body.WriteString(fmt.Sprintf("%s\u2192%s", ev.FormerNick, s.Nick()))
-		textStyle := tcell.StyleDefault.Foreground(tcell.ColorGray)
+		textStyle := tcell.StyleDefault.Foreground(app.cfg.Colors.Status)
 		arrowStyle := tcell.StyleDefault
 		body.AddStyle(0, textStyle)
 		body.AddStyle(len(ev.FormerNick), arrowStyle)
@@ -773,7 +770,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.addStatusLine(netID, ui.Line{
 			At:        msg.TimeOrNow(),
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
+			HeadColor: app.cfg.Colors.Status,
 			Body:      body.StyledString(),
 			Highlight: true,
 			Readable:  true,
@@ -858,9 +855,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.win.AddLine(netID, buffer, ui.Line{
 			At:        msg.TimeOrNow(),
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
+			HeadColor: app.cfg.Colors.Status,
 			Notify:    notify,
-			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
+			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
 			Highlight: notify == ui.NotifyHighlight,
 			Readable:  true,
 		})
@@ -1192,7 +1189,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 	case irc.UserNickEvent:
 		var body ui.StyledStringBuilder
 		body.WriteString(fmt.Sprintf("%s\u2192%s", ev.FormerNick, ev.User))
-		textStyle := tcell.StyleDefault.Foreground(tcell.ColorGray)
+		textStyle := tcell.StyleDefault.Foreground(app.cfg.Colors.Status)
 		arrowStyle := tcell.StyleDefault
 		body.AddStyle(0, textStyle)
 		body.AddStyle(len(ev.FormerNick), arrowStyle)
@@ -1200,7 +1197,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
+			HeadColor: app.cfg.Colors.Status,
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -1211,12 +1208,12 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		body.Grow(len(ev.User) + 1)
 		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGreen))
 		body.WriteByte('+')
-		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
+		body.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
+			HeadColor: app.cfg.Colors.Status,
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -1227,12 +1224,12 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		body.Grow(len(ev.User) + 1)
 		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorRed))
 		body.WriteByte('-')
-		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
+		body.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
+			HeadColor: app.cfg.Colors.Status,
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -1243,12 +1240,12 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		body.Grow(len(ev.User) + 1)
 		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorRed))
 		body.WriteByte('-')
-		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
+		body.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
+			HeadColor: app.cfg.Colors.Status,
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -1260,9 +1257,9 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
+			HeadColor: app.cfg.Colors.Status,
 			Notify:    ui.NotifyUnread,
-			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
+			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
 			Readable:  true,
 		}
 	case irc.ModeChangeEvent:
@@ -1272,8 +1269,8 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",
-			HeadColor: tcell.ColorGray,
-			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
+			HeadColor: app.cfg.Colors.Status,
+			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
 			Mergeable: mergeable,
 			Data:      []irc.Event{ev},
 			Readable:  true,
@@ -1484,7 +1481,7 @@ func (app *App) updatePrompt() {
 		prompt = ui.Styled(">",
 			tcell.
 				StyleDefault.
-				Foreground(tcell.Color(app.cfg.Colors.Prompt)),
+				Foreground(app.cfg.Colors.Prompt),
 		)
 	} else if s == nil {
 		prompt = ui.Styled("<offline>",
@@ -1514,8 +1511,8 @@ func (app *App) printTopic(netID, buffer string) (ok bool) {
 	app.win.AddLine(netID, buffer, ui.Line{
 		At:        time.Now(),
 		Head:      "--",
-		HeadColor: tcell.ColorGray,
-		Body:      ui.Styled(body, tcell.StyleDefault.Foreground(tcell.ColorGray)),
+		HeadColor: app.cfg.Colors.Status,
+		Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
 	})
 	return true
 }

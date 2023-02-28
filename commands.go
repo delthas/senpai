@@ -401,13 +401,13 @@ func commandDoNames(app *App, args []string) (err error) {
 		return fmt.Errorf("this is not a channel")
 	}
 	var sb ui.StyledStringBuilder
-	sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
+	sb.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
 	sb.WriteString("Names: ")
 	for _, name := range s.Names(buffer) {
 		if name.PowerLevel != "" {
 			sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGreen))
 			sb.WriteString(name.PowerLevel)
-			sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
+			sb.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
 		}
 		sb.WriteString(name.Name.Name)
 		sb.WriteByte(' ')
@@ -417,7 +417,7 @@ func commandDoNames(app *App, args []string) (err error) {
 	app.win.AddLine(netID, buffer, ui.Line{
 		At:        time.Now(),
 		Head:      "--",
-		HeadColor: tcell.ColorGray,
+		HeadColor: app.cfg.Colors.Status,
 		Body:      body,
 	})
 	return nil

@@ -47,12 +47,6 @@ func parseColor(s string, c *tcell.Color) error {
 	return nil
 }
 
-type ConfigColors struct {
-	Prompt tcell.Color
-	Unread tcell.Color
-	Nicks  ui.ColorScheme
-}
-
 type Config struct {
 	Addr     string
 	Nick     string
@@ -75,7 +69,7 @@ type Config struct {
 	MemberColEnabled bool
 	TextMaxWidth     int
 
-	Colors ConfigColors
+	Colors ui.ConfigColors
 
 	Debug bool
 }
@@ -108,7 +102,8 @@ func Defaults() Config {
 		MemberColWidth:   16,
 		MemberColEnabled: true,
 		TextMaxWidth:     0,
-		Colors: ConfigColors{
+		Colors: ui.ConfigColors{
+			Status: tcell.ColorGray,
 			Prompt: tcell.ColorDefault,
 			Unread: tcell.ColorDefault,
 			Nicks:  ui.ColorSchemeBase,
@@ -340,8 +335,10 @@ func unmarshal(filename string, cfg *Config) (err error) {
 					cfg.Colors.Prompt = color
 				case "unread":
 					cfg.Colors.Unread = color
+				case "status":
+					cfg.Colors.Status = color
 				default:
-					return fmt.Errorf("unknown directive %q", child.Name)
+					return fmt.Errorf("unknown colors directive %q", child.Name)
 				}
 			}
 		case "debug":

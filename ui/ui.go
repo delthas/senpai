@@ -24,6 +24,8 @@ type Config struct {
 }
 
 type ConfigColors struct {
+	Status tcell.Color
+	Prompt tcell.Color
 	Unread tcell.Color
 	Nicks  ColorScheme
 }
