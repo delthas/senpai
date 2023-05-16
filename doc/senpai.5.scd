@@ -170,7 +170,7 @@ colors {
 |  unread
 :  foreground color for unread buffer names in buffer lists
 |  status
-:  foreground color for status event lines (e.g. join, part, nick changes) in buffers
+:  foreground color for status event lines (e.g. join, part, nick changes) in buffers. "disabled" hides status messages.
 |  nicks
 :  color scheme for user nicks, either "base" (the default, 16 colors) or "extended" (256 colors)
 

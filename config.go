@@ -68,6 +68,7 @@ type Config struct {
 	MemberColWidth   int
 	MemberColEnabled bool
 	TextMaxWidth     int
+	StatusEnabled    bool
 
 	Colors ui.ConfigColors
 
@@ -102,6 +103,7 @@ func Defaults() Config {
 		MemberColWidth:   16,
 		MemberColEnabled: true,
 		TextMaxWidth:     0,
+		StatusEnabled:    true,
 		Colors: ui.ConfigColors{
 			Status: tcell.ColorGray,
 			Prompt: tcell.ColorDefault,
@@ -324,6 +326,11 @@ func unmarshal(filename string, cfg *Config) (err error) {
 						return fmt.Errorf("unknown nick color scheme %q", colorStr)
 					}
 					continue
+				case "status":
+					if colorStr == "disabled" {
+						cfg.StatusEnabled = false
+						continue
+					}
 				}
 
 				var color tcell.Color

@@ -760,6 +760,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			s.MonitorAdd(target)
 		}
 	case irc.SelfNickEvent:
+		if !app.cfg.StatusEnabled {
+			break
+		}
 		var body ui.StyledStringBuilder
 		body.WriteString(fmt.Sprintf("%s\u2192%s", ev.FormerNick, s.Nick()))
 		textStyle := tcell.StyleDefault.Foreground(app.cfg.Colors.Status)
@@ -776,6 +779,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			Readable:  true,
 		})
 	case irc.UserNickEvent:
+		if !app.cfg.StatusEnabled {
+			break
+		}
 		line := app.formatEvent(ev)
 		for _, c := range s.ChannelsSharedWith(ev.User) {
 			app.win.AddLine(netID, c, line)
@@ -814,15 +820,24 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			app.lastBuffer = ""
 		}
 	case irc.UserJoinEvent:
+		if !app.cfg.StatusEnabled {
+			break
+		}
 		line := app.formatEvent(ev)
 		app.win.AddLine(netID, ev.Channel, line)
 	case irc.SelfPartEvent:
 		app.win.RemoveBuffer(netID, ev.Channel)
 		delete(app.messageBounds, boundKey{netID, ev.Channel})
 	case irc.UserPartEvent:
+		if !app.cfg.StatusEnabled {
+			break
+		}
 		line := app.formatEvent(ev)
 		app.win.AddLine(netID, ev.Channel, line)
 	case irc.UserQuitEvent:
+		if !app.cfg.StatusEnabled {
+			break
+		}
 		line := app.formatEvent(ev)
 		for _, c := range ev.Channels {
 			app.win.AddLine(netID, c, line)
@@ -833,6 +848,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		topic := ui.IRCString(ev.Topic).String()
 		app.win.SetTopic(netID, ev.Channel, topic)
 	case irc.ModeChangeEvent:
+		if !app.cfg.StatusEnabled {
+			break
+		}
 		line := app.formatEvent(ev)
 		app.win.AddLine(netID, ev.Channel, line)
 	case irc.InviteEvent:
@@ -927,6 +945,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		var linesBefore []ui.Line
 		var linesAfter []ui.Line
 		bounds, hasBounds := app.messageBounds[boundKey{netID, ev.Target}]
+		boundsNew := bounds
 		for _, m := range ev.Messages {
 			var line ui.Line
 			switch ev := m.(type) {
@@ -936,6 +955,10 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				line = app.formatEvent(ev)
 			}
 			if line.IsZero() {
+				continue
+			}
+			boundsNew.Update(&line)
+			if _, ok := m.(irc.MessageEvent); !ok && !app.cfg.StatusEnabled {
 				continue
 			}
 			if hasBounds {
@@ -950,16 +973,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			}
 		}
 		app.win.AddLines(netID, ev.Target, linesBefore, linesAfter)
-		if len(linesBefore) != 0 {
-			bounds.Update(&linesBefore[0])
-			bounds.Update(&linesBefore[len(linesBefore)-1])
-		}
-		if len(linesAfter) != 0 {
-			bounds.Update(&linesAfter[0])
-			bounds.Update(&linesAfter[len(linesAfter)-1])
-		}
-		if !bounds.IsZero() {
-			app.messageBounds[boundKey{netID, ev.Target}] = bounds
+		if !boundsNew.IsZero() {
+			app.messageBounds[boundKey{netID, ev.Target}] = boundsNew
 		}
 	case irc.SearchEvent:
 		app.win.OpenOverlay()
