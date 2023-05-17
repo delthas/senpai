@@ -40,6 +40,7 @@ type UI struct {
 	e      Editor
 	prompt StyledString
 	status string
+	title  string
 
 	channelOffset int
 	memberClicked int
@@ -74,6 +75,7 @@ func New(config Config) (ui *UI, err error) {
 	}
 	ui.screen.EnablePaste()
 	ui.screen.SetCursorStyle(tcell.CursorStyleSteadyBar)
+	ui.screen.SetTitle("senpai")
 
 	_, h := ui.screen.Size()
 	ui.screen.Clear()
@@ -346,6 +348,14 @@ func (ui *UI) SetStatus(status string) {
 
 func (ui *UI) SetPrompt(prompt StyledString) {
 	ui.prompt = prompt
+}
+
+func (ui *UI) SetTitle(title string) {
+	if ui.title == title {
+		return
+	}
+	ui.title = title
+	ui.screen.SetTitle(title)
 }
 
 // InputContent result must not be modified.

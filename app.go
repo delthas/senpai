@@ -246,6 +246,11 @@ func (app *App) eventLoop() {
 				currentMembers = s.Names(buffer)
 			}
 			app.win.Draw(currentMembers)
+			if netID != "" && buffer != "" {
+				app.win.SetTitle(fmt.Sprintf("%s — senpai", buffer))
+			} else {
+				app.win.SetTitle(fmt.Sprintf("senpai"))
+			}
 		}
 	}
 	go func() {
