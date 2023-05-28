@@ -574,6 +574,12 @@ func (r *HistoryRequest) Before(t time.Time) {
 	r.doRequest()
 }
 
+func (r *HistoryRequest) Latest() {
+	r.command = "LATEST"
+	r.bounds = []string{"*"}
+	r.doRequest()
+}
+
 func (r *HistoryRequest) Targets(start time.Time, end time.Time) {
 	r.command = "TARGETS"
 	r.bounds = []string{formatTimestamp(start), formatTimestamp(end)}

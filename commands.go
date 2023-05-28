@@ -509,7 +509,7 @@ func commandDoQuery(app *App, args []string) (err error) {
 	if added {
 		s.MonitorAdd(target)
 		s.ReadGet(target)
-		s.NewHistoryRequest(target).WithLimit(200).Before(time.Now())
+		s.NewHistoryRequest(target).WithLimit(200).Latest()
 	}
 	return nil
 }

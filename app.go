@@ -517,7 +517,7 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 						if added {
 							s.MonitorAdd(buffer)
 							s.ReadGet(buffer)
-							s.NewHistoryRequest(buffer).WithLimit(500).Before(time.Now())
+							s.NewHistoryRequest(buffer).WithLimit(500).Latest()
 						}
 					}
 				}
@@ -672,13 +672,15 @@ func (app *App) requestHistory() {
 		return
 	}
 	if app.win.IsAtTop() && buffer != "" {
-		t := time.Now()
 		if bound, ok := app.messageBounds[boundKey{netID, buffer}]; ok {
-			t = bound.first
+			s.NewHistoryRequest(buffer).
+				WithLimit(200).
+				Before(bound.first)
+		} else {
+			s.NewHistoryRequest(buffer).
+				WithLimit(200).
+				Latest()
 		}
-		s.NewHistoryRequest(buffer).
-			WithLimit(200).
-			Before(t)
 	}
 }
 
@@ -785,9 +787,15 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		i, added := app.win.AddBuffer(netID, "", ev.Channel)
 		bounds, ok := app.messageBounds[boundKey{netID, ev.Channel}]
 		if added || !ok {
-			s.NewHistoryRequest(ev.Channel).
-				WithLimit(500).
-				Before(msg.TimeOrNow())
+			if t, ok := msg.Time(); ok {
+				s.NewHistoryRequest(ev.Channel).
+					WithLimit(500).
+					Before(t)
+			} else {
+				s.NewHistoryRequest(ev.Channel).
+					WithLimit(500).
+					Latest()
+			}
 		} else {
 			s.NewHistoryRequest(ev.Channel).
 				WithLimit(1000).
@@ -866,9 +874,15 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				app.monitor[netID][buffer] = struct{}{}
 				s.MonitorAdd(buffer)
 				s.ReadGet(buffer)
-				s.NewHistoryRequest(buffer).
-					WithLimit(500).
-					Before(msg.TimeOrNow())
+				if t, ok := msg.Time(); ok {
+					s.NewHistoryRequest(buffer).
+						WithLimit(500).
+						Before(t)
+				} else {
+					s.NewHistoryRequest(buffer).
+						WithLimit(500).
+						Latest()
+				}
 			}
 		}
 		app.win.AddLine(netID, buffer, line)
