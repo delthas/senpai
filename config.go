@@ -88,8 +88,8 @@ func DefaultHighlightPath() (string, error) {
 	return path.Join(configDir, "senpai", "highlight"), nil
 }
 
-func Defaults() (cfg Config, err error) {
-	cfg = Config{
+func Defaults() Config {
+	return Config{
 		Addr:             "",
 		Nick:             "",
 		Real:             "",
@@ -115,15 +115,10 @@ func Defaults() (cfg Config, err error) {
 		},
 		Debug: false,
 	}
-
-	return
 }
 
 func LoadConfigFile(filename string) (cfg Config, err error) {
-	cfg, err = Defaults()
-	if err != nil {
-		return
-	}
+	cfg = Defaults()
 
 	err = unmarshal(filename, &cfg)
 	if err != nil {
@@ -164,7 +159,7 @@ func LoadConfigFile(filename string) (cfg Config, err error) {
 func unmarshal(filename string, cfg *Config) (err error) {
 	directives, err := scfg.Load(filename)
 	if err != nil {
-		return fmt.Errorf("error parsing scfg: %s", err)
+		return fmt.Errorf("error parsing scfg: %w", err)
 	}
 
 	for _, d := range directives {
@@ -205,7 +200,7 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			cmd := exec.Command(cmdName, d.Params[1:]...)
 			var stdout []byte
 			if stdout, err = cmd.Output(); err != nil {
-				return fmt.Errorf("error running password command: %s", err)
+				return fmt.Errorf("error running password command: %w", err)
 			}
 
 			passCmdOut := strings.Split(string(stdout), "\n")

@@ -12,19 +12,20 @@ senpai is an IRC client that works best with bouncers:
 - history is fetched from the server via [CHATHISTORY],
 - networks are fetched from the server via [bouncer-networks].
 
-## How do I use this?
+## Installing
 
+From source (requires Go):
 ```shell
-mkdir -p ~/.config/senpai
-cat <<EOF >~/.config/senpai/senpai.scfg
-address chat.sr.ht
-nickname senpai
-password "my password can't be this cute (2010)"
-# alternatively, specify a command to fetch your password:
-# password-cmd  gopass show irc/<username>
-EOF
-go run ./cmd/senpai
+go install git.sr.ht/~taiite/senpai/cmd/senpai@master
 ```
+
+## Running
+
+From your terminal:
+```shell
+senpai
+```
+Senpai will guide you through a configuration assistant on your first run.
 
 Then, type `/join #senpai` on [Libera.Chat] and have a... chat!
 
@@ -43,8 +44,7 @@ things out with an IRC server, then you have two options:
 
 ## Contributing and stuff
 
-Contributions are accepted as patches to [the mailing list][ml] and as pull
-requests on [Github].
+Contributions are accepted as patches to [the mailing list][ml].
 
 Browse tickets at <https://todo.sr.ht/~taiite/senpai>.
 
@@ -56,6 +56,5 @@ Copyright (C) 2021 The senpai Contributors
 
 [bouncer-networks]: https://git.sr.ht/~emersion/soju/tree/master/item/doc/ext/bouncer-networks.md
 [CHATHISTORY]: https://ircv3.net/specs/extensions/chathistory
-[Github]: https://github.com/hhirtz/senpai/pulls
 [Libera.Chat]: https://libera.chat/
 [ml]: https://lists.sr.ht/~delthas/senpai-dev

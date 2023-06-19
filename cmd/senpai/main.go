@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -37,8 +38,79 @@ func main() {
 
 	cfg, err := senpai.LoadConfigFile(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load the required configuration file at %q: %s\n", configPath, err)
-		os.Exit(1)
+		if !errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "failed to load the required configuration file at %q: %s\n", configPath, err)
+			os.Exit(1)
+			return
+		}
+		var host, port string
+		tls := true
+		var nick, password string
+		fmt.Fprintf(os.Stderr, "The configuration file at %q was not found.\n", configPath)
+		fmt.Fprintf(os.Stderr, "Configuration assistant: senpai will create a configuration file for you.\n")
+		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your server host (examples: example.com, localhost, 1.2.3.4): ")
+		for host == "" {
+			fmt.Scanln(&host)
+		}
+		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your server port (examples: 6667, 6697) [optional]: ")
+		fmt.Scanln(&port)
+		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter whether your server uses TLS (examples: yes, no) [optional, default: yes]: ")
+		for {
+			var tlsStr string
+			fmt.Scanln(&tlsStr)
+			if tlsStr == "" {
+				break
+			}
+			if _, err := fmt.Fscan(strings.NewReader(tlsStr), &tls); err == nil {
+				break
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your nickname: ")
+		for nick == "" {
+			fmt.Scanln(&nick)
+		}
+		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your password (only enter if you already have an account) [optional]: ")
+		fmt.Scanln(&password)
+
+		folderPath := path.Dir(configPath)
+		if err := os.MkdirAll(folderPath, 0700); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create the configuration file folder at %q: %s\n", folderPath, err)
+			os.Exit(1)
+			return
+		}
+		f, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to create the configuration file at %q: %s\n", configPath, err)
+			os.Exit(1)
+			return
+		}
+		var addr string
+		if !tls {
+			addr += "irc+insecure://"
+		}
+		addr += host
+		if port != "" {
+			addr += ":" + port
+		}
+		fmt.Fprintf(f, "address %q\n", addr)
+		fmt.Fprintf(f, "nickname %q\n", nick)
+		if password != "" {
+			fmt.Fprintf(f, "password %q\n", password)
+		}
+		f.Close()
+
+		cfg, err = senpai.LoadConfigFile(configPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to load the configuration file at %q: %s\n", configPath, err)
+			os.Exit(1)
+			return
+		}
+
+		fmt.Fprintf(os.Stderr, "Configuration assistant: Configuration saved to %q. Now starting.", configPath)
+		for i := 0; i < 6; i++ {
+			time.Sleep(500 * time.Millisecond)
+			fmt.Fprintf(os.Stderr, ".")
+		}
 	}
 
 	cfg.Debug = cfg.Debug || debug
