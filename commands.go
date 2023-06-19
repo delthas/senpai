@@ -201,7 +201,7 @@ func init() {
 			AllowHome: true,
 			MaxArgs:   1,
 			Usage:     "<text>",
-			Desc:      "searches messages in a target",
+			Desc:      "search messages in a target",
 			Handle:    commandDoSearch,
 		},
 		"SHRUG": {
