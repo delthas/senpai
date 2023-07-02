@@ -428,6 +428,7 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 	if b == nil {
 		return
 	}
+	updateRead := b != bs.cur() && !b.read.IsZero()
 
 	lines := make([]Line, 0, len(before)+len(b.lines)+len(after))
 	for _, buf := range []*[]Line{&before, &b.lines, &after} {
@@ -445,6 +446,15 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 					line.computeSplitPoints()
 				}
 				lines = append(lines, line)
+			}
+
+			if updateRead && line.At.After(b.read) {
+				if line.Notify != NotifyNone {
+					b.unread = true
+				}
+				if line.Notify == NotifyHighlight {
+					b.highlights++
+				}
 			}
 		}
 	}
