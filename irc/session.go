@@ -95,6 +95,7 @@ type Channel struct {
 	Topic     string           // the topic of the channel, or "" if absent.
 	TopicWho  *Prefix          // the name of the last user who set the topic.
 	TopicTime time.Time        // the last time the topic has been changed.
+	Read      time.Time        // the time until which messages were read.
 
 	complete bool // whether this structure is fully initialized.
 }
@@ -1045,6 +1046,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			ev := SelfJoinEvent{
 				Channel: c.Name,
 				Topic:   c.Topic,
+				Read:    c.Read,
 			}
 			if stamp, ok := s.pendingChannels[channelCf]; ok && time.Since(stamp) < 5*time.Second {
 				ev.Requested = true
@@ -1367,6 +1369,16 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		if !ok {
 			return nil, nil
 		}
+
+		channelCf := s.Casemap(target)
+		if c, ok := s.channels[channelCf]; ok {
+			c.Read = t
+			s.channels[channelCf] = c
+			if !c.complete {
+				return nil, nil
+			}
+		}
+
 		return ReadEvent{
 			Target:    target,
 			Timestamp: t,

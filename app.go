@@ -792,6 +792,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 	case irc.SelfJoinEvent:
 		i, added := app.win.AddBuffer(netID, "", ev.Channel)
+		if !ev.Read.IsZero() {
+			app.win.SetRead(netID, ev.Channel, ev.Read)
+		}
 		bounds, ok := app.messageBounds[boundKey{netID, ev.Channel}]
 		if added || !ok {
 			if t, ok := msg.Time(); ok {
