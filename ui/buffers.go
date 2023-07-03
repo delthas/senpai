@@ -28,6 +28,14 @@ const (
 	NotifyHighlight
 )
 
+type optional int
+
+const (
+	optionalUnset optional = iota
+	optionalFalse
+	optionalTrue
+)
+
 type Line struct {
 	At        time.Time
 	Head      string
@@ -189,6 +197,17 @@ type buffer struct {
 	read       time.Time
 	openedOnce bool
 
+	// This is the "last read" timestamp when the buffer was last focused.
+	// If the "last read" timestamp changes while the buffer is focused,
+	// the ruler should not move.
+	unreadRuler time.Time
+	// Whether to draw the unread bar for the current buffer.
+	// The goal is to draw the unread bar iff there was at least one unread
+	// message when the buffer was opened.
+	// The unreadSkip value starts off as optionalUnset, then gets set to
+	// either optionalFalse or optionalTrue when a message is received.
+	unreadSkip optional
+
 	lines []Line
 	topic string
 
@@ -256,8 +275,21 @@ func (bs *BufferList) To(i int) bool {
 		if len(bs.list) <= bs.current {
 			bs.current = len(bs.list) - 1
 		}
-		bs.list[bs.current].highlights = 0
-		bs.list[bs.current].unread = false
+		b := bs.list[bs.current]
+		b.highlights = 0
+		b.unread = false
+		b.unreadRuler = b.read
+		if len(b.lines) > 0 {
+			l := b.lines[len(b.lines)-1]
+			if !l.At.After(b.unreadRuler) {
+				b.unreadSkip = optionalTrue
+			} else {
+				b.unreadSkip = optionalFalse
+			}
+		} else {
+			b.unreadSkip = optionalUnset
+		}
+		bs.list[bs.current] = b
 		return true
 	}
 	return false
@@ -268,19 +300,13 @@ func (bs *BufferList) ShowBufferNumbers(enabled bool) {
 }
 
 func (bs *BufferList) Next() {
-	bs.overlay = nil
-	bs.current = (bs.current + 1) % len(bs.list)
-	b := bs.cur()
-	b.highlights = 0
-	b.unread = false
+	c := (bs.current + 1) % len(bs.list)
+	bs.To(c)
 }
 
 func (bs *BufferList) Previous() {
-	bs.overlay = nil
-	bs.current = (bs.current - 1 + len(bs.list)) % len(bs.list)
-	b := bs.cur()
-	b.highlights = 0
-	b.unread = false
+	c := (bs.current - 1 + len(bs.list)) % len(bs.list)
+	bs.To(c)
 }
 
 func (bs *BufferList) NextUnread() {
@@ -421,6 +447,13 @@ func (bs *BufferList) AddLine(netID, title string, line Line) {
 	if line.Notify == NotifyHighlight && b != current {
 		b.highlights++
 	}
+	if b == current && b.unreadSkip == optionalUnset && len(b.lines) > 0 {
+		if b.unreadRuler.IsZero() || !b.lines[len(b.lines)-1].At.After(b.unreadRuler) {
+			b.unreadSkip = optionalTrue
+		} else {
+			b.unreadSkip = optionalFalse
+		}
+	}
 }
 
 func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
@@ -459,6 +492,13 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 		}
 	}
 	b.lines = lines
+	if b == bs.cur() && b.unreadSkip == optionalUnset && len(b.lines) > 0 {
+		if b.unreadRuler.IsZero() || !b.lines[len(b.lines)-1].At.After(b.unreadRuler) {
+			b.unreadSkip = optionalTrue
+		} else {
+			b.unreadSkip = optionalFalse
+		}
+	}
 }
 
 func (bs *BufferList) SetTopic(netID, title string, topic string) {
@@ -491,6 +531,10 @@ func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 	}
 	if b.read.Before(timestamp) {
 		b.read = timestamp
+		// For buffers that were focused _before_ we receive any "last read" date.
+		if b.unreadRuler.IsZero() {
+			b.unreadRuler = b.read
+		}
 	}
 }
 
@@ -783,6 +827,7 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 	}
 
 	yi := b.scrollAmt + y0 + bs.tlHeight
+	rulerDrawn := b.unreadSkip != optionalFalse || b.unreadRuler.IsZero() || b.title == ""
 	for i := len(b.lines) - 1; 0 <= i; i-- {
 		if yi < y0 {
 			break
@@ -792,6 +837,19 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 
 		line := &b.lines[i]
 		nls := line.NewLines(bs.textWidth)
+
+		if !rulerDrawn {
+			isRead := !line.At.After(b.unreadRuler)
+			if isRead && yi > y0 {
+				yi--
+				st := tcell.StyleDefault.Foreground(tcell.ColorRed)
+				for x := x0; x < x0+bs.tlInnerWidth+nickColWidth+9; x++ {
+					screen.SetContent(x, yi, 0x254C, nil, st)
+				}
+				rulerDrawn = true
+			}
+		}
+
 		yi -= len(nls) + 1
 		if y0+bs.tlHeight <= yi {
 			continue
