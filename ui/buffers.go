@@ -283,6 +283,26 @@ func (bs *BufferList) Previous() {
 	b.unread = false
 }
 
+func (bs *BufferList) NextUnread() {
+	for i := 0; i < len(bs.list); i++ {
+		c := (bs.current + i) % len(bs.list)
+		if bs.list[c].unread {
+			bs.To(c)
+			return
+		}
+	}
+}
+
+func (bs *BufferList) PreviousUnread() {
+	for i := 0; i < len(bs.list); i++ {
+		c := (bs.current - i + len(bs.list)) % len(bs.list)
+		if bs.list[c].unread {
+			bs.To(c)
+			return
+		}
+	}
+}
+
 func (bs *BufferList) Add(netID, netName, title string) (i int, added bool) {
 	i = 0
 	lTitle := strings.ToLower(title)

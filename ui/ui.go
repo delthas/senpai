@@ -126,6 +126,16 @@ func (ui *UI) PreviousBuffer() {
 	ui.memberOffset = 0
 }
 
+func (ui *UI) NextUnreadBuffer() {
+	ui.bs.NextUnread()
+	ui.memberOffset = 0
+}
+
+func (ui *UI) PreviousUnreadBuffer() {
+	ui.bs.PreviousUnread()
+	ui.memberOffset = 0
+}
+
 func (ui *UI) ClickedBuffer() int {
 	return ui.bs.clicked
 }

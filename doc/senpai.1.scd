@@ -86,6 +86,12 @@ senpai eats these events for eg selecting channels.*
 *CTRL-P*, *ALT-LEFT*
 	Go to the previous buffer.
 
+*SHIFT-RIGHT*
+	Go to the next unread buffer.
+
+*SHIFT-LEFT*
+	Go to the previous unread buffer.
+
 *ALT-HOME*
 	Go to the first buffer.
 

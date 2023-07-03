@@ -549,6 +549,8 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 	case tcell.KeyRight:
 		if ev.Modifiers() == tcell.ModAlt {
 			app.win.NextBuffer()
+		} else if ev.Modifiers() == tcell.ModShift {
+			app.win.NextUnreadBuffer()
 		} else if ev.Modifiers() == tcell.ModCtrl {
 			app.win.InputRightWord()
 		} else {
@@ -557,6 +559,8 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 	case tcell.KeyLeft:
 		if ev.Modifiers() == tcell.ModAlt {
 			app.win.PreviousBuffer()
+		} else if ev.Modifiers() == tcell.ModShift {
+			app.win.PreviousUnreadBuffer()
 		} else if ev.Modifiers() == tcell.ModCtrl {
 			app.win.InputLeftWord()
 		} else {
