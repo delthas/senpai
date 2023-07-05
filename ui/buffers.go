@@ -381,25 +381,42 @@ func (bs *BufferList) Remove(netID, title string) bool {
 	if idx < 0 {
 		return false
 	}
+	updated := bs.current == idx
 
 	bs.list = append(bs.list[:idx], bs.list[idx+1:]...)
 	if len(bs.list) <= bs.current {
 		bs.current--
 	}
+	if updated {
+		// Force refresh current buffer
+		c := bs.current
+		bs.current = -1
+		bs.To(c)
+	}
 	return true
 }
 
 func (bs *BufferList) RemoveNetwork(netID string) {
+	updated := false
 	for idx := 0; idx < len(bs.list); idx++ {
 		b := &bs.list[idx]
 		if b.netID != netID {
 			continue
+		}
+		if idx == bs.current {
+			updated = true
 		}
 		bs.list = append(bs.list[:idx], bs.list[idx+1:]...)
 		if len(bs.list) <= bs.current {
 			bs.current--
 		}
 		idx--
+	}
+	if updated {
+		// Force refresh current buffer
+		c := bs.current
+		bs.current = -1
+		bs.To(c)
 	}
 }
 
