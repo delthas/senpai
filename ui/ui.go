@@ -459,6 +459,10 @@ func (ui *UI) Beep() {
 	ui.screen.Beep()
 }
 
+func (ui *UI) Notify(title string, body string) {
+	ui.screen.Notify(title, body)
+}
+
 func (ui *UI) Draw(members []irc.Member) {
 	w, h := ui.screen.Size()
 

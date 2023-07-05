@@ -14,4 +14,4 @@ require (
 	mvdan.cc/xurls/v2 v2.3.0
 )
 
-replace github.com/gdamore/tcell/v2 => github.com/delthas/tcell/v2 v2.4.1-0.20230705153445-335346940558
+replace github.com/gdamore/tcell/v2 => github.com/delthas/tcell/v2 v2.4.1-0.20230705171626-83fbd7b21b55
