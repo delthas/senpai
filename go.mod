@@ -13,3 +13,5 @@ require (
 	golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
 	mvdan.cc/xurls/v2 v2.3.0
 )
+
+replace github.com/gdamore/tcell/v2 => github.com/delthas/tcell/v2 v2.4.1-0.20230705153445-335346940558
