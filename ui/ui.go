@@ -112,6 +112,10 @@ func (ui *UI) Exit() {
 }
 
 func (ui *UI) Close() {
+	// See: https://github.com/gdamore/tcell/issues/623
+	ui.screen.SetCursorStyle(tcell.CursorStyleDefault)
+	ui.screen.Sync()
+
 	ui.screen.Fini()
 }
 
