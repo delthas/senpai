@@ -73,6 +73,7 @@ func New(config Config) (ui *UI, err error) {
 		ui.screen.EnableMouse()
 	}
 	ui.screen.EnablePaste()
+	ui.screen.SetCursorStyle(tcell.CursorStyleSteadyBar)
 
 	_, h := ui.screen.Size()
 	ui.screen.Clear()
