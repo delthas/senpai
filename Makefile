@@ -1,13 +1,13 @@
 .POSIX:
 .SUFFIXES:
 
-GO = go
-RM = rm
-SCDOC = scdoc
-GOFLAGS =
-PREFIX = /usr/local
-BINDIR = bin
-MANDIR = share/man
+GO ?= go
+RM ?= rm
+SCDOC ?= scdoc
+GOFLAGS ?=
+PREFIX ?= /usr/local
+BINDIR ?= bin
+MANDIR ?= share/man
 
 all: senpai doc/senpai.1 doc/senpai.5
 
