@@ -859,10 +859,9 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 			isRead := !line.At.After(b.unreadRuler)
 			if isRead && yi > y0 {
 				yi--
-				st := tcell.StyleDefault.Foreground(tcell.ColorRed)
-				margin := 5
-				for x := x0 + nickColWidth + 9 + margin; x < x0+bs.tlInnerWidth-margin; x++ {
-					screen.SetContent(x, yi, '-', nil, st)
+				st := tcell.StyleDefault.Foreground(tcell.ColorGray)
+				for x := x0; x < x0+bs.tlInnerWidth+nickColWidth+9; x++ {
+					screen.SetContent(x, yi, 0x2500, nil, st)
 				}
 				rulerDrawn = true
 			}
