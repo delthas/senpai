@@ -43,11 +43,27 @@ things out with an IRC server, then you have two options:
 2. Run the test client, that uses the same IRC library but exposes a simpler
    interface, by running `go run ./cmd/test -help`.
 
-## Contributing and stuff
-
-Contributions are accepted as patches to [the mailing list][ml].
+## Issue tracker
 
 Browse tickets at <https://todo.sr.ht/~taiite/senpai>.
+
+## Contributing
+
+Sending patches to senpai is done [by email](https://lists.sr.ht/~delthas/senpai-dev), this is simple and built-in to Git.
+
+Set up your system once by following the steps Installation and Configuration of [git-send-email.io](https://git-send-email.io/)
+
+Then, run once in this repository:
+```shell
+git config sendemail.to "~delthas/senpai-dev@lists.sr.ht"
+```
+
+Then, to send a patch, make your commit, then run:
+```shell
+git send-email --base=HEAD~1 --annotate -1 -v1
+```
+
+It should then appear on [the mailing list](https://lists.sr.ht/~delthas/senpai-dev/patches).
 
 ## License
 
