@@ -860,17 +860,9 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 			if isRead && yi > y0 {
 				yi--
 				st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-				margin := 5
-				for x := x0 + nickColWidth + 9 + margin; x < x0+bs.tlInnerWidth-margin; x++ {
-					var r rune
-					if x == x0+nickColWidth+9+margin {
-						r = '◄'
-					} else if x == x0+bs.tlInnerWidth-margin-1 {
-						r = '►'
-					} else {
-						r = 0x2500
-					}
-					screen.SetContent(x, yi, r, nil, st)
+				printIdent(screen, x0+7, yi, nickColWidth, Styled("--", st))
+				for x := x0 + 9 + nickColWidth; x < x0+9+nickColWidth+bs.tlInnerWidth; x++ {
+					screen.SetContent(x, yi, 0x2500, nil, st)
 				}
 				rulerDrawn = true
 			}
