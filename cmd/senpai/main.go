@@ -61,9 +61,15 @@ func main() {
 			if tlsStr == "" {
 				break
 			}
-			if _, err := fmt.Fscan(strings.NewReader(tlsStr), &tls); err == nil {
-				break
+			switch strings.ToLower(tlsStr) {
+			case "y", "yes":
+				tls = true
+			case "n", "no":
+				tls = false
+			default:
+				continue
 			}
+			break
 		}
 		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your nickname: ")
 		for nick == "" {
