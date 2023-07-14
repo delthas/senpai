@@ -208,6 +208,10 @@ func init() {
 			Desc:   "send a shrug to the current channel ¯\\_(ツ)_/¯",
 			Handle: commandDoShrug,
 		},
+		"TABLEFLIP": {
+			Desc:   "send a tableflip to the current channel (╯°□°)╯︵ ┻━┻",
+			Handle: commandDoTableFlip,
+		},
 	}
 }
 
@@ -774,6 +778,11 @@ func commandSendMessage(app *App, target string, content string) error {
 func commandDoShrug(app *App, args []string) (err error) {
 	_, buffer := app.win.CurrentBuffer()
 	return commandSendMessage(app, buffer, `¯\_(ツ)_/¯`)
+}
+
+func commandDoTableFlip(app *App, args []string) (err error) {
+	_, buffer := app.win.CurrentBuffer()
+	return commandSendMessage(app, buffer, `(╯°□°)╯︵ ┻━┻`)
 }
 
 func (app *App) handleInput(buffer, content string) error {
