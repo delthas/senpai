@@ -48,12 +48,14 @@ func parseColor(s string, c *tcell.Color) error {
 }
 
 type Config struct {
-	Addr     string
-	Nick     string
-	Real     string
-	User     string
-	Password *string
-	TLS      bool
+	Addr          string
+	Nick          string
+	Real          string
+	User          string
+	Password      *string
+	TLS           bool
+	TLSSkipVerify bool
+
 	Channels []string
 
 	Typings bool
@@ -91,6 +93,7 @@ func Defaults() Config {
 		User:             "",
 		Password:         nil,
 		TLS:              true,
+		TLSSkipVerify:    false,
 		Channels:         nil,
 		Typings:          true,
 		Mouse:            true,
@@ -135,6 +138,9 @@ func LoadConfigFile(filename string) (cfg Config, err error) {
 	}
 	if u, err := url.Parse(cfg.Addr); err == nil && u.Scheme != "" {
 		switch u.Scheme {
+		case "ircs+insecure":
+			cfg.TLS = true
+			cfg.TLSSkipVerify = true
 		case "ircs":
 			cfg.TLS = true
 		case "irc+insecure":

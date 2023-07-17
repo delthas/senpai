@@ -405,8 +405,9 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 	if app.cfg.TLS {
 		host, _, _ := net.SplitHostPort(addr) // should succeed since net.Dial did.
 		conn = tls.Client(conn, &tls.Config{
-			ServerName: host,
-			NextProtos: []string{"irc"},
+			ServerName:         host,
+			InsecureSkipVerify: app.cfg.TLSSkipVerify,
+			NextProtos:         []string{"irc"},
 		})
 		err = conn.(*tls.Conn).HandshakeContext(ctx)
 		if err != nil {
