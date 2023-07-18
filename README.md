@@ -17,7 +17,9 @@ senpai is an IRC client that works best with bouncers:
 
 From source (requires Go):
 ```shell
-go install git.sr.ht/~taiite/senpai/cmd/senpai@master
+git clone git.sr.ht/~taiite/senpai/cmd/senpai
+cd senpai
+go install ./cmd/senpai
 ```
 
 ## Running
