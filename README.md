@@ -19,8 +19,17 @@ From source (requires Go):
 ```shell
 git clone git.sr.ht/~taiite/senpai/cmd/senpai
 cd senpai
+make
+sudo make install
+```
+
+For a simple Go local install:
+```shell
+git clone git.sr.ht/~taiite/senpai/cmd/senpai
+cd senpai
 go install ./cmd/senpai
 ```
+
 
 ## Running
 
