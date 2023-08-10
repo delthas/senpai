@@ -1,7 +1,6 @@
 package senpai
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -118,46 +117,57 @@ func Defaults() Config {
 	}
 }
 
-func LoadConfigFile(filename string) (cfg Config, err error) {
-	cfg = Defaults()
-
-	err = unmarshal(filename, &cfg)
+func ParseAddr(addr string, cfg *Config) error {
+	if addr == "" {
+		return nil
+	}
+	if !strings.Contains(addr, "://") {
+		addr = "irc://" + addr
+	}
+	u, err := url.Parse(addr)
 	if err != nil {
-		return cfg, err
+		return err
 	}
-	if cfg.Addr == "" {
-		return cfg, errors.New("addr is required")
+	switch u.Scheme {
+	case "ircs+insecure":
+		cfg.TLS = true
+		cfg.TLSSkipVerify = true
+	case "ircs":
+		cfg.TLS = true
+	case "irc+insecure":
+		cfg.TLS = false
+	case "irc":
+		// Could be TLS or plaintext, keep TLS as is.
+	default:
+		return fmt.Errorf("invalid IRC addr scheme: %v", addr)
 	}
-	if cfg.Nick == "" {
-		return cfg, errors.New("nick is required")
-	}
-	if cfg.User == "" {
-		cfg.User = cfg.Nick
-	}
-	if cfg.Real == "" {
-		cfg.Real = cfg.Nick
-	}
-	if u, err := url.Parse(cfg.Addr); err == nil && u.Scheme != "" {
-		switch u.Scheme {
-		case "ircs+insecure":
-			cfg.TLS = true
-			cfg.TLSSkipVerify = true
-		case "ircs":
-			cfg.TLS = true
-		case "irc+insecure":
-			cfg.TLS = false
-		case "irc":
-			// Could be TLS or plaintext, keep TLS as is.
-		default:
-			if u.Host != "" {
-				return cfg, fmt.Errorf("invalid IRC addr scheme: %v", cfg.Addr)
-			}
-		}
-		if u.Host != "" {
-			cfg.Addr = u.Host
+	if u := u.User; u != nil {
+		cfg.User = u.Username()
+		if p, ok := u.Password(); ok {
+			cfg.Password = &p
+		} else {
+			cfg.Password = nil
 		}
 	}
-	return
+	cfg.Addr = u.Host
+	target, _, _ := strings.Cut(strings.TrimLeft(u.Path, "/"), "/")
+	if target != "" {
+		cfg.Channels = []string{target}
+	}
+	return nil
+}
+
+func LoadConfigFile(filename string) (Config, error) {
+	cfg := Defaults()
+
+	err := unmarshal(filename, &cfg)
+	if err != nil {
+		return Config{}, err
+	}
+	if err := ParseAddr(cfg.Addr, &cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
 }
 
 func unmarshal(filename string, cfg *Config) (err error) {

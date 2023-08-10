@@ -109,6 +109,19 @@ type App struct {
 }
 
 func NewApp(cfg Config) (app *App, err error) {
+	if cfg.Addr == "" {
+		return nil, errors.New("address is required")
+	}
+	if cfg.Nick == "" {
+		return nil, errors.New("nick is required")
+	}
+	if cfg.User == "" {
+		cfg.User = cfg.Nick
+	}
+	if cfg.Real == "" {
+		cfg.Real = cfg.Nick
+	}
+
 	app = &App{
 		networks: map[string]struct{}{
 			"": {}, // add the master network by default

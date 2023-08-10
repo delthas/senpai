@@ -20,8 +20,10 @@ func main() {
 	tcell.SetEncodingFallback(tcell.EncodingFallbackASCII)
 
 	var configPath string
+	var nickname string
 	var debug bool
 	flag.StringVar(&configPath, "config", "", "path to the configuration file")
+	flag.StringVar(&nickname, "nickname", "", "nick name/display name to use")
 	flag.BoolVar(&debug, "debug", false, "show raw protocol data in the home buffer")
 	flag.Parse()
 
@@ -119,10 +121,15 @@ func main() {
 	}
 
 	cfg.Debug = cfg.Debug || debug
+	if nickname != "" {
+		cfg.Nick = nickname
+	}
 
 	app, err := senpai.NewApp(cfg)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "failed to run: %s\n", err)
+		os.Exit(1)
+		return
 	}
 
 	if !cfg.Transient {

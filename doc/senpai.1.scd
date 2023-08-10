@@ -13,8 +13,12 @@ senpai - your everyday IRC student
 *-config* <path>
 	Use a different path for the configuration file.
 
+*-nickname* <nickname>
+	Advanced. Nick name to connect as. Overrides the configuration item of the
+	same name.
+
 *-debug*
-	Show all IRC messages that are received from/sent to the server.
+	Advanced. Show all IRC messages that are received from/sent to the server.
 
 # DESCRIPTION
 
