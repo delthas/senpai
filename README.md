@@ -13,6 +13,17 @@ senpai is an IRC client that works best with bouncers:
 - networks are fetched from the server via [bouncer-networks],
 - messages can be searched in logs via [SEARCH].
 
+## Quick demo
+
+To try out senpai "online", a live SSH demo is available at:
+```shell
+ssh -p 6666 delthas.fr
+```
+
+Your nick will be set to your SSH username.
+
+*(This connects to the Ergo test network.)*
+
 ## Installing
 
 From source (requires Go):
