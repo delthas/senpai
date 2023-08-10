@@ -535,6 +535,9 @@ func commandDoQuit(app *App, args []string) (err error) {
 }
 
 func commandDoQuote(app *App, args []string) (err error) {
+	if app.cfg.Transient {
+		return fmt.Errorf("usage of QUOTE is disabled")
+	}
 	s := app.CurrentSession()
 	if s == nil {
 		return errOffline

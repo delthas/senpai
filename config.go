@@ -74,7 +74,8 @@ type Config struct {
 
 	Colors ui.ConfigColors
 
-	Debug bool
+	Debug     bool
+	Transient bool
 }
 
 func DefaultHighlightPath() (string, error) {
@@ -361,6 +362,15 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			}
 
 			if cfg.Debug, err = strconv.ParseBool(debug); err != nil {
+				return err
+			}
+		case "transient":
+			var transient string
+			if err := d.ParseParams(&transient); err != nil {
+				return err
+			}
+
+			if cfg.Transient, err = strconv.ParseBool(transient); err != nil {
 				return err
 			}
 		default:

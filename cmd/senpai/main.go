@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -126,9 +125,11 @@ func main() {
 		panic(err)
 	}
 
-	lastNetID, lastBuffer := getLastBuffer()
-	app.SwitchToBuffer(lastNetID, lastBuffer)
-	app.SetLastClose(getLastStamp())
+	if !cfg.Transient {
+		lastNetID, lastBuffer := getLastBuffer()
+		app.SwitchToBuffer(lastNetID, lastBuffer)
+		app.SetLastClose(getLastStamp())
+	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -140,8 +141,10 @@ func main() {
 
 	app.Run()
 	app.Close()
-	writeLastBuffer(app)
-	writeLastStamp(app)
+	if !cfg.Transient {
+		writeLastBuffer(app)
+		writeLastStamp(app)
+	}
 }
 
 func cachePath() string {
@@ -162,7 +165,7 @@ func lastBufferPath() string {
 }
 
 func getLastBuffer() (netID, buffer string) {
-	buf, err := ioutil.ReadFile(lastBufferPath())
+	buf, err := os.ReadFile(lastBufferPath())
 	if err != nil {
 		return "", ""
 	}
@@ -189,7 +192,7 @@ func lastStampPath() string {
 }
 
 func getLastStamp() time.Time {
-	buf, err := ioutil.ReadFile(lastStampPath())
+	buf, err := os.ReadFile(lastStampPath())
 	if err != nil {
 		return time.Time{}
 	}

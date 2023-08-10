@@ -180,8 +180,14 @@ colors {
 :  color scheme for user nicks, either "base" (the default, 16 colors) or "extended" (256 colors)
 
 *debug*
+	Advanced.
 	Dump all sent and received data to the home buffer, useful for debugging.
 	Defaults to false.
+
+*-transient*
+	Advanced.
+	Run an ephemeral instance without disk reads/writes (except for the initial
+	configuration).
 
 # EXAMPLES
 

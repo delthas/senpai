@@ -1124,6 +1124,10 @@ func (app *App) notifyHighlight(buffer, nick, content string) {
 		app.win.Notify(nick, content)
 	}
 
+	if app.cfg.Transient {
+		return
+	}
+
 	path := app.cfg.OnHighlightPath
 	if path == "" {
 		defaultHighlightPath, err := DefaultHighlightPath()
