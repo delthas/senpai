@@ -28,7 +28,7 @@ Your nick will be set to your SSH username.
 
 From source (requires Go):
 ```shell
-git clone git.sr.ht/~taiite/senpai/cmd/senpai
+git clone https://git.sr.ht/~taiite/senpai
 cd senpai
 make
 sudo make install
@@ -36,7 +36,7 @@ sudo make install
 
 For a simple Go local install:
 ```shell
-git clone git.sr.ht/~taiite/senpai/cmd/senpai
+git clone https://git.sr.ht/~taiite/senpai
 cd senpai
 go install ./cmd/senpai
 ```
