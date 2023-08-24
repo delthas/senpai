@@ -264,7 +264,7 @@ func (app *App) eventLoop() {
 			if netID != "" && buffer != "" {
 				app.win.SetTitle(fmt.Sprintf("%s — senpai", buffer))
 			} else {
-				app.win.SetTitle(fmt.Sprintf("senpai"))
+				app.win.SetTitle("senpai")
 			}
 		}
 	}
