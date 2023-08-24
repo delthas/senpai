@@ -507,8 +507,8 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 			app.win.ClickBuffer(y + app.win.ChannelOffset())
 		} else if app.win.ChannelWidth() == 0 && y == h-1 {
 			app.win.ClickBuffer(app.win.HorizontalBufferOffset(x))
-		} else if x > w-app.win.MemberWidth() {
-			app.win.ClickMember(y + app.win.MemberOffset())
+		} else if x > w-app.win.MemberWidth() && y >= 2 {
+			app.win.ClickMember(y - 2 + app.win.MemberOffset())
 		}
 	}
 	if ev.Buttons() == 0 {
@@ -521,7 +521,7 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 				app.win.GoToBufferNo(i)
 			}
 		} else if x > w-app.win.MemberWidth() {
-			if i := y + app.win.MemberOffset(); i == app.win.ClickedMember() {
+			if i := y - 2 + app.win.MemberOffset(); i >= 0 && i == app.win.ClickedMember() {
 				netID, target := app.win.CurrentBuffer()
 				s := app.sessions[netID]
 				if s != nil && target != "" {

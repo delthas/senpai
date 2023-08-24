@@ -1,12 +1,12 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"git.sr.ht/~taiite/senpai/irc"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -559,6 +559,26 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 	x0++
 	width--
 	clearArea(screen, x0, y0, width, height)
+
+	if len(members) > 0 {
+		var memberString string
+		if len(members) > 1 {
+			memberString = fmt.Sprintf("%d members", len(members))
+		} else {
+			memberString = fmt.Sprintf("%d member", len(members))
+		}
+		memberString = truncate(memberString, width-1, "\u2026")
+		xMembers := x0 + 1
+		printString(screen, &xMembers, y0, Styled(memberString, tcell.StyleDefault.Foreground(ui.config.Colors.Status)))
+	}
+	y0++
+	height--
+	for x := x0; x < x0+width; x++ {
+		st := tcell.StyleDefault.Foreground(tcell.ColorGray)
+		screen.SetContent(x, y0, 0x2500, nil, st)
+	}
+	y0++
+	height--
 
 	padding := 1
 	for _, m := range members {
