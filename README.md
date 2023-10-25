@@ -1,4 +1,4 @@
-# NOTICE me :senpai!
+![](res/icon.128.png) ![](res/logo.png)
 
 *Welcome home, desune~*
 

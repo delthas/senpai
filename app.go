@@ -159,11 +159,18 @@ func NewApp(cfg Config) (app *App, err error) {
 		MergeLine: func(former *ui.Line, addition ui.Line) {
 			app.mergeLine(former, addition)
 		},
-		Colors: cfg.Colors,
+		Colors:            cfg.Colors,
+		LocalIntegrations: cfg.LocalIntegrations,
 	})
 	if err != nil {
 		return
 	}
+	ui.NotifyStart(func(ev *ui.NotifyEvent) {
+		app.events <- event{
+			src:     "*",
+			content: ev,
+		}
+	})
 	app.win.SetPrompt(ui.Styled(">",
 		tcell.
 			StyleDefault.
@@ -470,6 +477,8 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 	case *tcell.EventError:
 		// happens when the terminal is closing: in which case, exit
 		return false
+	case *ui.NotifyEvent:
+		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
 	case statusLine:
 		app.addStatusLine(ev.netID, ev.line)
 	default:
@@ -1190,11 +1199,6 @@ func (app *App) isHighlight(s *irc.Session, content string) bool {
 func (app *App) notifyHighlight(buffer, nick, content string, current bool) {
 	if app.cfg.OnHighlightBeep {
 		app.win.Beep()
-	}
-	if buffer != nick {
-		app.win.Notify(fmt.Sprintf("%s — %s", buffer, nick), content)
-	} else {
-		app.win.Notify(nick, content)
 	}
 
 	if app.cfg.Transient {

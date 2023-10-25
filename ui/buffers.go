@@ -189,13 +189,14 @@ func (l *Line) NewLines(width int) []int {
 }
 
 type buffer struct {
-	netID      string
-	netName    string
-	title      string
-	highlights int
-	unread     bool
-	read       time.Time
-	openedOnce bool
+	netID         string
+	netName       string
+	title         string
+	highlights    int
+	notifications []int
+	unread        bool
+	read          time.Time
+	openedOnce    bool
 
 	// This is the "last read" timestamp when the buffer was last focused.
 	// If the "last read" timestamp changes while the buffer is focused,
@@ -275,9 +276,8 @@ func (bs *BufferList) To(i int) bool {
 		if len(bs.list) <= bs.current {
 			bs.current = len(bs.list) - 1
 		}
+		bs.clearRead(i)
 		b := bs.list[bs.current]
-		b.highlights = 0
-		b.unread = false
 		b.unreadRuler = b.read
 		if len(b.lines) > 0 {
 			l := b.lines[len(b.lines)-1]
@@ -383,6 +383,7 @@ func (bs *BufferList) Remove(netID, title string) bool {
 	}
 	updated := bs.current == idx
 
+	bs.clearRead(idx)
 	bs.list = append(bs.list[:idx], bs.list[idx+1:]...)
 	if bs.current >= idx {
 		bs.current--
@@ -406,6 +407,7 @@ func (bs *BufferList) RemoveNetwork(netID string) {
 		if idx == bs.current {
 			updated = true
 		}
+		bs.clearRead(idx)
 		bs.list = append(bs.list[:idx], bs.list[idx+1:]...)
 		if bs.current >= idx {
 			bs.current--
@@ -526,8 +528,20 @@ func (bs *BufferList) SetTopic(netID, title string, topic string) {
 	b.topic = topic
 }
 
+func (bs *BufferList) clearRead(i int) {
+	b := &bs.list[i]
+	b.highlights = 0
+	b.unread = false
+	if len(b.notifications) > 0 {
+		for _, id := range b.notifications {
+			notifyClose(id)
+		}
+		b.notifications = b.notifications[:0]
+	}
+}
+
 func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
-	_, b := bs.at(netID, title)
+	i, b := bs.at(netID, title)
 	if b == nil {
 		return
 	}
@@ -543,8 +557,7 @@ func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 		}
 	}
 	if clearRead {
-		b.highlights = 0
-		b.unread = false
+		bs.clearRead(i)
 	}
 	if b.read.Before(timestamp) {
 		b.read = timestamp

@@ -203,7 +203,14 @@ colors {
 *-transient*
 	Advanced.
 	Run an ephemeral instance without disk reads/writes (except for the initial
-	configuration).
+	configuration). Can be useful for public instances.
+	Defaults to false.
+
+*-local-integrations*
+	Advanced.
+	Enables integrations with the local system (e.g. notifications through
+	DBus). Can be useful to disable on systems planned to be used through SSH.
+	Defaults to true.
 
 # EXAMPLES
 

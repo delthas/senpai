@@ -12,16 +12,17 @@ import (
 )
 
 type Config struct {
-	NickColWidth     int
-	ChanColWidth     int
-	ChanColEnabled   bool
-	MemberColWidth   int
-	MemberColEnabled bool
-	TextMaxWidth     int
-	AutoComplete     func(cursorIdx int, text []rune) []Completion
-	Mouse            bool
-	MergeLine        func(former *Line, addition Line)
-	Colors           ConfigColors
+	NickColWidth      int
+	ChanColWidth      int
+	ChanColEnabled    bool
+	MemberColWidth    int
+	MemberColEnabled  bool
+	TextMaxWidth      int
+	AutoComplete      func(cursorIdx int, text []rune) []Completion
+	Mouse             bool
+	MergeLine         func(former *Line, addition Line)
+	Colors            ConfigColors
+	LocalIntegrations bool
 }
 
 type ConfigColors struct {
@@ -78,6 +79,7 @@ func New(config Config) (ui *UI, err error) {
 	ui.screen.EnablePaste()
 	ui.screen.SetCursorStyle(tcell.CursorStyleSteadyBar)
 	ui.screen.SetTitle("senpai")
+	ui.screen.SetAppID("senpai")
 
 	_, h := ui.screen.Size()
 	ui.screen.Clear()
@@ -298,6 +300,24 @@ func (ui *UI) RemoveNetworkBuffers(netID string) {
 
 func (ui *UI) AddLine(netID, buffer string, line Line) {
 	ui.bs.AddLine(netID, buffer, line)
+
+	curNetID, curBuffer := ui.bs.Current()
+	_, b := ui.bs.at(netID, buffer)
+	if b != nil && line.Notify == NotifyHighlight && (curNetID != netID || curBuffer != buffer) {
+		var header string
+		if buffer != line.Head {
+			header = fmt.Sprintf("%s — %s", buffer, line.Head)
+		} else {
+			header = line.Head
+		}
+		id := ui.notify(NotifyEvent{
+			NetID:  netID,
+			Buffer: buffer,
+		}, header, line.Body.String())
+		if id >= 0 {
+			b.notifications = append(b.notifications, id)
+		}
+	}
 }
 
 func (ui *UI) AddLines(netID, buffer string, before, after []Line) {
@@ -328,10 +348,9 @@ func (ui *UI) JumpBufferIndex(i int) bool {
 	return false
 }
 
-func (ui *UI) JumpBufferNetwork(netID, sub string) bool {
-	subLower := strings.ToLower(sub)
+func (ui *UI) JumpBufferNetwork(netID, buffer string) bool {
 	for i, b := range ui.bs.list {
-		if b.netID == netID && strings.Contains(strings.ToLower(b.title), subLower) {
+		if b.netID == netID && strings.ToLower(b.title) == strings.ToLower(buffer) {
 			if ui.bs.To(i) {
 				ui.memberOffset = 0
 			}

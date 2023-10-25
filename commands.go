@@ -258,8 +258,9 @@ func init() {
 			Handle:    commandDoBack,
 		},
 		"SHRUG": {
-			Desc:   "send a shrug to the current channel ¯\\_(ツ)_/¯",
-			Handle: commandDoShrug,
+			Desc:    "send a shrug to the current channel ¯\\_(ツ)_/¯",
+			MaxArgs: maxArgsInfinite,
+			Handle:  commandDoShrug,
 		},
 		"TABLEFLIP": {
 			Desc:   "send a tableflip to the current channel (╯°□°)╯︵ ┻━┻",

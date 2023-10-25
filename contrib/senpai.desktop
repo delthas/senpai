@@ -1,5 +1,5 @@
 [Desktop Entry]
-Version=1.0
+Version=1.5
 Name=senpai
 
 GenericName=IRC Client
@@ -8,6 +8,6 @@ Keywords=Chat;IRC;IM;Messaging
 Categories=Network;InstantMessaging;Chat;IRCClient;ConsoleOnly
 
 Type=Application
-Icon=utilities-terminal
+Icon=senpai
 Terminal=true
 Exec=senpai

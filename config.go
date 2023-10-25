@@ -113,8 +113,9 @@ type Config struct {
 
 	Colors ui.ConfigColors
 
-	Debug     bool
-	Transient bool
+	Debug             bool
+	Transient         bool
+	LocalIntegrations bool
 }
 
 func DefaultHighlightPath() (string, error) {
@@ -157,7 +158,9 @@ func Defaults() Config {
 				Self:   tcell.ColorRed,
 			},
 		},
-		Debug: false,
+		Debug:             false,
+		Transient:         false,
+		LocalIntegrations: true,
 	}
 }
 
@@ -436,8 +439,15 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			if err := d.ParseParams(&transient); err != nil {
 				return err
 			}
-
 			if cfg.Transient, err = strconv.ParseBool(transient); err != nil {
+				return err
+			}
+		case "local-integrations":
+			var localIntegrations string
+			if err := d.ParseParams(&localIntegrations); err != nil {
+				return err
+			}
+			if cfg.LocalIntegrations, err = strconv.ParseBool(localIntegrations); err != nil {
 				return err
 			}
 		default:
