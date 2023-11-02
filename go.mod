@@ -1,9 +1,10 @@
 module git.sr.ht/~delthas/senpai
 
-go 1.16
+go 1.18
 
 require (
 	git.sr.ht/~emersion/go-scfg v0.0.0-20231004133111-9dce55c8d63b
+	git.sr.ht/~rockorager/vaxis v0.8.5
 	github.com/delthas/go-libnp v0.0.0-20221222161248-0e45ece1f878
 	github.com/delthas/go-localeinfo v0.0.0-20221116001557-686a1e185118
 	github.com/gdamore/tcell/v2 v2.6.1-0.20230327043120-47ec3a77754f
@@ -14,4 +15,15 @@ require (
 	mvdan.cc/xurls/v2 v2.5.0
 )
 
-replace github.com/gdamore/tcell/v2 => github.com/delthas/tcell/v2 v2.4.1-0.20240531114655-837a7d7b4e80
+require (
+	github.com/containerd/console v1.0.3 // indirect
+	github.com/mattn/go-sixel v0.0.5 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/soniakeys/quant v1.0.0 // indirect
+	golang.org/x/image v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
+)
+
+replace github.com/gdamore/tcell/v2 => git.sr.ht/~delthas/vaxis-tcell v0.4.8-0.20240531132546-8a798f9059aa
+
+replace git.sr.ht/~rockorager/vaxis => git.sr.ht/~delthas/vaxis v0.8.6-0.20240531124940-d5ae0406e432

@@ -282,6 +282,7 @@ func (app *App) eventLoop() {
 		}
 	}()
 }
+
 func (app *App) handleEvent(ev event) bool {
 	if ev.src == "*" {
 		if ev.content == nil {
@@ -474,9 +475,15 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.handleMouseEvent(ev)
 	case *tcell.EventKey:
 		app.handleKeyEvent(ev)
+	case tcell.EventInterrupt:
+		// unknown key event, ignore
+		return true
 	case *tcell.EventError:
 		// happens when the terminal is closing: in which case, exit
 		return false
+	case tcell.EventVaxis:
+		// TODO use vaxis events
+		return true
 	case *ui.NotifyEvent:
 		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
 	case statusLine:
