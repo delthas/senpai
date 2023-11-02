@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"git.sr.ht/~rockorager/vaxis"
 	"github.com/gdamore/tcell/v2"
 
 	"git.sr.ht/~delthas/senpai/irc"
@@ -51,6 +52,9 @@ type UI struct {
 
 	channelWidth int
 	memberWidth  int
+
+	channelColClicked bool
+	memberColClicked  bool
 }
 
 func New(config Config) (ui *UI, err error) {
@@ -159,6 +163,42 @@ func (ui *UI) ClickBuffer(i int) {
 	if i < len(ui.bs.list) {
 		ui.bs.clicked = i
 	}
+}
+
+func (ui *UI) ClickChannelCol(v bool) {
+	ui.channelColClicked = v
+}
+
+func (ui *UI) ChannelColClicked() bool {
+	return ui.channelColClicked
+}
+
+func (ui *UI) ResizeChannelCol(x int) {
+	if x < 6 {
+		x = 6
+	} else if x > 24 {
+		x = 24
+	}
+	ui.channelWidth = x
+	ui.Resize()
+}
+
+func (ui *UI) ClickMemberCol(v bool) {
+	ui.memberColClicked = v
+}
+
+func (ui *UI) MemberColClicked() bool {
+	return ui.memberColClicked
+}
+
+func (ui *UI) ResizeMemberCol(x int) {
+	if x < 6 {
+		x = 6
+	} else if x > 24 {
+		x = 24
+	}
+	ui.memberWidth = x
+	ui.Resize()
 }
 
 func (ui *UI) GoToBufferNo(i int) {
@@ -386,6 +426,10 @@ func (ui *UI) SetTitle(title string) {
 	}
 	ui.title = title
 	ui.screen.SetTitle(title)
+}
+
+func (ui *UI) SetMouseShape(shape vaxis.MouseShape) {
+	ui.screen.Vaxis().SetMouseShape(shape)
 }
 
 // InputContent result must not be modified.

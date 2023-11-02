@@ -13,6 +13,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"git.sr.ht/~rockorager/vaxis"
 	"github.com/gdamore/tcell/v2"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
@@ -517,10 +518,20 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 		}
 	}
 	if ev.Buttons()&tcell.ButtonPrimary != 0 {
-		if x < app.win.ChannelWidth() {
+		if app.win.ChannelColClicked() {
+			app.win.ResizeChannelCol(x + 1)
+		} else if app.win.MemberColClicked() {
+			app.win.ResizeMemberCol(w - x)
+		} else if x == app.win.ChannelWidth()-1 {
+			app.win.ClickChannelCol(true)
+			app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
+		} else if x < app.win.ChannelWidth() {
 			app.win.ClickBuffer(y + app.win.ChannelOffset())
 		} else if app.win.ChannelWidth() == 0 && y == h-1 {
 			app.win.ClickBuffer(app.win.HorizontalBufferOffset(x))
+		} else if x == w-app.win.MemberWidth() {
+			app.win.ClickMemberCol(true)
+			app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
 		} else if x > w-app.win.MemberWidth() && y >= 2 {
 			app.win.ClickMember(y - 2 + app.win.MemberOffset())
 		}
@@ -543,7 +554,7 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 		}
 	}
 	if ev.Buttons() == 0 {
-		if x < app.win.ChannelWidth() {
+		if x < app.win.ChannelWidth()-1 {
 			if i := y + app.win.ChannelOffset(); i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
 			}
@@ -612,6 +623,13 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 		}
 		app.win.ClickBuffer(-1)
 		app.win.ClickMember(-1)
+		app.win.ClickChannelCol(false)
+		app.win.ClickMemberCol(false)
+		if x == app.win.ChannelWidth()-1 || x == w-app.win.MemberWidth() {
+			app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
+		} else {
+			app.win.SetMouseShape(vaxis.MouseShapeDefault)
+		}
 	}
 }
 
