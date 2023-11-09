@@ -119,6 +119,10 @@ func (ui *UI) Close() {
 	ui.screen.Fini()
 }
 
+func (ui *UI) Buffer(i int) (netID, title string, ok bool) {
+	return ui.bs.Buffer(i)
+}
+
 func (ui *UI) CurrentBuffer() (netID, title string) {
 	return ui.bs.Current()
 }

@@ -511,6 +511,23 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 			app.win.ClickMember(y - 2 + app.win.MemberOffset())
 		}
 	}
+	if ev.Buttons()&tcell.ButtonMiddle != 0 {
+		i := -1
+		if x < app.win.ChannelWidth() {
+			i = y + app.win.ChannelOffset()
+		} else if app.win.ChannelWidth() == 0 && y == h-1 {
+			i = app.win.HorizontalBufferOffset(x)
+		}
+		netID, channel, ok := app.win.Buffer(i)
+		if ok && channel != "" {
+			s := app.sessions[netID]
+			if s != nil && s.IsChannel(channel) {
+				s.Part(channel, "")
+			} else {
+				app.win.RemoveBuffer(netID, channel)
+			}
+		}
+	}
 	if ev.Buttons() == 0 {
 		if x < app.win.ChannelWidth() {
 			if i := y + app.win.ChannelOffset(); i == app.win.ClickedBuffer() {

@@ -573,6 +573,14 @@ func (bs *BufferList) UpdateRead() (netID, title string, timestamp time.Time) {
 	return "", "", time.Time{}
 }
 
+func (bs *BufferList) Buffer(i int) (netID, title string, ok bool) {
+	if i < 0 || i >= len(bs.list) {
+		return
+	}
+	b := &bs.list[i]
+	return b.netID, b.title, true
+}
+
 func (bs *BufferList) Current() (netID, title string) {
 	b := &bs.list[bs.current]
 	return b.netID, b.title
