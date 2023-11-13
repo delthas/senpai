@@ -43,4 +43,7 @@ uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/senpai.5
 	$(RM) $(DESTDIR)$(PREFIX)/$(APPDIR)/senpai.desktop
 
-.PHONY: all senpai doc clean install uninstall
+emoji:
+	curl -sSfL -o emoji.json "https://raw.githubusercontent.com/github/gemoji/master/db/emoji.json"
+
+.PHONY: all senpai doc clean install uninstall emoji

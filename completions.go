@@ -129,6 +129,41 @@ func (app *App) completionsCommands(cs []ui.Completion, cursorIdx int, text []ru
 	return cs
 }
 
+func (app *App) completionsEmoji(cs []ui.Completion, cursorIdx int, text []rune) []ui.Completion {
+	var start int
+	for start = cursorIdx - 1; start >= 0; start-- {
+		r := text[start]
+		if r == ':' {
+			break
+		}
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_' || (r >= '0' && r <= '9')) {
+			return cs
+		}
+	}
+	if start < 0 {
+		return cs
+	}
+	start++
+	word := text[start:cursorIdx]
+	if len(word) == 0 {
+		return cs
+	}
+	w := strings.ToLower(string(word))
+	for _, emoji := range findEmoji(w) {
+		c := make([]rune, 0, len(text)+len([]rune(emoji.Emoji))-len(word)-1)
+		c = append(c, text[:start-1]...)
+		c = append(c, []rune(emoji.Emoji)...)
+		if cursorIdx < len(text) {
+			c = append(c, text[cursorIdx:]...)
+		}
+		cs = append(cs, ui.Completion{
+			Text:      c,
+			CursorIdx: start - 1 + len([]rune(emoji.Emoji)),
+		})
+	}
+	return cs
+}
+
 func hasPrefix(s, prefix []rune) bool {
 	return len(prefix) <= len(s) && equal(prefix, s[:len(prefix)])
 }
