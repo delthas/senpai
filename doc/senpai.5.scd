@@ -170,14 +170,30 @@ colors {
 
 [[ *Sub-directive*
 :< *Description*
-|  prompt
+|  prompt <color>
 :  color for ">"-prompt that appears in command mode
-|  unread
+|  unread <color>
 :  foreground color for unread buffer names in buffer lists
-|  status
-:  foreground color for status event lines (e.g. join, part, nick changes) in buffers. "disabled" hides status messages.
-|  nicks
-:  color scheme for user nicks, either "base" (the default, 16 colors) or "extended" (256 colors)
+|  status [...]
+:  foreground color for status event lines (e.g. join, part, nick changes) in buffers, see table below
+|  nicks [...]
+:  color scheme for user nicks, see table below
+
+[[ *status sub-directive*
+:< *Description*
+|  status <color>
+:  show status events with the specified color
+|  status disabled
+:  hide status events
+
+[[ *nicks sub-directive*
+:< *Description*
+|  nicks base
+:  show nicks with 16 different colors (default)
+|  nicks extended
+:  show nicks with 256 different colors
+|  nicks fixed [<others> [self]]
+:  show nicks with a fixed color, optionally specifying the colors for other nicks, and self
 
 *debug*
 	Advanced.

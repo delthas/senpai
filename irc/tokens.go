@@ -467,6 +467,7 @@ type Member struct {
 	Name         *Prefix
 	Away         bool
 	Disconnected bool
+	Self         bool // Added by senpai
 }
 
 type members []Member

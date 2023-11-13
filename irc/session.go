@@ -271,6 +271,7 @@ func (s *Session) Names(target string) []Member {
 					Name:         u.Name.Copy(),
 					Away:         u.Away,
 					Disconnected: u.Disconnected,
+					Self:         s.nickCf == s.casemap(u.Name.Name),
 				})
 			}
 		}
@@ -284,6 +285,7 @@ func (s *Session) Names(target string) []Member {
 			Name: &Prefix{
 				Name: s.nick,
 			},
+			Self: true,
 		})
 	}
 	sort.Sort(members(names))

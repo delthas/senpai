@@ -26,6 +26,46 @@ func parseColor(s string, c *tcell.Color) error {
 		*c = tcell.NewHexColor(int32(hex))
 		return nil
 	}
+	ok := true
+	switch s {
+	case "black":
+		*c = tcell.ColorBlack
+	case "maroon":
+		*c = tcell.ColorBrown
+	case "green":
+		*c = tcell.ColorGreen
+	case "olive":
+		*c = tcell.ColorOlive
+	case "navy":
+		*c = tcell.ColorNavy
+	case "purple":
+		*c = tcell.ColorPurple
+	case "teal":
+		*c = tcell.ColorTeal
+	case "silver":
+		*c = tcell.ColorSilver
+	case "gray", "grey":
+		*c = tcell.ColorGray
+	case "red":
+		*c = tcell.ColorRed
+	case "lime":
+		*c = tcell.ColorLime
+	case "yellow":
+		*c = tcell.ColorYellow
+	case "blue":
+		*c = tcell.ColorBlue
+	case "fuschia":
+		*c = tcell.ColorFuchsia
+	case "aqua":
+		*c = tcell.ColorAqua
+	case "white":
+		*c = tcell.ColorWhite
+	default:
+		ok = false
+	}
+	if ok {
+		return nil
+	}
 
 	code, err := strconv.Atoi(s)
 	if err != nil {
@@ -111,7 +151,11 @@ func Defaults() Config {
 			Status: tcell.ColorGray,
 			Prompt: tcell.ColorDefault,
 			Unread: tcell.ColorDefault,
-			Nicks:  ui.ColorSchemeBase,
+			Nicks: ui.ColorScheme{
+				Type:   ui.ColorSchemeBase,
+				Others: tcell.ColorDefault,
+				Self:   tcell.ColorRed,
+			},
 		},
 		Debug: false,
 	}
@@ -336,9 +380,21 @@ func unmarshal(filename string, cfg *Config) (err error) {
 				case "nicks":
 					switch colorStr {
 					case "base":
-						cfg.Colors.Nicks = ui.ColorSchemeBase
+						cfg.Colors.Nicks.Type = ui.ColorSchemeBase
 					case "extended":
-						cfg.Colors.Nicks = ui.ColorSchemeExtended
+						cfg.Colors.Nicks.Type = ui.ColorSchemeExtended
+					case "fixed":
+						cfg.Colors.Nicks.Type = ui.ColorSchemeFixed
+						if len(child.Params) >= 2 {
+							if err = parseColor(child.Params[1], &cfg.Colors.Nicks.Others); err != nil {
+								return err
+							}
+						}
+						if len(child.Params) >= 3 {
+							if err = parseColor(child.Params[2], &cfg.Colors.Nicks.Self); err != nil {
+								return err
+							}
+						}
 					default:
 						return fmt.Errorf("unknown nick color scheme %q", colorStr)
 					}

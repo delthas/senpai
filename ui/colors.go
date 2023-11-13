@@ -6,14 +6,21 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type ColorScheme int
+type ColorSchemeType int
+
+type ColorScheme struct {
+	Type   ColorSchemeType
+	Others tcell.Color
+	Self   tcell.Color
+}
 
 const (
-	ColorSchemeBase ColorScheme = iota
+	ColorSchemeBase ColorSchemeType = iota
 	ColorSchemeExtended
+	ColorSchemeFixed
 )
 
-var colors = map[ColorScheme][]tcell.Color{
+var colors = map[ColorSchemeType][]tcell.Color{
 	// base 16 colors, excluding grayscale colors.
 	ColorSchemeBase: {
 		tcell.ColorMaroon,
@@ -65,15 +72,22 @@ var colors = map[ColorScheme][]tcell.Color{
 	},
 }
 
-func IdentColor(scheme ColorScheme, ident string) tcell.Color {
+func IdentColor(scheme ColorScheme, ident string, self bool) tcell.Color {
 	h := fnv.New32()
 	_, _ = h.Write([]byte(ident))
-	c := colors[scheme]
+	if scheme.Type == ColorSchemeFixed {
+		if self {
+			return scheme.Self
+		} else {
+			return scheme.Others
+		}
+	}
+	c := colors[scheme.Type]
 	return c[int(h.Sum32()%uint32(len(c)))]
 }
 
-func IdentString(scheme ColorScheme, ident string) StyledString {
-	color := IdentColor(scheme, ident)
+func IdentString(scheme ColorScheme, ident string, self bool) StyledString {
+	color := IdentColor(scheme, ident, self)
 	style := tcell.StyleDefault.Foreground(color)
 	return Styled(ident, style)
 }

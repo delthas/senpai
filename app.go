@@ -1408,19 +1408,19 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	if isAction || isNotice {
 		head = "*"
 	} else {
-		headColor = ui.IdentColor(app.cfg.Colors.Nicks, head)
+		headColor = ui.IdentColor(app.cfg.Colors.Nicks, head, isFromSelf)
 	}
 
 	var body ui.StyledStringBuilder
 	if isNotice {
-		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User)
+		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
 		body.SetStyle(tcell.StyleDefault.Foreground(color))
 		body.WriteString(ev.User)
 		body.SetStyle(tcell.StyleDefault)
 		body.WriteString(": ")
 		body.WriteStyledString(ui.IRCString(content))
 	} else if isAction {
-		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User)
+		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
 		body.SetStyle(tcell.StyleDefault.Foreground(color))
 		body.WriteString(ev.User)
 		body.SetStyle(tcell.StyleDefault)
@@ -1562,7 +1562,7 @@ func (app *App) updatePrompt() {
 				Foreground(tcell.ColorRed),
 		)
 	} else {
-		prompt = ui.IdentString(app.cfg.Colors.Nicks, s.Nick())
+		prompt = ui.IdentString(app.cfg.Colors.Nicks, s.Nick(), true)
 	}
 	app.win.SetPrompt(prompt)
 }
