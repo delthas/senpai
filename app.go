@@ -1125,7 +1125,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 
 func isBlackListed(command string) bool {
 	switch command {
-	case "002", "003", "004", "375", "376", "422":
+	case "002", "003", "004", "375", "376", "396", "422":
 		// useless connection messages
 		return true
 	}
