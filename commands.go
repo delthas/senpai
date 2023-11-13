@@ -53,17 +53,15 @@ func init() {
 			Handle:    commandDoJoin,
 		},
 		"ME": {
-			AllowHome: true,
-			MinArgs:   1,
-			MaxArgs:   1,
-			Usage:     "<message>",
-			Desc:      "send an action (reply to last query if sent from home)",
-			Handle:    commandDoMe,
+			MinArgs: 1,
+			MaxArgs: 1,
+			Usage:   "<message>",
+			Desc:    "send an action (reply to last query if sent from home)",
+			Handle:  commandDoMe,
 		},
 		"NP": {
-			AllowHome: true,
-			Desc:      "send the current song that is being played on the system",
-			Handle:    commandDoNP,
+			Desc:   "send the current song that is being played on the system",
+			Handle: commandDoNP,
 		},
 		"MSG": {
 			AllowHome: true,
@@ -158,7 +156,7 @@ func init() {
 			Handle:    commandDoBuffer,
 		},
 		"WHOIS": {
-			AllowHome: false,
+			AllowHome: true,
 			MinArgs:   0,
 			MaxArgs:   1,
 			Usage:     "<nick>",
@@ -174,7 +172,7 @@ func init() {
 			Handle:    commandDoInvite,
 		},
 		"KICK": {
-			AllowHome: false,
+			AllowHome: true,
 			MinArgs:   1,
 			MaxArgs:   2,
 			Usage:     "<nick> [channel]",
@@ -182,7 +180,7 @@ func init() {
 			Handle:    commandDoKick,
 		},
 		"BAN": {
-			AllowHome: false,
+			AllowHome: true,
 			MinArgs:   1,
 			MaxArgs:   2,
 			Usage:     "<nick> [channel]",
@@ -190,7 +188,7 @@ func init() {
 			Handle:    commandDoBan,
 		},
 		"UNBAN": {
-			AllowHome: false,
+			AllowHome: true,
 			MinArgs:   1,
 			MaxArgs:   2,
 			Usage:     "<nick> [channel]",
@@ -198,11 +196,10 @@ func init() {
 			Handle:    commandDoUnban,
 		},
 		"SEARCH": {
-			AllowHome: true,
-			MaxArgs:   1,
-			Usage:     "<text>",
-			Desc:      "search messages in a target",
-			Handle:    commandDoSearch,
+			MaxArgs: 1,
+			Usage:   "<text>",
+			Desc:    "search messages in a target",
+			Handle:  commandDoSearch,
 		},
 		"SHRUG": {
 			Desc:   "send a shrug to the current channel ¯\\_(ツ)_/¯",
@@ -592,7 +589,7 @@ func commandDoWhois(app *App, args []string) (err error) {
 	}
 	var nick string
 	if len(args) == 0 {
-		if s.IsChannel(channel) {
+		if channel == "" || s.IsChannel(channel) {
 			return fmt.Errorf("either send this command from a DM, or specify the user")
 		}
 		nick = channel
