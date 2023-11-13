@@ -1099,6 +1099,14 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 					return
 				}
 			}
+		case "305", "306":
+			app.addStatusLine(netID, ui.Line{
+				At:        time.Now(),
+				Head:      "--",
+				HeadColor: app.cfg.Colors.Status,
+				Body:      ui.Styled(ev.Message, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+			})
+			return
 		}
 		var head string
 		var body string

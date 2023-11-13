@@ -215,6 +215,12 @@ _name_ is matched case-insensitively.  It can be one of the following:
 	Search messages matching the given text, in the current channel or server.
 	This opens a temporary list, which can be closed with the escape key.
 
+*AWAY* [message]
+	Mark yourself as away, with an optional away message.
+
+*BACK*
+	Mark yourself as back from being away.
+
 *SHRUG*
 	Send a shrug emoji to the current channel. ¯\\\_(ツ)\_/¯
 

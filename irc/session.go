@@ -414,6 +414,14 @@ func (s *Session) Search(target, text string) {
 	s.out <- NewMessage("SEARCH", formatTags(attrs))
 }
 
+func (s *Session) Away(message string) {
+	if message != "" {
+		s.out <- NewMessage("AWAY", message)
+	} else {
+		s.out <- NewMessage("AWAY")
+	}
+}
+
 func splitChunks(s string, chunkLen int) (chunks []string) {
 	if chunkLen <= 0 {
 		return []string{s}

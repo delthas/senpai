@@ -209,6 +209,19 @@ func init() {
 			Desc:    "search messages in a target",
 			Handle:  commandDoSearch,
 		},
+		"AWAY": {
+			AllowHome: true,
+			MinArgs:   0,
+			MaxArgs:   1,
+			Usage:     "[message]",
+			Desc:      "mark yourself as away",
+			Handle:    commandDoAway,
+		},
+		"BACK": {
+			AllowHome: true,
+			Desc:      "mark yourself as back from being away",
+			Handle:    commandDoBack,
+		},
 		"SHRUG": {
 			Desc:   "send a shrug to the current channel ¯\\_(ツ)_/¯",
 			Handle: commandDoShrug,
@@ -715,6 +728,28 @@ func commandDoSearch(app *App, args []string) (err error) {
 		return errors.New("server does not support searching")
 	}
 	s.Search(channel, text)
+	return nil
+}
+
+func commandDoAway(app *App, args []string) (err error) {
+	reason := "Away"
+	if len(args) > 0 {
+		reason = args[0]
+	}
+	s := app.CurrentSession()
+	if s == nil {
+		return errOffline
+	}
+	s.Away(reason)
+	return nil
+}
+
+func commandDoBack(app *App, args []string) (err error) {
+	s := app.CurrentSession()
+	if s == nil {
+		return errOffline
+	}
+	s.Away("")
 	return nil
 }
 
