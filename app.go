@@ -1578,7 +1578,7 @@ func (app *App) printTopic(netID, buffer string) (ok bool) {
 	if who == nil {
 		body = fmt.Sprintf("Topic: %s", topic)
 	} else {
-		body = fmt.Sprintf("Topic (by %s, %s): %s", who, at.Local().Format("Mon Jan 2 15:04:05"), topic)
+		body = fmt.Sprintf("Topic (by %s, %s): %s", who.Name, at.Local().Format("Mon Jan 2 15:04:05"), topic)
 	}
 	app.win.AddLine(netID, buffer, ui.Line{
 		At:        time.Now(),
