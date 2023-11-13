@@ -156,15 +156,15 @@ pane-widths {
 *colors* { ... }
 	Settings for colors of different UI elements.
 
-	Colors are represented as numbers from 0 to 255 for 256 default terminal
-	colors respectively. -1 has special meaning of default terminal color. To
-	use true colors, *#*_rrggbb_ notation is supported.
+	Colors can be set either by name ("red"), by number (from 0 to 255, for the
+	default 256 terminal colors; -1 meaning default), or by RGB hex true color
+	(*#*_rrggbb_).
 
 	Colors are set as sub-directives of the main *colors* directive:
 
 ```
 colors {
-    prompt 2 # green
+    prompt green
 }
 ```
 
