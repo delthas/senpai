@@ -342,6 +342,14 @@ func (s *Session) SendRaw(raw string) {
 	s.out <- NewMessage(raw)
 }
 
+func (s *Session) List(pattern string) {
+	if pattern != "" {
+		s.out <- NewMessage("LIST", pattern)
+	} else {
+		s.out <- NewMessage("LIST")
+	}
+}
+
 func (s *Session) Join(channel, key string) {
 	channelCf := s.Casemap(channel)
 	s.pendingChannels[channelCf] = time.Now()

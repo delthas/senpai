@@ -183,6 +183,9 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *QUOTE* <raw message>
 	Send _raw message_ verbatim.
 
+*LIST* [pattern]
+	List public channels, optionally matching the specified pattern.
+
 *BUFFER* <name>
 	Switch to the buffer containing _name_.
 

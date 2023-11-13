@@ -133,6 +133,14 @@ func init() {
 			Desc:      "send raw protocol data",
 			Handle:    commandDoQuote,
 		},
+		"LIST": {
+			AllowHome: true,
+			MinArgs:   0,
+			MaxArgs:   1,
+			Usage:     "[pattern]",
+			Desc:      "list public channels",
+			Handle:    commandDoList,
+		},
 		"REPLY": {
 			AllowHome: true,
 			MinArgs:   1,
@@ -540,6 +548,22 @@ func commandDoQuote(app *App, args []string) (err error) {
 		return errOffline
 	}
 	s.SendRaw(args[0])
+	return nil
+}
+
+func commandDoList(app *App, args []string) (err error) {
+	if app.cfg.Transient {
+		return fmt.Errorf("usage of LIST is disabled")
+	}
+	s := app.CurrentSession()
+	if s == nil {
+		return errOffline
+	}
+	var pattern string
+	if len(args) > 0 {
+		pattern = args[0]
+	}
+	s.List(pattern)
 	return nil
 }
 
