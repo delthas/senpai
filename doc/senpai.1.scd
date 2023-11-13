@@ -198,8 +198,9 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *INVITE* <nick> [channel]
 	Invite _nick_ to _channel_ (the current channel if not given).
 
-*KICK* <nick> [channel]
-	Eject _nick_ from _channel_ (the current channel if not given).
+*KICK* <nick> [channel] [message]
+	Eject _nick_ from _channel_ (the current channel if not given) with an
+	optional kick message/reason.
 
 *BAN* <nick> [channel]
 	Ban _nick_ from entering _channel_ (the current channel if not given).

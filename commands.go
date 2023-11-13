@@ -174,8 +174,8 @@ func init() {
 		"KICK": {
 			AllowHome: true,
 			MinArgs:   1,
-			MaxArgs:   2,
-			Usage:     "<nick> [channel]",
+			MaxArgs:   3,
+			Usage:     "<nick> [channel] [message]",
 			Desc:      "eject someone from the channel",
 			Handle:    commandDoKick,
 		},
@@ -623,14 +623,22 @@ func commandDoKick(app *App, args []string) (err error) {
 	if s == nil {
 		return errOffline
 	}
+	// Check whether the argument after the user is a channel, to accept both:
+	// - KICK user #chan you are mean
+	// - KICK user you are mean
+	comment := ""
 	if len(args) >= 2 {
-		channel = args[1]
-	} else if channel == "" {
+		if s.IsChannel(args[1]) {
+			channel = args[1]
+		} else {
+			comment = args[1] + " "
+		}
+	}
+	if channel == "" {
 		return fmt.Errorf("either send this command from a channel, or specify the channel")
 	}
-	comment := ""
 	if len(args) == 3 {
-		comment = args[2]
+		comment += args[2]
 	}
 	s.Kick(nick, channel, comment)
 	return nil
