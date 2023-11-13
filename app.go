@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1062,13 +1063,42 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if isBlackListed(msg.Command) {
 			break
 		}
-		if ev.Code == "372" {
+		switch ev.Code {
+		case "372":
 			app.win.AddLine(netID, "", ui.Line{
 				At:   msg.TimeOrNow(),
 				Head: "MOTD --",
 				Body: ui.PlainString(ev.Message),
 			})
-			break
+			return
+		case "324":
+			channel, line, ok := strings.Cut(ev.Message, " ")
+			if ok {
+				text := fmt.Sprintf("%s has modes %s", channel, line)
+				app.win.AddLine(netID, channel, ui.Line{
+					At:        time.Now(),
+					Head:      "--",
+					HeadColor: app.cfg.Colors.Status,
+					Body:      ui.Styled(text, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+				})
+				return
+			}
+		case "329":
+			channel, line, ok := strings.Cut(ev.Message, " ")
+			if ok {
+				creation, err := strconv.ParseInt(line, 10, 64)
+				if err == nil {
+					t := time.Unix(creation, 0)
+					text := fmt.Sprintf("%s was created on %s", channel, t.Local().Format("January 2, 2006"))
+					app.win.AddLine(netID, channel, ui.Line{
+						At:        time.Now(),
+						Head:      "--",
+						HeadColor: app.cfg.Colors.Status,
+						Body:      ui.Styled(text, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+					})
+					return
+				}
+			}
 		}
 		var head string
 		var body string
