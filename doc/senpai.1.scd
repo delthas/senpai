@@ -189,6 +189,12 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *BUFFER* <name>
 	Switch to the buffer containing _name_.
 
+*WHOIS* <nickname>
+	Get information about someone who is connected.
+
+*WHOWAS* <nickname>
+	Get information about someone who is disconnected.
+
 *NICK* <nickname>
 	Change your nickname.
 
@@ -221,11 +227,50 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *BACK*
 	Mark yourself as back from being away.
 
+*VERSION* [target]
+	Query the server software version.
+
+*ADMIN* [target]
+	Query the server administrative information.
+
+*LUSERS*
+	Query the server user information.
+
+*TIME* [target]
+	Query the server local time.
+
+*INFO*
+	Query server information.
+
+*LINKS*
+	Query the servers of the network.
+
 *SHRUG*
 	Send a shrug emoji to the current channel. ¯\\\_(ツ)\_/¯
 
 *TABLEFLIP*
 	Send a table flip emoji to the current channel. (╯°□°)╯︵ ┻━┻
+
+*STATS* <query> [target]
+	Query server statistics (advanced).
+
+*CONNECT* <target server> [<port> [remote server]]
+	Connect a server to the network (advanced).
+
+*SQUIT* <server> [comment]
+	Disconnects a server from the network (advanced).
+
+*KILL* <nick> [message]
+	Eject someone from the server (advanced).
+
+*REHASH*
+	Make the server reload its configuration (advanced).
+
+*RESTART*
+	Make the server restart (advanced).
+
+*WALLOPS* [text]
+	Broadcast a message to all users (advanced).
 
 # SEE ALSO
 

@@ -28,7 +28,7 @@ type command struct {
 	MaxArgs   int
 	Usage     string
 	Desc      string
-	Handle    func(app *App, args []string) error
+	Handle    func(app *App, args []string) error // nil = passthrough
 }
 
 type commandSet map[string]*command
@@ -74,7 +74,6 @@ func init() {
 		"MOTD": {
 			AllowHome: true,
 			Desc:      "show the message of the day (MOTD)",
-			Handle:    commandDoMOTD,
 		},
 		"NAMES": {
 			Desc:   "show the member list of the current channel",
@@ -94,7 +93,6 @@ func init() {
 			MaxArgs:   2,
 			Usage:     "<username> <password>",
 			Desc:      "log in to an operator account",
-			Handle:    commandDoOper,
 		},
 		"MODE": {
 			AllowHome: true,
@@ -135,7 +133,6 @@ func init() {
 		},
 		"LIST": {
 			AllowHome: true,
-			MinArgs:   0,
 			MaxArgs:   1,
 			Usage:     "[pattern]",
 			Desc:      "list public channels",
@@ -168,8 +165,16 @@ func init() {
 			MinArgs:   0,
 			MaxArgs:   1,
 			Usage:     "<nick>",
-			Desc:      "get information about someone",
+			Desc:      "get information about someone who is connected",
 			Handle:    commandDoWhois,
+		},
+		"WHOWAS": {
+			AllowHome: true,
+			MinArgs:   0,
+			MaxArgs:   1,
+			Usage:     "<nick>",
+			Desc:      "get information about someone who is disconnected",
+			Handle:    commandDoWhowas,
 		},
 		"INVITE": {
 			AllowHome: true,
@@ -203,6 +208,27 @@ func init() {
 			Desc:      "remove effect of a ban from the user",
 			Handle:    commandDoUnban,
 		},
+		"CONNECT": {
+			AllowHome: true,
+			MinArgs:   1,
+			MaxArgs:   3,
+			Usage:     "<target server> [<port> [remote server]]",
+			Desc:      "connect a server to the network",
+		},
+		"SQUIT": {
+			AllowHome: true,
+			MinArgs:   1,
+			MaxArgs:   2,
+			Usage:     "<server> [comment]",
+			Desc:      "disconnect a server from the network",
+		},
+		"KILL": {
+			AllowHome: true,
+			MinArgs:   1,
+			MaxArgs:   2,
+			Usage:     "<nick> [message]",
+			Desc:      "eject someone from the server",
+		},
 		"SEARCH": {
 			MaxArgs: 1,
 			Usage:   "<text>",
@@ -229,6 +255,58 @@ func init() {
 		"TABLEFLIP": {
 			Desc:   "send a tableflip to the current channel (╯°□°)╯︵ ┻━┻",
 			Handle: commandDoTableFlip,
+		},
+		"VERSION": {
+			AllowHome: true,
+			MaxArgs:   1,
+			Usage:     "[target]",
+			Desc:      "query the server software version",
+		},
+		"ADMIN": {
+			AllowHome: true,
+			MaxArgs:   1,
+			Usage:     "[target]",
+			Desc:      "query the server administrative information",
+		},
+		"LUSERS": {
+			AllowHome: true,
+			Desc:      "query the server user information",
+		},
+		"TIME": {
+			AllowHome: true,
+			MaxArgs:   1,
+			Usage:     "[target]",
+			Desc:      "query the server local time",
+		},
+		"STATS": {
+			AllowHome: true,
+			MinArgs:   1,
+			MaxArgs:   2,
+			Usage:     "<query> [target]",
+			Desc:      "query server statistics",
+		},
+		"INFO": {
+			AllowHome: true,
+			Desc:      "query server information",
+		},
+		"REHASH": {
+			AllowHome: true,
+			Desc:      "make the server reload its configuration",
+		},
+		"RESTART": {
+			AllowHome: true,
+			Desc:      "make the server restart",
+		},
+		"LINKS": {
+			AllowHome: true,
+			Desc:      "query the servers of the network",
+		},
+		"WALLOPS": {
+			AllowHome: true,
+			MinArgs:   1,
+			MaxArgs:   1,
+			Usage:     "<text>",
+			Desc:      "broadcast a message to all users",
 		},
 	}
 }
@@ -403,16 +481,6 @@ func commandDoMsg(app *App, args []string) (err error) {
 	return commandSendMessage(app, target, content)
 }
 
-func commandDoMOTD(app *App, args []string) (err error) {
-	netID, _ := app.win.CurrentBuffer()
-	s := app.sessions[netID]
-	if s == nil {
-		return errOffline
-	}
-	s.MOTD()
-	return nil
-}
-
 func commandDoNames(app *App, args []string) (err error) {
 	netID, buffer := app.win.CurrentBuffer()
 	s := app.sessions[netID]
@@ -455,15 +523,6 @@ func commandDoNick(app *App, args []string) (err error) {
 		return errOffline
 	}
 	s.ChangeNick(nick)
-	return
-}
-
-func commandDoOper(app *App, args []string) (err error) {
-	s := app.CurrentSession()
-	if s == nil {
-		return errOffline
-	}
-	s.Oper(args[0], args[1])
 	return
 }
 
@@ -634,6 +693,25 @@ func commandDoWhois(app *App, args []string) (err error) {
 		nick = args[0]
 	}
 	s.Whois(nick)
+	return nil
+}
+
+func commandDoWhowas(app *App, args []string) (err error) {
+	netID, channel := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	var nick string
+	if len(args) == 0 {
+		if channel == "" || s.IsChannel(channel) {
+			return fmt.Errorf("either send this command from a DM, or specify the user")
+		}
+		nick = channel
+	} else {
+		nick = args[0]
+	}
+	s.Whowas(nick)
 	return nil
 }
 
@@ -895,7 +973,20 @@ func (app *App) handleInput(buffer, content string) error {
 		return fmt.Errorf("command %s cannot be executed from a server buffer", chosenCMDName)
 	}
 
-	return cmd.Handle(app, args)
+	if cmd.Handle != nil {
+		return cmd.Handle(app, args)
+	} else {
+		if s := app.CurrentSession(); s != nil {
+			if rawArgs != "" {
+				s.Send(cmdName, args...)
+			} else {
+				s.Send(cmdName)
+			}
+			return nil
+		} else {
+			return errOffline
+		}
+	}
 }
 
 func getSong() (string, error) {

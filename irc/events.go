@@ -4,6 +4,11 @@ import "time"
 
 type Event interface{}
 
+type InfoEvent struct {
+	Prefix  string
+	Message string
+}
+
 type ErrorEvent struct {
 	Severity Severity
 	Code     string

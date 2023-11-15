@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1059,67 +1058,38 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			}
 			app.win.RemoveNetworkBuffers(ev.ID)
 		}
-	case irc.ErrorEvent:
-		if isBlackListed(msg.Command) {
-			break
+	case irc.InfoEvent:
+		var head string
+		if ev.Prefix != "" {
+			head = ev.Prefix + " --"
+		} else {
+			head = "--"
 		}
-		switch ev.Code {
-		case "372":
-			app.win.AddLine(netID, "", ui.Line{
-				At:   msg.TimeOrNow(),
-				Head: "MOTD --",
-				Body: ui.PlainString(ev.Message),
-			})
-			return
-		case "324":
-			channel, line, ok := strings.Cut(ev.Message, " ")
-			if ok {
-				text := fmt.Sprintf("%s has modes %s", channel, line)
-				app.win.AddLine(netID, channel, ui.Line{
-					At:        time.Now(),
-					Head:      "--",
-					HeadColor: app.cfg.Colors.Status,
-					Body:      ui.Styled(text, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
-				})
-				return
-			}
-		case "329":
-			channel, line, ok := strings.Cut(ev.Message, " ")
-			if ok {
-				creation, err := strconv.ParseInt(line, 10, 64)
-				if err == nil {
-					t := time.Unix(creation, 0)
-					text := fmt.Sprintf("%s was created on %s", channel, t.Local().Format("January 2, 2006"))
-					app.win.AddLine(netID, channel, ui.Line{
-						At:        time.Now(),
-						Head:      "--",
-						HeadColor: app.cfg.Colors.Status,
-						Body:      ui.Styled(text, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
-					})
-					return
-				}
-			}
-		case "305", "306":
+		app.addStatusLine(netID, ui.Line{
+			At:        msg.TimeOrNow(),
+			Head:      head,
+			HeadColor: app.cfg.Colors.Status,
+			Body:      ui.Styled(ev.Message, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+		})
+		return
+	case irc.ErrorEvent:
+		var head string
+		var body string
+		switch ev.Severity {
+		case irc.SeverityNote:
 			app.addStatusLine(netID, ui.Line{
-				At:        time.Now(),
-				Head:      "--",
+				At:        msg.TimeOrNow(),
+				Head:      fmt.Sprintf("(%s) --", ev.Code),
 				HeadColor: app.cfg.Colors.Status,
 				Body:      ui.Styled(ev.Message, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
 			})
 			return
-		}
-		var head string
-		var body string
-		switch ev.Severity {
 		case irc.SeverityFail:
 			head = "--"
 			body = fmt.Sprintf("Error (code %s): %s", ev.Code, ev.Message)
 		case irc.SeverityWarn:
 			head = "--"
 			body = fmt.Sprintf("Warning (code %s): %s", ev.Code, ev.Message)
-		case irc.SeverityNote:
-			head = ev.Code + " --"
-			body = ev.Message
 		default:
 			panic("unreachable")
 		}
@@ -1129,15 +1099,6 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			Body: ui.PlainString(body),
 		})
 	}
-}
-
-func isBlackListed(command string) bool {
-	switch command {
-	case "002", "003", "004", "375", "376", "396", "422":
-		// useless connection messages
-		return true
-	}
-	return false
 }
 
 func isWordBoundary(r rune) bool {
@@ -1616,7 +1577,7 @@ func (app *App) printTopic(netID, buffer string) (ok bool) {
 	if who == nil {
 		body = fmt.Sprintf("Topic: %s", topic)
 	} else {
-		body = fmt.Sprintf("Topic (by %s, %s): %s", who.Name, at.Local().Format("Mon Jan 2 15:04:05"), topic)
+		body = fmt.Sprintf("Topic (set by %s on %s): %s", who.Name, at.Local().Format("January 2 2006 at 15:04:05"), topic)
 	}
 	app.win.AddLine(netID, buffer, ui.Line{
 		At:        time.Now(),
