@@ -119,7 +119,8 @@ func (s StyledString) Truncate(w int, tail StyledString) StyledString {
 	return sb.StyledString()
 }
 
-var urlRegex, _ = xurls.StrictMatchingScheme(xurls.AnyScheme)
+// https://github.com/mvdan/xurls/pull/75
+var urlRegex, _ = xurls.StrictMatchingScheme(`([a-zA-Z][a-zA-Z.\-+]*://|(bitcoin|cid|file|geo|magnet|mailto|mid|sms|tel|xmpp):)`)
 
 func (s StyledString) ParseURLs() StyledString {
 	if !strings.ContainsRune(s.string, '.') {
