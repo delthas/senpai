@@ -278,7 +278,7 @@ func (ui *UI) HasOverlay() bool {
 func (ui *UI) AddBuffer(netID, netName, title string) (i int, added bool) {
 	i, added = ui.bs.Add(netID, netName, title)
 	if added {
-		ui.HorizontalBufferScrollTo()
+		ui.ScrollToBuffer()
 	}
 	return
 }
@@ -455,7 +455,7 @@ func (ui *UI) Resize() {
 	} else {
 		ui.bs.ResizeTimeline(innerWidth, h-2, textWidth)
 	}
-	ui.HorizontalBufferScrollTo()
+	ui.ScrollToBuffer()
 	ui.screen.Sync()
 }
 
@@ -510,20 +510,22 @@ func (ui *UI) Draw(members []irc.Member) {
 	ui.screen.Show()
 }
 
-func (ui *UI) HorizontalBufferScrollTo() {
-	w, _ := ui.screen.Size()
-	screenWidth := w - ui.memberWidth
+func (ui *UI) ScrollToBuffer() {
 	if ui.bs.current < ui.channelOffset {
 		ui.channelOffset = ui.bs.current
 		return
 	}
 
-	leftMost := ui.bs.GetLeftMost(screenWidth)
-
-	if ui.channelOffset >= leftMost {
-		return
+	w, h := ui.screen.Size()
+	var first int
+	if ui.channelWidth > 0 {
+		first = ui.bs.current - h + 1
+	} else {
+		first = ui.bs.GetLeftMost(w - ui.memberWidth)
 	}
-	ui.channelOffset = leftMost
+	if ui.channelOffset < first {
+		ui.channelOffset = first
+	}
 }
 
 func (ui *UI) drawStatusBar(x0, y, width int) {

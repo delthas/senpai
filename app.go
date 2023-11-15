@@ -578,17 +578,17 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		app.win.ScrollDown()
 	case tcell.KeyCtrlN:
 		app.win.NextBuffer()
-		app.win.HorizontalBufferScrollTo()
+		app.win.ScrollToBuffer()
 	case tcell.KeyCtrlP:
 		app.win.PreviousBuffer()
-		app.win.HorizontalBufferScrollTo()
+		app.win.ScrollToBuffer()
 	case tcell.KeyRight:
 		if ev.Modifiers() == tcell.ModAlt {
 			app.win.NextBuffer()
-			app.win.HorizontalBufferScrollTo()
+			app.win.ScrollToBuffer()
 		} else if ev.Modifiers() == tcell.ModShift {
 			app.win.NextUnreadBuffer()
-			app.win.HorizontalBufferScrollTo()
+			app.win.ScrollToBuffer()
 		} else if ev.Modifiers() == tcell.ModCtrl {
 			app.win.InputRightWord()
 		} else {
@@ -597,10 +597,10 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 	case tcell.KeyLeft:
 		if ev.Modifiers() == tcell.ModAlt {
 			app.win.PreviousBuffer()
-			app.win.HorizontalBufferScrollTo()
+			app.win.ScrollToBuffer()
 		} else if ev.Modifiers() == tcell.ModShift {
 			app.win.PreviousUnreadBuffer()
-			app.win.HorizontalBufferScrollTo()
+			app.win.ScrollToBuffer()
 		} else if ev.Modifiers() == tcell.ModCtrl {
 			app.win.InputLeftWord()
 		} else {
@@ -862,7 +862,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		// Restore last buffer
 		if netID == app.lastNetID && ev.Channel == app.lastBuffer {
 			app.win.JumpBufferNetwork(app.lastNetID, app.lastBuffer)
-			app.win.HorizontalBufferScrollTo()
+			app.win.ScrollToBuffer()
 			app.lastNetID = ""
 			app.lastBuffer = ""
 		}
