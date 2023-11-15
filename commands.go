@@ -940,6 +940,10 @@ func (app *App) handleInput(buffer, content string) error {
 
 	cmdName, rawArgs, isCommand := parseCommand(content)
 	if !isCommand {
+		if _, _, command := parseCommand(strings.TrimSpace(content)); !confirmed && command {
+			// " /FOO BAR"
+			return fmt.Errorf("this message looks like a command; remove the spaces at the start, or press enter again to send the message as is")
+		}
 		return noCommand(app, rawArgs)
 	}
 	if cmdName == "" {
