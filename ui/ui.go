@@ -423,7 +423,7 @@ func (ui *UI) InputAutoComplete(offset int) (ok bool) {
 	return ui.e.AutoComplete(offset)
 }
 
-func (ui *UI) InputEnter() (content string) {
+func (ui *UI) InputFlush() (content string) {
 	return ui.e.Flush()
 }
 

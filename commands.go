@@ -931,6 +931,9 @@ func commandDoTableFlip(app *App, args []string) (err error) {
 }
 
 func (app *App) handleInput(buffer, content string) error {
+	confirmed := content == app.lastConfirm
+	app.lastConfirm = content
+
 	if content == "" {
 		return nil
 	}
@@ -956,7 +959,20 @@ func (app *App) handleInput(buffer, content string) error {
 		found = true
 	}
 	if !found {
-		return fmt.Errorf("command %q doesn't exist", cmdName)
+		if confirmed {
+			if s := app.CurrentSession(); s != nil {
+				if rawArgs != "" {
+					s.SendRaw(fmt.Sprintf("%s %s", cmdName, rawArgs))
+				} else {
+					s.SendRaw(cmdName)
+				}
+				return nil
+			} else {
+				return errOffline
+			}
+		} else {
+			return fmt.Errorf("the senpai command %q does not exist; press enter again to pass the command as is to the server", cmdName)
+		}
 	}
 
 	cmd := commands[chosenCMDName]

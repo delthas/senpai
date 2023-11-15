@@ -106,6 +106,8 @@ type App struct {
 
 	lastMessageTime time.Time
 	lastCloseTime   time.Time
+
+	lastConfirm string
 }
 
 func NewApp(cfg Config) (app *App, err error) {
@@ -671,9 +673,8 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		app.win.ToggleMemberList()
 	case tcell.KeyCR, tcell.KeyLF:
 		netID, buffer := app.win.CurrentBuffer()
-		input := app.win.InputEnter()
-		err := app.handleInput(buffer, input)
-		if err != nil {
+		input := string(app.win.InputContent())
+		if err := app.handleInput(buffer, input); err != nil {
 			app.win.AddLine(netID, buffer, ui.Line{
 				At:        time.Now(),
 				Head:      "!!",
@@ -681,6 +682,8 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 				Notify:    ui.NotifyUnread,
 				Body:      ui.PlainSprintf("%q: %s", input, err),
 			})
+		} else {
+			app.win.InputFlush()
 		}
 	case tcell.KeyRune:
 		if ev.Modifiers() == tcell.ModAlt {
