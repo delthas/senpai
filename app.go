@@ -956,7 +956,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 		app.win.AddLine(netID, buffer, line)
 		if line.Notify == ui.NotifyHighlight {
-			app.notifyHighlight(buffer, ev.User, line.Body.String())
+			curNetID, curBuffer := app.win.CurrentBuffer()
+			current := curNetID == netID && curBuffer == buffer
+			app.notifyHighlight(buffer, ev.User, line.Body.String(), current)
 		}
 		if !s.IsChannel(msg.Params[0]) && !s.IsMe(ev.User) {
 			app.lastQuery = msg.Prefix.Name
@@ -1150,7 +1152,7 @@ func (app *App) isHighlight(s *irc.Session, content string) bool {
 
 // notifyHighlight executes the script at "on-highlight-path" according to the given
 // message context.
-func (app *App) notifyHighlight(buffer, nick, content string) {
+func (app *App) notifyHighlight(buffer, nick, content string, current bool) {
 	if app.cfg.OnHighlightBeep {
 		app.win.Beep()
 	}
@@ -1173,7 +1175,7 @@ func (app *App) notifyHighlight(buffer, nick, content string) {
 		path = defaultHighlightPath
 	}
 
-	netID, curBuffer := app.win.CurrentBuffer()
+	netID, _ := app.win.CurrentBuffer()
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		// only error out if the user specified a highlight path
 		// if default path unreachable, simple bail
@@ -1189,7 +1191,7 @@ func (app *App) notifyHighlight(buffer, nick, content string) {
 		return
 	}
 	here := "0"
-	if buffer == curBuffer { // TODO also check netID
+	if current {
 		here = "1"
 	}
 	cmd := exec.Command(path)
