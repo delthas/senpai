@@ -341,7 +341,7 @@ func commandDoBuffer(app *App, args []string) error {
 	name := args[0]
 	i, err := strconv.Atoi(name)
 	if err == nil {
-		if app.win.JumpBufferIndex(i) {
+		if app.win.JumpBufferIndex(i - 1) {
 			return nil
 		}
 	}

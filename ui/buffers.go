@@ -684,7 +684,7 @@ func (bs *BufferList) DrawVerticalBufferList(screen tcell.Screen, x0, y0, width,
 		}
 		if bs.showBufferNumbers {
 			indexSt := st.Foreground(tcell.ColorGray)
-			indexText := fmt.Sprintf("%d:", bi)
+			indexText := fmt.Sprintf("%d:", bi+1)
 			printString(screen, &x, y, Styled(indexText, indexSt))
 			x = x0 + indexPadding
 		}
