@@ -113,7 +113,7 @@ func (app *App) completionsCommands(cs []ui.Completion, cursorIdx int, text []ru
 	}
 
 	uText := strings.ToUpper(string(text[1:cursorIdx]))
-	for name, _ := range commands {
+	for name := range commands {
 		if strings.HasPrefix(name, uText) {
 			c := make([]rune, len(text)+len(name)-len(uText))
 			copy(c[:1], []rune("/"))

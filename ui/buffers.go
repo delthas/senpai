@@ -93,7 +93,7 @@ func (l *Line) NewLines(width int) []int {
 	// Beware! This function was made by your local Test Driven Developper™ who
 	// doesn't understand one bit of this function and how it works (though it
 	// might not work that well if you're here...).  The code below is thus very
-	// cryptic and not well structured.  However, I'm going to try to explain
+	// cryptic and not well-structured.  However, I'm going to try to explain
 	// some of those lines!
 
 	if l.width == width {

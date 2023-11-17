@@ -394,7 +394,7 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 	bracketIdx := strings.LastIndexByte(addr, ']')
 	if colonIdx <= bracketIdx {
 		// either colonIdx < 0, or the last colon is before a ']' (end
-		// of IPv6 address. -> missing port
+		// of IPv6 address). -> missing port
 		if app.cfg.TLS {
 			addr += ":6697"
 		} else {

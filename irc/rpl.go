@@ -104,7 +104,7 @@ const (
 	errInviteonlychan   = "473" // <channel> :Cannot join channel (+I)
 	errBannedfromchan   = "474" // <channel> :Cannot join channel (+b)
 	errBadchankey       = "475" // <channel> :Cannot join channel (+k)
-	errNopriviledges    = "481" // :Permission Denied- You're not an IRC operator
+	errNopriviledges    = "481" // :Permission Denied - You're not an IRC operator
 	errChanoprivsneeded = "482" // <channel> :You're not an operator
 
 	errUmodeunknownflag = "501" // :Unknown mode flag

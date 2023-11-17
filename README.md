@@ -34,7 +34,7 @@ make
 sudo make install
 ```
 
-For a simple Go local install:
+For a simple Go local installation:
 ```shell
 git clone https://git.sr.ht/~taiite/senpai
 cd senpai
