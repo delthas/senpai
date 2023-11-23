@@ -63,9 +63,24 @@ To debug IRC traffic, run senpai with the `-debug` argument (or put `debug true`
 
 Browse tickets at <https://todo.sr.ht/~taiite/senpai>.
 
+To create a ticket, visit the page above, or simply send an email to: [u.taiite.senpai@todo.sr.ht](mailto:u.taiite.senpai@todo.sr.ht) (does not require an account)
+
 ## Contributing
 
 Sending patches to senpai is done [by email](https://lists.sr.ht/~delthas/senpai-dev), this is simple and built-in to Git.
+
+### Using pyonji
+
+[pyonji](https://git.sr.ht/~emersion/pyonji) streamlines the Git email contribution workflow.
+
+Install, then run once in this repository:
+```shell
+git config sendemail.to "~delthas/senpai-dev@lists.sr.ht"
+```
+
+Then after adding your changes to a commit, run `pyonji`.
+
+### Using traditional git tools
 
 Set up your system once by following the steps Installation and Configuration of [git-send-email.io](https://git-send-email.io/)
 
