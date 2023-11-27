@@ -4,13 +4,16 @@
 GO ?= go
 RM ?= rm
 SCDOC ?= scdoc
+GIT ?= git
 GOFLAGS ?=
 PREFIX ?= /usr/local
 BINDIR ?= bin
 MANDIR ?= share/man
 APPDIR ?= share/applications
 
-export SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
+ifneq (, $(shell which $(GIT) 2>/dev/null))
+export SOURCE_DATE_EPOCH ?= $(shell $(GIT) log -1 --pretty=%ct)
+endif
 
 all: senpai doc
 
