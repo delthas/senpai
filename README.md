@@ -73,12 +73,7 @@ Sending patches to senpai is done [by email](https://lists.sr.ht/~delthas/senpai
 
 [pyonji](https://git.sr.ht/~emersion/pyonji) streamlines the Git email contribution workflow.
 
-Install, then run once in this repository:
-```shell
-git config sendemail.to "~delthas/senpai-dev@lists.sr.ht"
-```
-
-Then after adding your changes to a commit, run `pyonji`.
+Install, then after adding your changes to a commit, run `pyonji`.
 
 ### Using traditional git tools
 
