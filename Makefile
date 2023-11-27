@@ -10,6 +10,8 @@ BINDIR ?= bin
 MANDIR ?= share/man
 APPDIR ?= share/applications
 
+export SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
+
 all: senpai doc
 
 senpai:
