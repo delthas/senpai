@@ -11,7 +11,7 @@ BINDIR ?= bin
 MANDIR ?= share/man
 APPDIR ?= share/applications
 
-ifneq (, $(shell which $(GIT) 2>/dev/null))
+ifeq (0, $(shell $(GIT) status >/dev/null 2>&1; echo $$?))
 export SOURCE_DATE_EPOCH ?= $(shell $(GIT) log -1 --pretty=%ct)
 endif
 
