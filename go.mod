@@ -1,4 +1,4 @@
-module git.sr.ht/~taiite/senpai
+module git.sr.ht/~delthas/senpai
 
 go 1.16
 

@@ -286,5 +286,5 @@ _name_ is matched case-insensitively.  It can be one of the following:
 
 Creator/Sensei: Hubert Hirtz <hubert@hirtzfr.eu>!++
 Current maintainer: delthas <delthas@dille.cc>.++
-Sources are available at <https://git.sr.ht/~taiite/senpai>.++
+Sources are available at <https://git.sr.ht/~delthas/senpai>.++
 Patches are welcome by email at <~delthas/senpai-dev@lists.sr.ht>.

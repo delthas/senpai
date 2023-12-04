@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"git.sr.ht/~taiite/senpai/ui"
+	"git.sr.ht/~delthas/senpai/ui"
 )
 
 const welcomeMessage = "senpai dev build. Enter /help for a list of commands."

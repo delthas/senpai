@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.sr.ht/~taiite/senpai/irc"
+	"git.sr.ht/~delthas/senpai/irc"
 	"github.com/gdamore/tcell/v2"
 )
 

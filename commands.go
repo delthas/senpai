@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"git.sr.ht/~taiite/senpai/irc"
-	"git.sr.ht/~taiite/senpai/ui"
+	"git.sr.ht/~delthas/senpai/irc"
+	"git.sr.ht/~delthas/senpai/ui"
 	"github.com/delthas/go-libnp"
 	"github.com/gdamore/tcell/v2"
 	"golang.org/x/net/context"

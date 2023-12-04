@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git.sr.ht/~taiite/senpai/ui"
+	"git.sr.ht/~delthas/senpai/ui"
 
 	"github.com/gdamore/tcell/v2"
 

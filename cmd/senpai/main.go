@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"git.sr.ht/~taiite/senpai"
+	"git.sr.ht/~delthas/senpai"
 	"github.com/gdamore/tcell/v2"
 )
 

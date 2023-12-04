@@ -4,7 +4,7 @@
 
 **A modern terminal IRC client.**
 
-![a screenshot of your senpai feat. simon!](https://taiite.srht.site/senpai.png)
+![a screenshot of your senpai feat. simon!](senpai.png)
 
 senpai is an IRC client that works best with bouncers:
 
@@ -28,7 +28,7 @@ Your nick will be set to your SSH username.
 
 From source (requires Go):
 ```shell
-git clone https://git.sr.ht/~taiite/senpai
+git clone https://git.sr.ht/~delthas/senpai
 cd senpai
 make
 sudo make install
@@ -36,7 +36,7 @@ sudo make install
 
 For a simple Go local installation:
 ```shell
-git clone https://git.sr.ht/~taiite/senpai
+git clone https://git.sr.ht/~delthas/senpai
 cd senpai
 go install ./cmd/senpai
 ```
@@ -61,9 +61,9 @@ To debug IRC traffic, run senpai with the `-debug` argument (or put `debug true`
 
 ## Issue tracker
 
-Browse tickets at <https://todo.sr.ht/~taiite/senpai>.
+Browse tickets at <https://todo.sr.ht/~delthas/senpai>.
 
-To create a ticket, visit the page above, or simply send an email to: [u.taiite.senpai@todo.sr.ht](mailto:u.taiite.senpai@todo.sr.ht) (does not require an account)
+To create a ticket, visit the page above, or simply send an email to: [u.delthas.senpai@todo.sr.ht](mailto:u.delthas.senpai@todo.sr.ht) (does not require an account)
 
 ## Contributing
 
@@ -96,6 +96,8 @@ It should then appear on [the mailing list](https://lists.sr.ht/~delthas/senpai-
 This senpai is open source! Please use it under the ISC license.
 
 Copyright (C) 2021 The senpai Contributors
+
+*senpai was created by taiite, who later handed development over to delthas. This is not a fork, but a continuation of the project initially hosted at https://sr.ht/~taiite/senpai/*
 
 [bouncer-networks]: https://git.sr.ht/~emersion/soju/tree/master/item/doc/ext/bouncer-networks.md
 [CHATHISTORY]: https://ircv3.net/specs/extensions/chathistory

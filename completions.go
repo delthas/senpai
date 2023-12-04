@@ -3,7 +3,7 @@ package senpai
 import (
 	"strings"
 
-	"git.sr.ht/~taiite/senpai/ui"
+	"git.sr.ht/~delthas/senpai/ui"
 )
 
 func (app *App) completionsChannelMembers(cs []ui.Completion, cursorIdx int, text []rune) []ui.Completion {
