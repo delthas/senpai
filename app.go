@@ -566,6 +566,10 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 		} else {
 			app.win.InputSet("/quit")
 		}
+	case tcell.KeyCtrlF:
+		if len(app.win.InputContent()) == 0 {
+			app.win.InputSet("/search ")
+		}
 	case tcell.KeyCtrlA:
 		app.win.InputHome()
 	case tcell.KeyCtrlE:

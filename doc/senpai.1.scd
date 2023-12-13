@@ -85,6 +85,9 @@ senpai eats these events for eg selecting channels.*
 *CTRL-C*
 	Clear input line.
 
+*CTRL-F*
+	Prepare for search: add /search to input line.
+
 *CTRL-U*, *PgUp*
 	Go up in the timeline.
 
