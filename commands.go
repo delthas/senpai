@@ -876,7 +876,7 @@ func fieldsN(s string, n int) []string {
 }
 
 func parseCommand(s string) (command, args string, isCommand bool) {
-	if s[0] != '/' {
+	if len(s) == 0 || s[0] != '/' {
 		return "", s, false
 	}
 	if len(s) > 1 && s[1] == '/' {
