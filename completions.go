@@ -1,6 +1,7 @@
 package senpai
 
 import (
+	"fmt"
 	"strings"
 
 	"git.sr.ht/~delthas/senpai/ui"
@@ -35,7 +36,10 @@ func (app *App) completionsChannelMembers(cs []ui.Completion, cursorIdx int, tex
 			}
 			copy(c[start:], nickComp)
 			cs = append(cs, ui.Completion{
+				StartIdx:  start,
+				EndIdx:    cursorIdx,
 				Text:      c,
+				Display:   []rune(name.Name.Name),
 				CursorIdx: start + len(nickComp),
 			})
 		}
@@ -53,6 +57,8 @@ func (app *App) completionsChannelTopic(cs []ui.Completion, cursorIdx int, text 
 	if cursorIdx == len(text) {
 		compText := append(text, []rune(topic)...)
 		cs = append(cs, ui.Completion{
+			StartIdx:  cursorIdx,
+			EndIdx:    cursorIdx,
 			Text:      compText,
 			CursorIdx: len(compText),
 		})
@@ -91,6 +97,8 @@ func (app *App) completionsMsg(cs []ui.Completion, cursorIdx int, text []rune) [
 				copy(c[5+len(nickComp):], text[cursorIdx:])
 			}
 			cs = append(cs, ui.Completion{
+				StartIdx:  5,
+				EndIdx:    cursorIdx,
 				Text:      c,
 				CursorIdx: 5 + len(nickComp),
 			})
@@ -121,6 +129,8 @@ func (app *App) completionsCommands(cs []ui.Completion, cursorIdx int, text []ru
 			copy(c[1+len(name):], text[cursorIdx:])
 
 			cs = append(cs, ui.Completion{
+				StartIdx:  0,
+				EndIdx:    cursorIdx,
 				Text:      c,
 				CursorIdx: 1 + len(name),
 			})
@@ -157,7 +167,10 @@ func (app *App) completionsEmoji(cs []ui.Completion, cursorIdx int, text []rune)
 			c = append(c, text[cursorIdx:]...)
 		}
 		cs = append(cs, ui.Completion{
+			StartIdx:  start - 1,
+			EndIdx:    cursorIdx,
 			Text:      c,
+			Display:   []rune(fmt.Sprintf("%v (%v)", emoji.Emoji, emoji.Alias)),
 			CursorIdx: start - 1 + len([]rune(emoji.Emoji)),
 		})
 	}

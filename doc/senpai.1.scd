@@ -129,8 +129,8 @@ senpai eats these events for eg selecting channels.*
 	Sends the contents of the input field.
 
 *TAB*
-	Trigger the auto-completion.  Press several times to cycle through
-	completions.
+	Open the auto-completion dialog. Choose auto-completion item with *UP* and
+	*DOWN*, then press *TAB* again to confirm.
 
 *CTRL-L*
 	Refresh the window.

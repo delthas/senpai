@@ -7,7 +7,10 @@ import (
 )
 
 type Completion struct {
+	StartIdx  int
+	EndIdx    int
 	Text      []rune
+	Display   []rune
 	CursorIdx int
 }
 
@@ -340,6 +343,10 @@ func (e *Editor) End() {
 }
 
 func (e *Editor) Up() {
+	if e.autoCache != nil {
+		e.autoCacheIdx = (e.autoCacheIdx + 1) % len(e.autoCache)
+		return
+	}
 	if e.lineIdx == 0 {
 		return
 	}
@@ -353,6 +360,10 @@ func (e *Editor) Up() {
 }
 
 func (e *Editor) Down() {
+	if e.autoCache != nil {
+		e.autoCacheIdx = (e.autoCacheIdx + len(e.autoCache) - 1) % len(e.autoCache)
+		return
+	}
 	if e.lineIdx == len(e.text)-1 {
 		e.Flush()
 		return
@@ -366,7 +377,7 @@ func (e *Editor) Down() {
 	e.End()
 }
 
-func (e *Editor) AutoComplete(offset int) (ok bool) {
+func (e *Editor) AutoComplete() (ok bool) {
 	if e.autoCache == nil {
 		e.autoCache = e.autoComplete(e.cursorIdx, e.text[e.lineIdx])
 		if len(e.autoCache) == 0 {
@@ -374,8 +385,7 @@ func (e *Editor) AutoComplete(offset int) (ok bool) {
 			return false
 		}
 		e.autoCacheIdx = 0
-	} else {
-		e.autoCacheIdx = (e.autoCacheIdx + len(e.autoCache) + offset) % len(e.autoCache)
+		return
 	}
 
 	e.text[e.lineIdx] = e.autoCache[e.autoCacheIdx].Text
@@ -388,6 +398,7 @@ func (e *Editor) AutoComplete(offset int) (ok bool) {
 	for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 		e.offsetIdx++
 	}
+	e.autoCache = nil
 
 	e.backsearchEnd()
 	return true
@@ -447,20 +458,79 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int) {
 	x := x0
 	i := e.offsetIdx
 
+	autoStart := -1
+	autoEnd := -1
+	autoX := x0
+	if e.autoCache != nil {
+		autoStart = e.autoCache[e.autoCacheIdx].StartIdx
+		autoEnd = e.autoCache[e.autoCacheIdx].EndIdx
+	}
+
 	for i < len(e.text[e.lineIdx]) && x < x0+e.width {
 		r := e.text[e.lineIdx][i]
 		s := st
 		if e.backsearch && i < e.cursorIdx && i >= e.cursorIdx-len(e.backsearchPattern) {
 			s = s.Underline(true)
 		}
+		if i >= autoStart && i < autoEnd {
+			s = s.Underline(true)
+		}
+		if i == autoStart {
+			autoX = x
+		}
 		screen.SetContent(x, y, r, nil, s)
 		x += runeWidth(r)
 		i++
+	}
+	if i == autoStart {
+		autoX = x
 	}
 
 	for x < x0+e.width {
 		screen.SetContent(x, y, ' ', nil, st)
 		x++
+	}
+
+	autoCount := y - 2
+	if autoCount < 0 {
+		autoCount = 0
+	} else if autoCount > len(e.autoCache) {
+		autoCount = len(e.autoCache)
+	} else if autoCount > 10 {
+		autoCount = 10
+	}
+	autoOff := 0
+	if len(e.autoCache) > autoCount {
+		autoOff = e.autoCacheIdx - autoCount/2
+		if autoOff < 0 {
+			autoOff = 0
+		} else if autoOff > len(e.autoCache)-autoCount {
+			autoOff = len(e.autoCache) - autoCount
+		}
+	}
+
+	for i, completion := range e.autoCache[autoOff : autoOff+autoCount] {
+		display := completion.Display
+		if display == nil {
+			display = completion.Text[completion.StartIdx:]
+		}
+
+		x := autoX
+		y := y - i - 1
+		for _, r := range display {
+			if x >= x0+e.width {
+				break
+			}
+			s := st.Background(tcell.ColorBlack)
+			s = s.Reverse(true)
+			if i+autoOff == e.autoCacheIdx {
+				s = s.Bold(true)
+			} else {
+				s = s.Dim(true)
+			}
+			screen.SetContent(x, y, r, nil, s)
+			x += runeWidth(r)
+		}
 	}
 
 	cursorX := x0 + e.textWidth[e.cursorIdx] - e.textWidth[e.offsetIdx]

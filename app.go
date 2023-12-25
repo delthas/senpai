@@ -659,12 +659,7 @@ func (app *App) handleKeyEvent(ev *tcell.EventKey) {
 	case tcell.KeyCtrlR:
 		app.win.InputBackSearch()
 	case tcell.KeyTab:
-		ok := app.win.InputAutoComplete(1)
-		if ok {
-			app.typing()
-		}
-	case tcell.KeyBacktab:
-		ok := app.win.InputAutoComplete(-1)
+		ok := app.win.InputAutoComplete()
 		if ok {
 			app.typing()
 		}
@@ -1251,13 +1246,6 @@ func (app *App) completions(cursorIdx int, text []rune) []ui.Completion {
 	cs = app.completionsMsg(cs, cursorIdx, text)
 	cs = app.completionsCommands(cs, cursorIdx, text)
 	cs = app.completionsEmoji(cs, cursorIdx, text)
-
-	if cs != nil {
-		cs = append(cs, ui.Completion{
-			Text:      text,
-			CursorIdx: cursorIdx,
-		})
-	}
 
 	return cs
 }

@@ -419,8 +419,8 @@ func (ui *UI) InputDeleteWord() (ok bool) {
 	return ui.e.RemWord()
 }
 
-func (ui *UI) InputAutoComplete(offset int) (ok bool) {
-	return ui.e.AutoComplete(offset)
+func (ui *UI) InputAutoComplete() (ok bool) {
+	return ui.e.AutoComplete()
 }
 
 func (ui *UI) InputFlush() (content string) {
@@ -474,12 +474,6 @@ func (ui *UI) Notify(title string, body string) {
 func (ui *UI) Draw(members []irc.Member) {
 	w, h := ui.screen.Size()
 
-	if ui.channelWidth == 0 {
-		ui.e.Draw(ui.screen, 9+ui.config.NickColWidth, h-2)
-	} else {
-		ui.e.Draw(ui.screen, 9+ui.channelWidth+ui.config.NickColWidth, h-1)
-	}
-
 	ui.bs.DrawTimeline(ui.screen, ui.channelWidth, 0, ui.config.NickColWidth)
 	if ui.channelWidth == 0 {
 		ui.bs.DrawHorizontalBufferList(ui.screen, 0, h-1, w-ui.memberWidth, &ui.channelOffset)
@@ -505,6 +499,12 @@ func (ui *UI) Draw(members []irc.Member) {
 			ui.screen.SetContent(x, h-1, ' ', nil, tcell.StyleDefault)
 		}
 		printIdent(ui.screen, ui.channelWidth+7, h-1, ui.config.NickColWidth, ui.prompt)
+	}
+
+	if ui.channelWidth == 0 {
+		ui.e.Draw(ui.screen, 9+ui.config.NickColWidth, h-2)
+	} else {
+		ui.e.Draw(ui.screen, 9+ui.channelWidth+ui.config.NickColWidth, h-1)
 	}
 
 	ui.screen.Show()
