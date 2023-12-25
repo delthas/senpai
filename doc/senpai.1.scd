@@ -32,14 +32,16 @@ extensions, such as:
 
 # CONFIGURATION
 
-senpai needs a configuration file to start.  It searches for it in the following
-location:
+senpai searches for it in the following location:
 
 	$XDG_CONFIG_HOME/senpai/senpai.scfg
 
 If unset, $XDG_CONFIG_HOME defaults to *~/.config*.
 
 For information about the configuration format, see *senpai*(5).
+
+If the configuration file does not exist, a setup assistant will create one for
+you.
 
 # USER INTERFACE
 
