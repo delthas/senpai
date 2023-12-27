@@ -1027,7 +1027,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			app.messageBounds[boundKey{netID, ev.Target}] = boundsNew
 		}
 	case irc.SearchEvent:
-		app.win.OpenOverlay()
+		app.win.OpenOverlay("Press Escape to close the search results")
 		lines := make([]ui.Line, 0, len(ev.Messages))
 		for _, m := range ev.Messages {
 			_, line := app.formatMessage(s, m)

@@ -16,6 +16,8 @@ type Completion struct {
 
 // Editor is the text field where the user writes messages and commands.
 type Editor struct {
+	colors ConfigColors
+
 	// text contains the written runes. An empty slice means no text is written.
 	text [][]rune
 
@@ -56,8 +58,9 @@ type Editor struct {
 
 // NewEditor returns a new Editor.
 // Call Resize() once before using it.
-func NewEditor(autoComplete func(cursorIdx int, text []rune) []Completion) Editor {
+func NewEditor(colors ConfigColors, autoComplete func(cursorIdx int, text []rune) []Completion) Editor {
 	return Editor{
+		colors:       colors,
 		text:         [][]rune{{}},
 		history:      [][]rune{},
 		textWidth:    []int{0},
@@ -452,11 +455,20 @@ func (e *Editor) bumpOldestChange() {
 	}
 }
 
-func (e *Editor) Draw(screen tcell.Screen, x0, y int) {
+func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 	st := tcell.StyleDefault
 
 	x := x0
 	i := e.offsetIdx
+	text := e.text[e.lineIdx]
+	showCursor := true
+
+	if len(text) == 0 && len(hint) > 0 && !e.backsearch {
+		i = 0
+		text = []rune(hint)
+		st = st.Foreground(e.colors.Status)
+		showCursor = false
+	}
 
 	autoStart := -1
 	autoEnd := -1
@@ -466,8 +478,8 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int) {
 		autoEnd = e.autoCache[e.autoCacheIdx].EndIdx
 	}
 
-	for i < len(e.text[e.lineIdx]) && x < x0+e.width {
-		r := e.text[e.lineIdx][i]
+	for i < len(text) && x < x0+e.width {
+		r := text[i]
 		s := st
 		if e.backsearch && i < e.cursorIdx && i >= e.cursorIdx-len(e.backsearchPattern) {
 			s = s.Underline(true)
@@ -533,8 +545,12 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int) {
 		}
 	}
 
-	cursorX := x0 + e.textWidth[e.cursorIdx] - e.textWidth[e.offsetIdx]
-	screen.ShowCursor(cursorX, y)
+	if showCursor {
+		cursorX := x0 + e.textWidth[e.cursorIdx] - e.textWidth[e.offsetIdx]
+		screen.ShowCursor(cursorX, y)
+	} else {
+		screen.HideCursor()
+	}
 }
 
 // runeOffset returns the lowercase version of a rune

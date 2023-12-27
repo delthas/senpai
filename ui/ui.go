@@ -6,8 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"git.sr.ht/~delthas/senpai/irc"
 	"github.com/gdamore/tcell/v2"
+
+	"git.sr.ht/~delthas/senpai/irc"
 )
 
 type Config struct {
@@ -36,11 +37,12 @@ type UI struct {
 	exit   atomic.Value // bool
 	config Config
 
-	bs     BufferList
-	e      Editor
-	prompt StyledString
-	status string
-	title  string
+	bs          BufferList
+	e           Editor
+	prompt      StyledString
+	status      string
+	title       string
+	overlayHint string
 
 	channelOffset int
 	memberClicked int
@@ -97,7 +99,7 @@ func New(config Config) (ui *UI, err error) {
 	}()
 
 	ui.bs = NewBufferList(config.Colors, ui.config.MergeLine)
-	ui.e = NewEditor(ui.config.AutoComplete)
+	ui.e = NewEditor(config.Colors, ui.config.AutoComplete)
 	ui.Resize()
 
 	return
@@ -263,8 +265,9 @@ func (ui *UI) IsAtTop() bool {
 	return ui.bs.IsAtTop()
 }
 
-func (ui *UI) OpenOverlay() {
+func (ui *UI) OpenOverlay(hint string) {
 	ui.bs.OpenOverlay()
+	ui.overlayHint = hint
 }
 
 func (ui *UI) CloseOverlay() {
@@ -489,22 +492,30 @@ func (ui *UI) Draw(members []irc.Member) {
 		ui.drawStatusBar(ui.channelWidth, h-2, w-ui.channelWidth-ui.memberWidth)
 	}
 
+	prompt := ui.prompt
+	if ui.bs.HasOverlay() && ui.e.TextLen() == 0 {
+		prompt = Styled(">", tcell.StyleDefault.Foreground(ui.config.Colors.Prompt))
+	}
 	if ui.channelWidth == 0 {
 		for x := 0; x < 9+ui.config.NickColWidth; x++ {
 			ui.screen.SetContent(x, h-2, ' ', nil, tcell.StyleDefault)
 		}
-		printIdent(ui.screen, 7, h-2, ui.config.NickColWidth, ui.prompt)
+		printIdent(ui.screen, 7, h-2, ui.config.NickColWidth, prompt)
 	} else {
 		for x := ui.channelWidth; x < 9+ui.channelWidth+ui.config.NickColWidth; x++ {
 			ui.screen.SetContent(x, h-1, ' ', nil, tcell.StyleDefault)
 		}
-		printIdent(ui.screen, ui.channelWidth+7, h-1, ui.config.NickColWidth, ui.prompt)
+		printIdent(ui.screen, ui.channelWidth+7, h-1, ui.config.NickColWidth, prompt)
 	}
 
+	var hint string
+	if ui.bs.HasOverlay() {
+		hint = ui.overlayHint
+	}
 	if ui.channelWidth == 0 {
-		ui.e.Draw(ui.screen, 9+ui.config.NickColWidth, h-2)
+		ui.e.Draw(ui.screen, 9+ui.config.NickColWidth, h-2, hint)
 	} else {
-		ui.e.Draw(ui.screen, 9+ui.channelWidth+ui.config.NickColWidth, h-1)
+		ui.e.Draw(ui.screen, 9+ui.channelWidth+ui.config.NickColWidth, h-1, hint)
 	}
 
 	ui.screen.Show()

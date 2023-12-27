@@ -51,7 +51,7 @@ func assertEditorEq(t *testing.T, actual, expected Editor) {
 }
 
 func TestOneLetter(t *testing.T) {
-	e := NewEditor(nil)
+	e := NewEditor(ConfigColors{}, nil)
 	e.Resize(5)
 	e.PutRune('h')
 	assertEditorEq(t, e, Editor{
@@ -64,7 +64,7 @@ func TestOneLetter(t *testing.T) {
 }
 
 func TestFourLetters(t *testing.T) {
-	e := NewEditor(nil)
+	e := NewEditor(ConfigColors{}, nil)
 	e.Resize(5)
 	e.PutRune('h')
 	e.PutRune('e')
@@ -74,7 +74,7 @@ func TestFourLetters(t *testing.T) {
 }
 
 func TestOneLeft(t *testing.T) {
-	e := NewEditor(nil)
+	e := NewEditor(ConfigColors{}, nil)
 	e.Resize(5)
 	e.PutRune('h')
 	e.PutRune('l')
@@ -86,7 +86,7 @@ func TestOneLeft(t *testing.T) {
 }
 
 func TestOneRem(t *testing.T) {
-	e := NewEditor(nil)
+	e := NewEditor(ConfigColors{}, nil)
 	e.Resize(5)
 	e.PutRune('h')
 	e.PutRune('l')
@@ -98,7 +98,7 @@ func TestOneRem(t *testing.T) {
 }
 
 func TestLeftAndRem(t *testing.T) {
-	e := NewEditor(nil)
+	e := NewEditor(ConfigColors{}, nil)
 	e.Resize(5)
 	e.PutRune('h')
 	e.PutRune('l')
