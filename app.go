@@ -13,11 +13,12 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"git.sr.ht/~delthas/senpai/irc"
-	"git.sr.ht/~delthas/senpai/ui"
 	"github.com/gdamore/tcell/v2"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
+
+	"git.sr.ht/~delthas/senpai/irc"
+	"git.sr.ht/~delthas/senpai/ui"
 )
 
 const eventChanSize = 1024

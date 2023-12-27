@@ -12,8 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"git.sr.ht/~delthas/senpai"
 	"github.com/gdamore/tcell/v2"
+
+	"git.sr.ht/~delthas/senpai"
 )
 
 func main() {
