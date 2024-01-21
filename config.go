@@ -258,7 +258,7 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			cmd := exec.Command(cmdName, d.Params[1:]...)
 			var stdout []byte
 			if stdout, err = cmd.Output(); err != nil {
-				return fmt.Errorf("error running password command: %w", err)
+				return fmt.Errorf("error running password command: %v", err)
 			}
 
 			passCmdOut := strings.Split(string(stdout), "\n")
