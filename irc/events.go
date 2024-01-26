@@ -68,6 +68,7 @@ type TopicChangeEvent struct {
 	Channel string
 	Topic   string
 	Time    time.Time
+	Who	string
 }
 
 type ModeChangeEvent struct {

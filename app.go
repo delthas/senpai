@@ -1390,7 +1390,8 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		}
 	case irc.TopicChangeEvent:
 		topic := ui.IRCString(ev.Topic).String()
-		body := fmt.Sprintf("Topic changed to: %s", topic)
+		who := ui.IRCString(ev.Who).String()
+		body := fmt.Sprintf("Topic changed by %s to: %s", who, topic)
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",

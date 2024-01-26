@@ -1140,6 +1140,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				Channel: channel,
 				Topic:   topic,
 				Time:    msg.TimeOrNow(),
+				Who:     msg.Prefix.Name,
 			}, nil
 		}
 
@@ -1154,6 +1155,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				Channel: c.Name,
 				Topic:   c.Topic,
 				Time:    msg.TimeOrNow(),
+				Who:     msg.Prefix.Name,
 			}, nil
 		}
 	case "MODE":
