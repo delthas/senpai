@@ -525,6 +525,7 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 		}
 	}
 
+	pad_rune := rune(' ')
 	for i, completion := range e.autoCache[autoOff : autoOff+autoCount] {
 		display := completion.Display
 		if display == nil {
@@ -533,19 +534,26 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 
 		x := autoX
 		y := y - i - 1
+
+		s := st.Background(tcell.ColorBlack)
+		s = s.Reverse(i+autoOff == e.autoCacheIdx)
+
+		/* Pad one space at the left */
+		screen.SetContent(x, y, pad_rune, nil, s)
+		x += runeWidth(pad_rune)
+
 		for _, r := range display {
-			if x >= x0+e.width {
+			if x + 1 >= x0+e.width {
 				break
-			}
-			s := st.Background(tcell.ColorBlack)
-			s = s.Reverse(true)
-			if i+autoOff == e.autoCacheIdx {
-				s = s.Bold(true)
-			} else {
-				s = s.Dim(true)
 			}
 			screen.SetContent(x, y, r, nil, s)
 			x += runeWidth(r)
+		}
+
+		/* Pad to the right so we get to 20 in total */
+		for (x - autoX) < 20 && x < x0+e.width {
+			screen.SetContent(x, y, pad_rune, nil, s)
+			x += runeWidth(pad_rune)
 		}
 	}
 
