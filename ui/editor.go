@@ -388,7 +388,9 @@ func (e *Editor) AutoComplete() (ok bool) {
 			return false
 		}
 		e.autoCacheIdx = 0
-		return
+		if len(e.autoCache) > 1 {
+			return
+		}
 	}
 
 	e.text[e.lineIdx] = e.autoCache[e.autoCacheIdx].Text
