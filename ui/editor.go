@@ -347,7 +347,7 @@ func (e *Editor) End() {
 
 func (e *Editor) Up() {
 	if e.autoCache != nil {
-		e.autoCacheIdx = (e.autoCacheIdx + 1) % len(e.autoCache)
+		e.autoCacheIdx = (e.autoCacheIdx + len(e.autoCache) - 1) % len(e.autoCache)
 		return
 	}
 	if e.lineIdx == 0 {
@@ -364,7 +364,7 @@ func (e *Editor) Up() {
 
 func (e *Editor) Down() {
 	if e.autoCache != nil {
-		e.autoCacheIdx = (e.autoCacheIdx + len(e.autoCache) - 1) % len(e.autoCache)
+		e.autoCacheIdx = (e.autoCacheIdx + 1) % len(e.autoCache)
 		return
 	}
 	if e.lineIdx == len(e.text)-1 {
@@ -535,7 +535,7 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 		}
 
 		x := autoX
-		y := y - i - 1
+		y := y - (autoCount - i)
 
 		s := st.Background(tcell.ColorBlack)
 		s = s.Reverse(i+autoOff == e.autoCacheIdx)
