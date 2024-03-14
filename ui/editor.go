@@ -347,7 +347,7 @@ func (e *Editor) End() {
 
 func (e *Editor) Up() {
 	if e.autoCache != nil {
-		e.autoCacheIdx = (e.autoCacheIdx + 1) % len(e.autoCache)
+		e.autoCacheIdx = (e.autoCacheIdx + len(e.autoCache) - 1) % len(e.autoCache)
 		return
 	}
 	if e.lineIdx == 0 {
@@ -364,7 +364,7 @@ func (e *Editor) Up() {
 
 func (e *Editor) Down() {
 	if e.autoCache != nil {
-		e.autoCacheIdx = (e.autoCacheIdx + len(e.autoCache) - 1) % len(e.autoCache)
+		e.autoCacheIdx = (e.autoCacheIdx + 1) % len(e.autoCache)
 		return
 	}
 	if e.lineIdx == len(e.text)-1 {
@@ -388,7 +388,9 @@ func (e *Editor) AutoComplete() (ok bool) {
 			return false
 		}
 		e.autoCacheIdx = 0
-		return
+		if len(e.autoCache) > 1 {
+			return
+		}
 	}
 
 	e.text[e.lineIdx] = e.autoCache[e.autoCacheIdx].Text
@@ -490,6 +492,10 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 		if i == autoStart {
 			autoX = x
 		}
+		if r == '\n' {
+			r = '↲'
+			s = s.Background(tcell.ColorRed).Foreground(tcell.ColorBlack)
+		}
 		screen.SetContent(x, y, r, nil, s)
 		x += runeWidth(r)
 		i++
@@ -521,6 +527,7 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 		}
 	}
 
+	pad_rune := rune(' ')
 	for i, completion := range e.autoCache[autoOff : autoOff+autoCount] {
 		display := completion.Display
 		if display == nil {
@@ -528,20 +535,27 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 		}
 
 		x := autoX
-		y := y - i - 1
+		y := y - (autoCount - i)
+
+		s := st.Background(tcell.ColorBlack)
+		s = s.Reverse(i+autoOff == e.autoCacheIdx)
+
+		/* Pad one space at the left */
+		screen.SetContent(x, y, pad_rune, nil, s)
+		x += runeWidth(pad_rune)
+
 		for _, r := range display {
-			if x >= x0+e.width {
+			if x + 1 >= x0+e.width {
 				break
-			}
-			s := st.Background(tcell.ColorBlack)
-			s = s.Reverse(true)
-			if i+autoOff == e.autoCacheIdx {
-				s = s.Bold(true)
-			} else {
-				s = s.Dim(true)
 			}
 			screen.SetContent(x, y, r, nil, s)
 			x += runeWidth(r)
+		}
+
+		/* Pad to the right so we get to 20 in total */
+		for (x - autoX) < 20 && x < x0+e.width {
+			screen.SetContent(x, y, pad_rune, nil, s)
+			x += runeWidth(pad_rune)
 		}
 	}
 
