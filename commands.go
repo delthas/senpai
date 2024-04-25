@@ -381,9 +381,6 @@ func commandDoHelp(app *App, args []string) (err error) {
 			At:   t,
 			Body: ui.PlainSprintf("  %s", cmd.Desc),
 		})
-		app.win.AddLine(netID, buffer, ui.Line{
-			At: t,
-		})
 	}
 
 	addLineCommands := func(names []string) {
