@@ -618,16 +618,13 @@ func commandDoQuit(app *App, args []string) (err error) {
 }
 
 func commandDoBouncer(app *App, args []string) (err error) {
-	if app.cfg.Transient {
-		return fmt.Errorf("usage of BOUNCER is disabled")
+	b, err := getBouncerService(app)
+	if err != nil {
+		return err
 	}
 	s := app.CurrentSession()
 	if s == nil {
 		return errOffline
-	}
-	b := s.BouncerService()
-	if b == "" {
-		return fmt.Errorf("no bouncer service found on this server")
 	}
 	s.PrivMsg(b, args[0])
 	return nil
@@ -1060,4 +1057,19 @@ func getSong() (string, error) {
 		}
 	}
 	return sb.String(), nil
+}
+
+func getBouncerService(app *App) (service string, err error) {
+	if app.cfg.Transient {
+		return "", fmt.Errorf("usage of BOUNCER is disabled")
+	}
+	s := app.CurrentSession()
+	if s == nil {
+		return "", errOffline
+	}
+	b := s.BouncerService()
+	if b == "" {
+		return "", fmt.Errorf("no bouncer service found on this server; try using soju")
+	}
+	return b, nil
 }

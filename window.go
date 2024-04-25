@@ -7,7 +7,7 @@ import (
 	"git.sr.ht/~delthas/senpai/ui"
 )
 
-const welcomeMessage = "senpai dev build. Enter /help for a list of commands."
+const welcomeMessage = "Welcome to senpai! To get started, use the Help buttons, or enter /help for a list of commands."
 
 func (app *App) initWindow() {
 	app.win.AddBuffer("", "(home)", "")

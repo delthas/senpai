@@ -538,17 +538,57 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 		} else if x > w-app.win.MemberWidth() {
 			if i := y - 2 + app.win.MemberOffset(); i >= 0 && i == app.win.ClickedMember() {
 				netID, target := app.win.CurrentBuffer()
-				s := app.sessions[netID]
-				if s != nil && target != "" {
-					members := s.Names(target)
-					if i < len(members) {
-						buffer := members[i].Name.Name
-						i, added := app.win.AddBuffer(netID, "", buffer)
-						app.win.JumpBufferIndex(i)
-						if added {
-							s.MonitorAdd(buffer)
-							s.ReadGet(buffer)
-							s.NewHistoryRequest(buffer).WithLimit(500).Latest()
+				if target == "" {
+					switch y {
+					case 2:
+						if _, err := getBouncerService(app); err != nil {
+							app.win.AddLine(netID, target, ui.Line{
+								At:        time.Now(),
+								Head:      "--",
+								HeadColor: tcell.ColorRed,
+								Body:      ui.PlainSprintf("Adding networks is not available: %v", err),
+							})
+						} else {
+							app.win.AddLine(netID, target, ui.Line{
+								At:   time.Now(),
+								Head: "--",
+								Body: ui.PlainString("To join a network/server, use /bouncer network create -addr <address> [-name <name>]"),
+							})
+							app.win.AddLine(netID, target, ui.Line{
+								At:   time.Now(),
+								Head: "--",
+								Body: ui.PlainString("For details, see /bouncer help network create"),
+							})
+							app.win.InputSet("/bouncer network create -addr ")
+						}
+					case 4:
+						app.win.AddLine(netID, target, ui.Line{
+							At:   time.Now(),
+							Head: "--",
+							Body: ui.PlainString("To join a channel, use /join <#channel> [<password>]"),
+						})
+						app.win.InputSet("/join ")
+					case 6:
+						app.win.AddLine(netID, target, ui.Line{
+							At:   time.Now(),
+							Head: "--",
+							Body: ui.PlainString("To message a user, use /query <user> [<message>]"),
+						})
+						app.win.InputSet("/query ")
+					}
+				} else {
+					s := app.sessions[netID]
+					if s != nil && target != "" {
+						members := s.Names(target)
+						if i < len(members) {
+							buffer := members[i].Name.Name
+							i, added := app.win.AddBuffer(netID, "", buffer)
+							app.win.JumpBufferIndex(i)
+							if added {
+								s.MonitorAdd(buffer)
+								s.ReadGet(buffer)
+								s.NewHistoryRequest(buffer).WithLimit(500).Latest()
+							}
 						}
 					}
 				}

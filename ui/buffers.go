@@ -841,10 +841,7 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 	xTopic := x0
 	printString(screen, &xTopic, y0, Styled(b.topic, tcell.StyleDefault))
 	y0++
-	for x := x0; x < x0+bs.tlInnerWidth+nickColWidth+9; x++ {
-		st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-		screen.SetContent(x, y0, 0x2500, nil, st)
-	}
+	drawHorizontalLine(screen, x0, y0, bs.tlInnerWidth+nickColWidth+9)
 	y0++
 
 	if bs.textWidth < bs.tlInnerWidth {
@@ -869,9 +866,7 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 				yi--
 				st := tcell.StyleDefault.Foreground(tcell.ColorGray)
 				printIdent(screen, x0+7, yi, nickColWidth, Styled("--", st))
-				for x := x0 + 9 + nickColWidth; x < x0+9+nickColWidth+bs.tlInnerWidth; x++ {
-					screen.SetContent(x, yi, 0x2500, nil, st)
-				}
+				drawHorizontalLine(screen, x0, yi, 9+nickColWidth+bs.tlInnerWidth)
 				rulerDrawn = true
 			}
 		}

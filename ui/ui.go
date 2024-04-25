@@ -568,14 +568,36 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 			*offset = 0
 		}
 	}
-	if ui.memberClicked >= len(members) {
-		ui.memberClicked = len(members) - 1
-	}
 
 	drawVerticalLine(screen, x0, y0, height)
 	x0++
 	width--
 	clearArea(screen, x0, y0, width, height)
+
+	if _, channel := ui.bs.Current(); channel == "" {
+		x := x0 + 1
+		printString(screen, &x, y0, Styled("Help", tcell.StyleDefault.Foreground(ui.config.Colors.Status)))
+		drawHorizontalLine(screen, x0, y0+1, width)
+		y0 += 2
+
+		lines := []string{
+			"→Add network",
+			"→Join channel",
+			"→Message user",
+		}
+		for i, line := range lines {
+			reverse := i*2 == ui.memberClicked
+			x := x0
+			printString(screen, &x, y0, Styled(line, tcell.StyleDefault.Reverse(reverse)))
+			drawHorizontalLine(screen, x0, y0+1, width)
+			y0 += 2
+		}
+		return
+	}
+
+	if ui.memberClicked >= len(members) {
+		ui.memberClicked = len(members) - 1
+	}
 
 	if len(members) > 0 {
 		var memberString string
@@ -590,10 +612,7 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 	}
 	y0++
 	height--
-	for x := x0; x < x0+width; x++ {
-		st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-		screen.SetContent(x, y0, 0x2500, nil, st)
-	}
+	drawHorizontalLine(screen, x0, y0, width)
 	y0++
 	height--
 

@@ -124,6 +124,13 @@ func clearArea(screen tcell.Screen, x0, y0, width, height int) {
 	}
 }
 
+func drawHorizontalLine(screen tcell.Screen, x0, y, width int) {
+	st := tcell.StyleDefault.Foreground(tcell.ColorGray)
+	for x := x0; x < x0+width; x++ {
+		screen.SetContent(x, y, 0x2500, nil, st)
+	}
+}
+
 func drawVerticalLine(screen tcell.Screen, x, y0, height int) {
 	for y := y0; y < y0+height; y++ {
 		screen.SetContent(x, y, 0x2502, nil, tcell.StyleDefault)
