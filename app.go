@@ -1378,7 +1378,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		content = parts[1]
 	}
 
-	if !ev.TargetIsChannel && isNotice {
+	if !ev.TargetIsChannel && (isNotice || ev.User == s.BouncerService()) {
 		curNetID, curBuffer := app.win.CurrentBuffer()
 		if curNetID == s.NetID() {
 			buffer = curBuffer

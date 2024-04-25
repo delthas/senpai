@@ -45,6 +45,14 @@ func init() {
 			Desc:      "show the list of commands, or how to use the given one",
 			Handle:    commandDoHelp,
 		},
+		"BOUNCER": {
+			AllowHome: true,
+			MinArgs:   1,
+			MaxArgs:   1,
+			Usage:     "<bouncer message>",
+			Desc:      "send command to the bouncer service (only works with soju); e.g. /bouncer help",
+			Handle:    commandDoBouncer,
+		},
 		"JOIN": {
 			AllowHome: true,
 			MinArgs:   1,
@@ -609,6 +617,22 @@ func commandDoQuit(app *App, args []string) (err error) {
 		session.Quit(reason)
 	}
 	app.win.Exit()
+	return nil
+}
+
+func commandDoBouncer(app *App, args []string) (err error) {
+	if app.cfg.Transient {
+		return fmt.Errorf("usage of BOUNCER is disabled")
+	}
+	s := app.CurrentSession()
+	if s == nil {
+		return errOffline
+	}
+	b := s.BouncerService()
+	if b == "" {
+		return fmt.Errorf("no bouncer service found on this server")
+	}
+	s.PrivMsg(b, args[0])
 	return nil
 }
 

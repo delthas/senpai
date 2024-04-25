@@ -128,6 +128,7 @@ type Session struct {
 	availableCaps map[string]string
 	enabledCaps   map[string]struct{}
 
+	serverName string
 	// ISUPPORT features
 	casemap       func(string) string
 	chanmodes     [4]string
@@ -221,6 +222,15 @@ func (s *Session) Close() {
 func (s *Session) HasCapability(capability string) bool {
 	_, ok := s.enabledCaps[capability]
 	return ok
+}
+
+// BouncerService returns the optional nick of the bouncer service user.
+func (s *Session) BouncerService() string {
+	switch s.serverName {
+	case "soju":
+		return "BouncerServ"
+	}
+	return ""
 }
 
 func (s *Session) Nick() string {
@@ -743,6 +753,10 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}}
 		if s.host == "" {
 			s.Who(s.nick)
+		}
+	case rplMyinfo:
+		if err := msg.ParseParams(nil, nil, &s.serverName); err != nil {
+			return nil, err
 		}
 	case rplIsupport:
 		if len(msg.Params) < 3 {
@@ -1453,7 +1467,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		// silence monlist full error, we don't care because we do it best-effort
 	case rplAway:
 		// we display user away status, we don't care about automatic AWAY replies
-	case rplYourhost, rplCreated, rplMyinfo:
+	case rplYourhost, rplCreated:
 		// useless conection messages
 	case rplAdminme:
 		// useless admin info header
