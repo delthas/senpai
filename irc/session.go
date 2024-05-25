@@ -1495,7 +1495,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		// useless whois delimiter
 	case rplEndofinfo:
 		// useless info delimiter
-	case rplHelpstart, rplEndofhelp:
+	case rplEndofhelp:
 		// useless help delimiter
 	case rplStatscommands:
 		var command, count string
@@ -1913,7 +1913,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Prefix:  "User",
 			Message: fmt.Sprintf("The user %s %s", nick, text),
 		}, nil
-	case rplHelptxt:
+	case rplHelpstart, rplHelptxt:
 		var text string
 		if err := msg.ParseParams(nil, nil, &text); err != nil {
 			return nil, err
