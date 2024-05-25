@@ -1649,13 +1649,13 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Message: fmt.Sprintf("The user %s is connected through the server %s (%s)", nick, server, serverInfo),
 		}, nil
 	case rplWhoisoperator:
-		var nick string
-		if err := msg.ParseParams(nil, &nick); err != nil {
+		var nick, opertype string
+		if err := msg.ParseParams(nil, &nick, &opertype); err != nil {
 			return nil, err
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s is an operator of this server", nick),
+			Message: fmt.Sprintf("The user %s %s", nick, opertype),
 		}, nil
 	case rplWhowasuser:
 		var nick, username, host, realname string
