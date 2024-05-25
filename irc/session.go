@@ -1611,7 +1611,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s %s", nick, text),
+			Message: fmt.Sprintf("%s %s", nick, text),
 		}, nil
 	case rplUnaway:
 		return InfoEvent{
@@ -1628,7 +1628,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s has identified and is registered to the server", nick),
+			Message: fmt.Sprintf("%s has identified and is registered to the server", nick),
 		}, nil
 	case rplWhoisuser:
 		var nick, username, host, realname string
@@ -1637,7 +1637,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s has username %s and host %s (mask %s!%s@%s); their realname is %s", nick, username, host, nick, username, host, realname),
+			Message: fmt.Sprintf("%s has username %s and host %s (mask %s!%s@%s); their realname is %s", nick, username, host, nick, username, host, realname),
 		}, nil
 	case rplWhoisserver:
 		var nick, server, serverInfo string
@@ -1646,7 +1646,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s is connected through the server %s (%s)", nick, server, serverInfo),
+			Message: fmt.Sprintf("%s is connected through the server %s (%s)", nick, server, serverInfo),
 		}, nil
 	case rplWhoisoperator:
 		var nick, opertype string
@@ -1655,7 +1655,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s %s", nick, opertype),
+			Message: fmt.Sprintf("%s %s", nick, opertype),
 		}, nil
 	case rplWhowasuser:
 		var nick, username, host, realname string
@@ -1664,7 +1664,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s was last seen with username %s and host %s (mask %s!%s@%s); their realname was %s", nick, username, host, nick, username, host, realname),
+			Message: fmt.Sprintf("%s was last seen with username %s and host %s (mask %s!%s@%s); their realname was %s", nick, username, host, nick, username, host, realname),
 		}, nil
 	case rplWhoisidle:
 		var nick, idleText, signonText string
@@ -1681,7 +1681,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		idle := (time.Duration(idleSeconds) * time.Second).String()
 		t := time.Unix(signon, 0)
-		text := fmt.Sprintf("The user %s was idle for %s; they signed-on on %s", nick, idle, t.Local().Format("January 2 at 15:04"))
+		text := fmt.Sprintf("%s was idle for %s; they signed-on on %s", nick, idle, t.Local().Format("January 2 at 15:04"))
 		return InfoEvent{
 			Prefix:  "User",
 			Message: text,
@@ -1693,7 +1693,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s has joined channels: %s", nick, text),
+			Message: fmt.Sprintf("%s has joined channels: %s", nick, text),
 		}, nil
 	case rplWhoisspecial:
 		var nick, text string
@@ -1702,7 +1702,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s is also: %s", nick, text),
+			Message: fmt.Sprintf("%s is also: %s", nick, text),
 		}, nil
 	case rplList:
 		var channel, count, topic string
@@ -1748,12 +1748,12 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		if nick != account {
 			return InfoEvent{
 				Prefix:  "User",
-				Message: fmt.Sprintf("The user %s is authenticated as %s", nick, account),
+				Message: fmt.Sprintf("%s is authenticated as %s", nick, account),
 			}, nil
 		} else {
 			return InfoEvent{
 				Prefix:  "User",
-				Message: fmt.Sprintf("The user %s is authenticated", nick),
+				Message: fmt.Sprintf("%s is authenticated", nick),
 			}, nil
 		}
 	case rplInvitelist, rplInvexlist:
@@ -1784,7 +1784,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}
 			return InfoEvent{
 				Prefix:  "User",
-				Message: fmt.Sprintf("The user %s %s", nick, text),
+				Message: fmt.Sprintf("%s %s", nick, text),
 			}, nil
 		} else if len(msg.Params) >= 4 {
 			var nick string
@@ -1793,7 +1793,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}
 			return InfoEvent{
 				Prefix:  "User",
-				Message: fmt.Sprintf("The user %s is actually using the host %s", nick, msg.Params[len(msg.Params)-2]),
+				Message: fmt.Sprintf("%s is actually using the host %s", nick, msg.Params[len(msg.Params)-2]),
 			}, nil
 		}
 	case rplExceptlist:
@@ -1877,7 +1877,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s %s", nick, text),
+			Message: fmt.Sprintf("%s %s", nick, text),
 		}, nil
 	case rplWhoismodes:
 		var nick, text string
@@ -1886,7 +1886,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s %s", nick, text),
+			Message: fmt.Sprintf("%s %s", nick, text),
 		}, nil
 	case rplYoureoper:
 		var text string
@@ -1911,7 +1911,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		}
 		return InfoEvent{
 			Prefix:  "User",
-			Message: fmt.Sprintf("The user %s %s", nick, text),
+			Message: fmt.Sprintf("%s %s", nick, text),
 		}, nil
 	case rplHelpstart, rplHelptxt:
 		var text string
