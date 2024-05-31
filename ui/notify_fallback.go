@@ -3,7 +3,7 @@
 
 package ui
 
-func (ui *UI) notify(title, content string) int {
+func (ui *UI) notify(target NotifyEvent, title, content string) int {
 	ui.screen.Notify(title, content)
 	return -1
 }
