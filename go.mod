@@ -26,4 +26,4 @@ require (
 
 replace github.com/gdamore/tcell/v2 => git.sr.ht/~delthas/vaxis-tcell v0.4.8-0.20240531132546-8a798f9059aa
 
-replace git.sr.ht/~rockorager/vaxis => git.sr.ht/~delthas/vaxis v0.8.6-0.20240531124940-d5ae0406e432
+replace git.sr.ht/~rockorager/vaxis => git.sr.ht/~delthas/vaxis v0.8.6-0.20240603110739-391283dbeff7
