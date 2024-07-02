@@ -9,57 +9,57 @@ import (
 	"strconv"
 	"strings"
 
-	"git.sr.ht/~delthas/senpai/ui"
+	"git.sr.ht/~rockorager/vaxis"
 
-	"github.com/gdamore/tcell/v2"
+	"git.sr.ht/~delthas/senpai/ui"
 
 	"git.sr.ht/~emersion/go-scfg"
 )
 
-func parseColor(s string, c *tcell.Color) error {
+func parseColor(s string, c *vaxis.Color) error {
 	if strings.HasPrefix(s, "#") {
 		hex, err := strconv.ParseInt(s[1:], 16, 32)
 		if err != nil {
 			return err
 		}
 
-		*c = tcell.NewHexColor(int32(hex))
+		*c = vaxis.HexColor(uint32(hex))
 		return nil
 	}
 	ok := true
 	switch s {
 	case "black":
-		*c = tcell.ColorBlack
+		*c = vaxis.IndexColor(0)
 	case "maroon":
-		*c = tcell.ColorBrown
+		*c = vaxis.IndexColor(1)
 	case "green":
-		*c = tcell.ColorGreen
+		*c = vaxis.IndexColor(2)
 	case "olive":
-		*c = tcell.ColorOlive
+		*c = vaxis.IndexColor(3)
 	case "navy":
-		*c = tcell.ColorNavy
+		*c = vaxis.IndexColor(4)
 	case "purple":
-		*c = tcell.ColorPurple
+		*c = vaxis.IndexColor(5)
 	case "teal":
-		*c = tcell.ColorTeal
+		*c = vaxis.IndexColor(6)
 	case "silver":
-		*c = tcell.ColorSilver
+		*c = vaxis.IndexColor(7)
 	case "gray", "grey":
-		*c = tcell.ColorGray
+		*c = vaxis.IndexColor(8)
 	case "red":
-		*c = tcell.ColorRed
+		*c = vaxis.IndexColor(9)
 	case "lime":
-		*c = tcell.ColorLime
+		*c = vaxis.IndexColor(10)
 	case "yellow":
-		*c = tcell.ColorYellow
+		*c = vaxis.IndexColor(11)
 	case "blue":
-		*c = tcell.ColorBlue
+		*c = vaxis.IndexColor(12)
 	case "fuschia":
-		*c = tcell.ColorFuchsia
+		*c = vaxis.IndexColor(13)
 	case "aqua":
-		*c = tcell.ColorAqua
+		*c = vaxis.IndexColor(14)
 	case "white":
-		*c = tcell.ColorWhite
+		*c = vaxis.IndexColor(15)
 	default:
 		ok = false
 	}
@@ -73,7 +73,7 @@ func parseColor(s string, c *tcell.Color) error {
 	}
 
 	if code == -1 {
-		*c = tcell.ColorDefault
+		*c = vaxis.Color(0)
 		return nil
 	}
 
@@ -81,7 +81,7 @@ func parseColor(s string, c *tcell.Color) error {
 		return fmt.Errorf("color code must be between 0-255. If you meant to use true colors, use #aabbcc notation")
 	}
 
-	*c = tcell.PaletteColor(code)
+	*c = vaxis.IndexColor(uint8(code))
 
 	return nil
 }
@@ -149,13 +149,13 @@ func Defaults() Config {
 		TextMaxWidth:     0,
 		StatusEnabled:    true,
 		Colors: ui.ConfigColors{
-			Status: tcell.ColorGray,
-			Prompt: tcell.ColorDefault,
-			Unread: tcell.ColorDefault,
+			Status: ui.ColorGray,
+			Prompt: vaxis.Color(0),
+			Unread: vaxis.Color(0),
 			Nicks: ui.ColorScheme{
 				Type:   ui.ColorSchemeBase,
-				Others: tcell.ColorDefault,
-				Self:   tcell.ColorRed,
+				Others: vaxis.Color(0),
+				Self:   vaxis.Color(9),
 			},
 		},
 		Debug:             false,
@@ -410,7 +410,7 @@ func unmarshal(filename string, cfg *Config) (err error) {
 					}
 				}
 
-				var color tcell.Color
+				var color vaxis.Color
 				if err = parseColor(colorStr, &color); err != nil {
 					return err
 				}

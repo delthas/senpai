@@ -44,7 +44,7 @@ func (ui *UI) notify(target NotifyEvent, title, content string) int {
 		}
 	}
 
-	ui.screen.Notify(title, content)
+	ui.vx.Notify(title, content)
 	return -1
 }
 

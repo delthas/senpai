@@ -8,50 +8,32 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"git.sr.ht/~rockorager/vaxis"
 	"mvdan.cc/xurls/v2"
-
-	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
 )
-
-var condition = runewidth.Condition{}
-
-func runeWidth(r rune) int {
-	if r == '\n' {
-		r = '↲'
-	}
-	return condition.RuneWidth(r)
-}
-
-func stringWidth(s string) int {
-	return condition.StringWidth(s)
-}
-
-func truncate(s string, w int, tail string) string {
-	return condition.Truncate(s, w, tail)
-}
 
 // Taken from <https://modern.ircdocs.horse/formatting.html>
 
-var baseCodes = []tcell.Color{
-	tcell.ColorWhite, tcell.ColorBlack, tcell.ColorBlue, tcell.ColorGreen,
-	tcell.ColorRed, tcell.ColorBrown, tcell.ColorPurple, tcell.ColorOrange,
-	tcell.ColorYellow, tcell.ColorLightGreen, tcell.ColorTeal, tcell.ColorLightCyan,
-	tcell.ColorLightBlue, tcell.ColorPink, tcell.ColorGray, tcell.ColorLightGray,
+var baseCodes = []vaxis.Color{
+	vaxis.IndexColor(15),
+	vaxis.IndexColor(0),
+	vaxis.IndexColor(4),
+	vaxis.IndexColor(2),
+	vaxis.IndexColor(9),
+	vaxis.IndexColor(1),
+	vaxis.IndexColor(5),
+	vaxis.IndexColor(3),
+	vaxis.IndexColor(11),
+	vaxis.IndexColor(10),
+	vaxis.IndexColor(6),
+	vaxis.IndexColor(14),
+	vaxis.IndexColor(12),
+	vaxis.IndexColor(13),
+	vaxis.IndexColor(8),
+	vaxis.IndexColor(7),
 }
 
-// unused
-var ansiCodes = []uint64{
-	/* 16-27 */ 52, 94, 100, 58, 22, 29, 23, 24, 17, 54, 53, 89,
-	/* 28-39 */ 88, 130, 142, 64, 28, 35, 30, 25, 18, 91, 90, 125,
-	/* 40-51 */ 124, 166, 184, 106, 34, 49, 37, 33, 19, 129, 127, 161,
-	/* 52-63 */ 196, 208, 226, 154, 46, 86, 51, 75, 21, 171, 201, 198,
-	/* 64-75 */ 203, 215, 227, 191, 83, 122, 87, 111, 63, 177, 207, 205,
-	/* 76-87 */ 217, 223, 229, 193, 157, 158, 159, 153, 147, 183, 219, 212,
-	/* 88-98 */ 16, 233, 235, 237, 239, 241, 244, 247, 250, 254, 231,
-}
-
-var hexCodes = []int32{
+var hexCodes = []uint32{
 	0x470000, 0x472100, 0x474700, 0x324700, 0x004700, 0x00472c, 0x004747, 0x002747, 0x000047, 0x2e0047, 0x470047, 0x47002a,
 	0x740000, 0x743a00, 0x747400, 0x517400, 0x007400, 0x007449, 0x007474, 0x004074, 0x000074, 0x4b0074, 0x740074, 0x740045,
 	0xb50000, 0xb56300, 0xb5b500, 0x7db500, 0x00b500, 0x00b571, 0x00b5b5, 0x0063b5, 0x0000b5, 0x7500b5, 0xb500b5, 0xb5006b,
@@ -61,20 +43,20 @@ var hexCodes = []int32{
 	0x000000, 0x131313, 0x282828, 0x363636, 0x4d4d4d, 0x656565, 0x818181, 0x9f9f9f, 0xbcbcbc, 0xe2e2e2, 0xffffff,
 }
 
-func colorFromCode(code int) (color tcell.Color) {
+func colorFromCode(code int) (color vaxis.Color) {
 	if code < 0 || 99 <= code {
-		color = tcell.ColorDefault
+		color = vaxis.Color(0)
 	} else if code < 16 {
 		color = baseCodes[code]
 	} else {
-		color = tcell.NewHexColor(hexCodes[code-16])
+		color = vaxis.HexColor(hexCodes[code-16])
 	}
 	return
 }
 
 type rangedStyle struct {
 	Start int // byte index at which Style is effective
-	Style tcell.Style
+	Style vaxis.Style
 }
 
 type StyledString struct {
@@ -90,7 +72,7 @@ func PlainSprintf(format string, a ...interface{}) StyledString {
 	return PlainString(fmt.Sprintf(format, a...))
 }
 
-func Styled(s string, style tcell.Style) StyledString {
+func Styled(s string, style vaxis.Style) StyledString {
 	rStyle := rangedStyle{
 		Start: 0,
 		Style: style,
@@ -105,25 +87,7 @@ func (s StyledString) String() string {
 	return s.string
 }
 
-func (s StyledString) Truncate(w int, tail StyledString) StyledString {
-	if stringWidth(s.string) < w {
-		return s
-	}
-	var sb StyledStringBuilder
-	truncated := truncate(s.string, w-stringWidth(tail.string), "")
-	sb.WriteString(truncated)
-	for _, style := range s.styles {
-		if len(truncated) <= style.Start {
-			break
-		}
-		sb.styles = append(sb.styles, style)
-	}
-	sb.WriteStyledString(tail)
-	return sb.StyledString()
-}
-
-// https://github.com/mvdan/xurls/pull/75
-var urlRegex, _ = xurls.StrictMatchingScheme(`([a-zA-Z][a-zA-Z.\-+]*://|(bitcoin|cid|file|geo|magnet|mailto|mid|sms|tel|xmpp):)`)
+var urlRegex, _ = xurls.StrictMatchingScheme(xurls.AnyScheme)
 
 func (s StyledString) ParseURLs() StyledString {
 	if !strings.ContainsRune(s.string, '.') {
@@ -137,7 +101,6 @@ func (s StyledString) ParseURLs() StyledString {
 	j := 0
 	lastStyle := rangedStyle{
 		Start: -1,
-		Style: tcell.StyleDefault,
 	}
 	for i := 0; i < len(urls); i++ {
 		u := urls[i]
@@ -155,16 +118,20 @@ func (s StyledString) ParseURLs() StyledString {
 			}
 			if st.Start == ub {
 				// a style already starts at this position, edit it
-				lastStyle.Style = lastStyle.Style.Url(link).UrlId(id)
+				lastStyle.Style.Hyperlink = link
+				lastStyle.Style.HyperlinkParams = fmt.Sprintf("id=%v", id)
 			}
 			lastStyle = st
 			styles = append(styles, st)
 		}
 		if lastStyle.Start != ub {
 			// no style existed at this position, add one from the last style
+			st := lastStyle.Style
+			st.Hyperlink = link
+			st.HyperlinkParams = fmt.Sprintf("id=%v", id)
 			styles = append(styles, rangedStyle{
 				Start: ub,
-				Style: lastStyle.Style.Url(link).UrlId(id),
+				Style: st,
 			})
 		}
 		// find last style starting before or at url end
@@ -174,16 +141,20 @@ func (s StyledString) ParseURLs() StyledString {
 				break
 			}
 			if st.Start < ue {
-				st.Style = st.Style.Url(link).UrlId(id)
+				st.Style.Hyperlink = link
+				st.Style.HyperlinkParams = fmt.Sprintf("id=%v", id)
 			}
 			lastStyle = st
 			styles = append(styles, st)
 		}
 		if lastStyle.Start != ue {
 			// no style existed at this position, add one from the last style without the hyperlink
+			st := lastStyle.Style
+			st.Hyperlink = ""
+			st.HyperlinkParams = ""
 			styles = append(styles, rangedStyle{
 				Start: ue,
-				Style: lastStyle.Style.Url("").UrlId(""),
+				Style: st,
 			})
 		}
 	}
@@ -199,7 +170,7 @@ func isDigit(c byte) bool {
 	return '0' <= c && c <= '9'
 }
 
-func parseColorNumber(raw string) (color tcell.Color, n int) {
+func parseColorNumber(raw string) (color vaxis.Color, n int) {
 	if len(raw) == 0 || !isDigit(raw[0]) {
 		return
 	}
@@ -217,27 +188,27 @@ func parseColorNumber(raw string) (color tcell.Color, n int) {
 	return colorFromCode(code), 2
 }
 
-func parseColor(raw string) (fg, bg tcell.Color, n int) {
+func parseColor(raw string) (fg, bg vaxis.Color, n int) {
 	fg, n = parseColorNumber(raw)
 	raw = raw[n:]
 
 	if len(raw) == 0 || raw[0] != ',' {
-		return fg, tcell.ColorDefault, n
+		return fg, vaxis.Color(0), n
 	}
 
 	n++
 	bg, p := parseColorNumber(raw[1:])
 	n += p
 
-	if bg == tcell.ColorDefault {
+	if bg == vaxis.Color(0) {
 		// Lone comma, do not parse as part of a color code.
-		return fg, tcell.ColorDefault, n - 1
+		return fg, vaxis.Color(0), n - 1
 	}
 
 	return fg, bg, n
 }
 
-func parseHexColorNumber(raw string) (color tcell.Color, n int) {
+func parseHexColorNumber(raw string) (color vaxis.Color, n int) {
 	if len(raw) < 6 {
 		return
 	}
@@ -248,24 +219,24 @@ func parseHexColorNumber(raw string) (color tcell.Color, n int) {
 	if err != nil {
 		return
 	}
-	return tcell.NewHexColor(int32(value)), 6
+	return vaxis.HexColor(uint32(value)), 6
 }
 
-func parseHexColor(raw string) (fg, bg tcell.Color, n int) {
+func parseHexColor(raw string) (fg, bg vaxis.Color, n int) {
 	fg, n = parseHexColorNumber(raw)
 	raw = raw[n:]
 
 	if len(raw) == 0 || raw[0] != ',' {
-		return fg, tcell.ColorDefault, n
+		return fg, vaxis.Color(0), n
 	}
 
 	n++
 	bg, p := parseHexColorNumber(raw[1:])
 	n += p
 
-	if bg == tcell.ColorDefault {
+	if bg == vaxis.Color(0) {
 		// Lone comma, do not parse as part of a color code.
-		return fg, tcell.ColorDefault, n - 1
+		return fg, vaxis.Color(0), n - 1
 	}
 
 	return fg, bg, n
@@ -274,20 +245,18 @@ func parseHexColor(raw string) (fg, bg tcell.Color, n int) {
 func IRCString(raw string) StyledString {
 	var formatted strings.Builder
 	var styles []rangedStyle
-	var last tcell.Style
+	var last vaxis.Style
 
 	for len(raw) != 0 {
 		r, runeSize := utf8.DecodeRuneInString(raw)
-		_, _, lastAttrs := last.Decompose()
 		current := last
 		if r == 0x0F {
-			current = tcell.StyleDefault
+			current = vaxis.Style{}
 		} else if r == 0x02 {
-			lastWasBold := lastAttrs&tcell.AttrBold != 0
-			current = last.Bold(!lastWasBold)
+			current.Attribute ^= vaxis.AttrBold
 		} else if r == 0x03 || r == 0x04 {
-			var fg tcell.Color
-			var bg tcell.Color
+			var fg vaxis.Color
+			var bg vaxis.Color
 			var n int
 			if r == 0x03 {
 				fg, bg, n = parseColor(raw[1:])
@@ -298,25 +267,26 @@ func IRCString(raw string) StyledString {
 			if n == 0 {
 				// Both `fg` and `bg` are equal to
 				// tcell.ColorDefault.
-				current = last.Foreground(tcell.ColorDefault).
-					Background(tcell.ColorDefault)
-			} else if bg == tcell.ColorDefault {
-				current = last.Foreground(fg)
+				current.Foreground = vaxis.Color(0)
+				current.Background = vaxis.Color(0)
+			} else if bg == vaxis.Color(0) {
+				current.Foreground = fg
 			} else {
-				current = last.Foreground(fg).Background(bg)
+				current.Foreground = fg
+				current.Background = bg
 			}
 		} else if r == 0x16 {
-			lastWasReverse := lastAttrs&tcell.AttrReverse != 0
-			current = last.Reverse(!lastWasReverse)
+			current.Attribute ^= vaxis.AttrReverse
 		} else if r == 0x1D {
-			lastWasItalic := lastAttrs&tcell.AttrItalic != 0
-			current = last.Italic(!lastWasItalic)
+			current.Attribute ^= vaxis.AttrItalic
 		} else if r == 0x1E {
-			lastWasStrikeThrough := lastAttrs&tcell.AttrStrikeThrough != 0
-			current = last.StrikeThrough(!lastWasStrikeThrough)
+			current.Attribute ^= vaxis.AttrStrikethrough
 		} else if r == 0x1F {
-			lastWasUnderline := lastAttrs&tcell.AttrUnderline != 0
-			current = last.Underline(!lastWasUnderline)
+			if last.UnderlineStyle == vaxis.UnderlineOff {
+				current.UnderlineStyle = vaxis.UnderlineSingle
+			} else {
+				current.UnderlineStyle = vaxis.UnderlineOff
+			}
 		} else {
 			formatted.WriteRune(r)
 		}
@@ -362,7 +332,7 @@ func (sb *StyledStringBuilder) WriteStyledString(s StyledString) {
 	sb.WriteString(s.string)
 }
 
-func (sb *StyledStringBuilder) AddStyle(start int, style tcell.Style) {
+func (sb *StyledStringBuilder) AddStyle(start int, style vaxis.Style) {
 	for i := 0; i < len(sb.styles); i++ {
 		if sb.styles[i].Start == i {
 			sb.styles[i].Style = style
@@ -382,7 +352,7 @@ func (sb *StyledStringBuilder) AddStyle(start int, style tcell.Style) {
 	})
 }
 
-func (sb *StyledStringBuilder) SetStyle(style tcell.Style) {
+func (sb *StyledStringBuilder) SetStyle(style vaxis.Style) {
 	sb.styles = append(sb.styles, rangedStyle{
 		Start: sb.Len(),
 		Style: style,

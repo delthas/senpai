@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
+	"git.sr.ht/~rockorager/vaxis"
 )
 
 func assertIRCString(t *testing.T, input string, expected StyledString) {
@@ -35,62 +35,62 @@ func TestIRCString(t *testing.T) {
 	assertIRCString(t, "\x02hello", StyledString{
 		string: "hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Bold(true)},
+			{Start: 0, Style: vaxis.Style{Attribute: vaxis.AttrBold}},
 		},
 	})
 	assertIRCString(t, "\x035hello", StyledString{
 		string: "hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1)}},
 		},
 	})
 	assertIRCString(t, "\x0305hello", StyledString{
 		string: "hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1)}},
 		},
 	})
 	assertIRCString(t, "\x0305,0hello", StyledString{
 		string: "hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown).Background(tcell.ColorWhite)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1), Background: vaxis.IndexColor(15)}},
 		},
 	})
 	assertIRCString(t, "\x035,00hello", StyledString{
 		string: "hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown).Background(tcell.ColorWhite)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1), Background: vaxis.IndexColor(15)}},
 		},
 	})
 	assertIRCString(t, "\x0305,00hello", StyledString{
 		string: "hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown).Background(tcell.ColorWhite)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1), Background: vaxis.IndexColor(15)}},
 		},
 	})
 
 	assertIRCString(t, "\x035,hello", StyledString{
 		string: ",hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1)}},
 		},
 	})
 	assertIRCString(t, "\x0305,hello", StyledString{
 		string: ",hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1)}},
 		},
 	})
 	assertIRCString(t, "\x03050hello", StyledString{
 		string: "0hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1)}},
 		},
 	})
 	assertIRCString(t, "\x0305,000hello", StyledString{
 		string: "0hello",
 		styles: []rangedStyle{
-			{Start: 0, Style: tcell.StyleDefault.Foreground(tcell.ColorBrown).Background(tcell.ColorWhite)},
+			{Start: 0, Style: vaxis.Style{Foreground: vaxis.IndexColor(1), Background: vaxis.IndexColor(15)}},
 		},
 	})
 }

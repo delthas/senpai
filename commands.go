@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"git.sr.ht/~rockorager/vaxis"
 	"github.com/delthas/go-libnp"
-	"github.com/gdamore/tcell/v2"
 	"golang.org/x/net/context"
 
 	"git.sr.ht/~delthas/senpai/irc"
@@ -369,9 +369,11 @@ func commandDoHelp(app *App, args []string) (err error) {
 	addLineCommand := func(sb *ui.StyledStringBuilder, name string, cmd *command) {
 		sb.Reset()
 		sb.Grow(len(name) + 1 + len(cmd.Usage))
-		sb.SetStyle(tcell.StyleDefault.Bold(true))
+		sb.SetStyle(vaxis.Style{
+			Attribute: vaxis.AttrBold,
+		})
 		sb.WriteString(name)
-		sb.SetStyle(tcell.StyleDefault)
+		sb.SetStyle(vaxis.Style{})
 		sb.WriteByte(' ')
 		sb.WriteString(cmd.Usage)
 		app.win.AddLine(netID, buffer, ui.Line{
@@ -498,13 +500,19 @@ func commandDoNames(app *App, args []string) (err error) {
 		return fmt.Errorf("this is not a channel")
 	}
 	var sb ui.StyledStringBuilder
-	sb.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
+	sb.SetStyle(vaxis.Style{
+		Foreground: app.cfg.Colors.Status,
+	})
 	sb.WriteString("Names: ")
 	for _, name := range s.Names(buffer) {
 		if name.PowerLevel != "" {
-			sb.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGreen))
+			sb.SetStyle(vaxis.Style{
+				Foreground: vaxis.IndexColor(2),
+			})
 			sb.WriteString(name.PowerLevel)
-			sb.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
+			sb.SetStyle(vaxis.Style{
+				Foreground: app.cfg.Colors.Status,
+			})
 		}
 		sb.WriteString(name.Name.Name)
 		sb.WriteByte(' ')

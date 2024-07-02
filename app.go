@@ -14,7 +14,6 @@ import (
 	"unicode/utf8"
 
 	"git.sr.ht/~rockorager/vaxis"
-	"github.com/gdamore/tcell/v2"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
 
@@ -172,10 +171,9 @@ func NewApp(cfg Config) (app *App, err error) {
 			content: ev,
 		}
 	})
-	app.win.SetPrompt(ui.Styled(">",
-		tcell.
-			StyleDefault.
-			Foreground(app.cfg.Colors.Prompt)),
+	app.win.SetPrompt(ui.Styled(">", vaxis.Style{
+		Foreground: app.cfg.Colors.Prompt,
+	}),
 	)
 
 	app.initWindow()
@@ -375,7 +373,7 @@ func (app *App) ircLoop(netID string) {
 		}
 		app.queueStatusLine(netID, ui.Line{
 			Head:      "!!",
-			HeadColor: tcell.ColorRed,
+			HeadColor: ui.ColorRed,
 			Body:      ui.PlainString("Connection lost"),
 		})
 	}
@@ -392,7 +390,7 @@ func (app *App) connect(netID string) net.Conn {
 	}
 	app.queueStatusLine(netID, ui.Line{
 		Head:      "!!",
-		HeadColor: tcell.ColorRed,
+		HeadColor: ui.ColorRed,
 		Body:      ui.PlainSprintf("Connection failed: %v", err),
 	})
 	return nil
@@ -467,93 +465,89 @@ func (app *App) uiLoop() {
 }
 
 func (app *App) handleUIEvent(ev interface{}) bool {
+	// TODO: eat QuitEvent here?
 	switch ev := ev.(type) {
-	case *tcell.EventResize:
+	case vaxis.Resize:
 		app.win.Resize()
-	case *tcell.EventPaste:
-		app.pasting = ev.Start()
-	case *tcell.EventMouse:
+	case vaxis.PasteStartEvent:
+		app.pasting = true
+	case vaxis.PasteEndEvent:
+		app.pasting = false
+	case vaxis.Mouse:
 		app.handleMouseEvent(ev)
-	case *tcell.EventKey:
+	case vaxis.Key:
 		app.handleKeyEvent(ev)
-	case tcell.EventInterrupt:
-		// unknown key event, ignore
-		return true
-	case *tcell.EventError:
-		// happens when the terminal is closing: in which case, exit
-		return false
-	case tcell.EventVaxis:
-		// TODO use vaxis events
-		return true
 	case *ui.NotifyEvent:
 		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
 	case statusLine:
 		app.addStatusLine(ev.netID, ev.line)
 	default:
-		panic("unreachable")
+		// TODO: missing event types
 	}
 	return true
 }
 
-func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
-	x, y := ev.Position()
+func (app *App) handleMouseEvent(ev vaxis.Mouse) {
+	x, y := ev.Col, ev.Row
 	w, h := app.win.Size()
-	if ev.Buttons()&tcell.WheelUp != 0 {
-		if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
-			app.win.ScrollChannelUpBy(4)
-		} else if x > w-app.win.MemberWidth() {
-			app.win.ScrollMemberUpBy(4)
-		} else {
-			app.win.ScrollUpBy(4)
-			app.requestHistory()
-		}
-	}
-	if ev.Buttons()&tcell.WheelDown != 0 {
-		if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
-			app.win.ScrollChannelDownBy(4)
-		} else if x > w-app.win.MemberWidth() {
-			app.win.ScrollMemberDownBy(4)
-		} else {
-			app.win.ScrollDownBy(4)
-		}
-	}
-	if ev.Buttons()&tcell.ButtonPrimary != 0 {
-		if app.win.ChannelColClicked() {
-			app.win.ResizeChannelCol(x + 1)
-		} else if app.win.MemberColClicked() {
-			app.win.ResizeMemberCol(w - x)
-		} else if x == app.win.ChannelWidth()-1 {
-			app.win.ClickChannelCol(true)
-			app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
-		} else if x < app.win.ChannelWidth() {
-			app.win.ClickBuffer(y + app.win.ChannelOffset())
-		} else if app.win.ChannelWidth() == 0 && y == h-1 {
-			app.win.ClickBuffer(app.win.HorizontalBufferOffset(x))
-		} else if x == w-app.win.MemberWidth() {
-			app.win.ClickMemberCol(true)
-			app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
-		} else if x > w-app.win.MemberWidth() && y >= 2 {
-			app.win.ClickMember(y - 2 + app.win.MemberOffset())
-		}
-	}
-	if ev.Buttons()&tcell.ButtonMiddle != 0 {
-		i := -1
-		if x < app.win.ChannelWidth() {
-			i = y + app.win.ChannelOffset()
-		} else if app.win.ChannelWidth() == 0 && y == h-1 {
-			i = app.win.HorizontalBufferOffset(x)
-		}
-		netID, channel, ok := app.win.Buffer(i)
-		if ok && channel != "" {
-			s := app.sessions[netID]
-			if s != nil && s.IsChannel(channel) {
-				s.Part(channel, "")
+	if ev.EventType == vaxis.EventPress {
+		if ev.Button == vaxis.MouseWheelUp {
+			if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
+				app.win.ScrollChannelUpBy(4)
+			} else if x > w-app.win.MemberWidth() {
+				app.win.ScrollMemberUpBy(4)
 			} else {
-				app.win.RemoveBuffer(netID, channel)
+				app.win.ScrollUpBy(4)
+				app.requestHistory()
+			}
+		}
+		if ev.Button == vaxis.MouseWheelDown {
+			if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
+				app.win.ScrollChannelDownBy(4)
+			} else if x > w-app.win.MemberWidth() {
+				app.win.ScrollMemberDownBy(4)
+			} else {
+				app.win.ScrollDownBy(4)
+			}
+		}
+		if ev.Button == vaxis.MouseLeftButton {
+			if app.win.ChannelColClicked() {
+				app.win.ResizeChannelCol(x + 1)
+			} else if app.win.MemberColClicked() {
+				app.win.ResizeMemberCol(w - x)
+			} else if x == app.win.ChannelWidth()-1 {
+				app.win.ClickChannelCol(true)
+				app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
+			} else if x < app.win.ChannelWidth() {
+				app.win.ClickBuffer(y + app.win.ChannelOffset())
+			} else if app.win.ChannelWidth() == 0 && y == h-1 {
+				app.win.ClickBuffer(app.win.HorizontalBufferOffset(x))
+			} else if x == w-app.win.MemberWidth() {
+				app.win.ClickMemberCol(true)
+				app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
+			} else if x > w-app.win.MemberWidth() && y >= 2 {
+				app.win.ClickMember(y - 2 + app.win.MemberOffset())
+			}
+		}
+		if ev.Button == vaxis.MouseMiddleButton {
+			i := -1
+			if x < app.win.ChannelWidth() {
+				i = y + app.win.ChannelOffset()
+			} else if app.win.ChannelWidth() == 0 && y == h-1 {
+				i = app.win.HorizontalBufferOffset(x)
+			}
+			netID, channel, ok := app.win.Buffer(i)
+			if ok && channel != "" {
+				s := app.sessions[netID]
+				if s != nil && s.IsChannel(channel) {
+					s.Part(channel, "")
+				} else {
+					app.win.RemoveBuffer(netID, channel)
+				}
 			}
 		}
 	}
-	if ev.Buttons() == 0 {
+	if ev.EventType == vaxis.EventRelease {
 		if x < app.win.ChannelWidth()-1 {
 			if i := y + app.win.ChannelOffset(); i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
@@ -572,7 +566,7 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 							app.win.AddLine(netID, target, ui.Line{
 								At:        time.Now(),
 								Head:      "--",
-								HeadColor: tcell.ColorRed,
+								HeadColor: ui.ColorRed,
 								Body:      ui.PlainSprintf("Adding networks is not available: %v", err),
 							})
 						} else {
@@ -633,156 +627,157 @@ func (app *App) handleMouseEvent(ev *tcell.EventMouse) {
 	}
 }
 
-func (app *App) handleKeyEvent(ev *tcell.EventKey) {
-	switch ev.Key() {
-	case tcell.KeyCtrlC:
+func (app *App) handleKeyEvent(ev vaxis.Key) {
+	switch ev.EventType {
+	case vaxis.EventPress, vaxis.EventRepeat, vaxis.EventPaste:
+	default:
+		return
+	}
+	if ev.Text != "" {
+		for _, r := range ev.Text {
+			app.win.InputRune(r)
+		}
+		app.typing()
+		return
+	}
+
+	if keyMatches(ev, 'c', vaxis.ModCtrl) {
 		if app.win.InputClear() {
 			app.typing()
 		} else {
 			app.win.InputSet("/quit")
 		}
-	case tcell.KeyCtrlF:
+	} else if keyMatches(ev, 'f', vaxis.ModCtrl) {
 		if len(app.win.InputContent()) == 0 {
 			app.win.InputSet("/search ")
 		}
-	case tcell.KeyCtrlA:
+	} else if keyMatches(ev, 'a', vaxis.ModCtrl) {
 		app.win.InputHome()
-	case tcell.KeyCtrlE:
+	} else if keyMatches(ev, 'e', vaxis.ModCtrl) {
 		app.win.InputEnd()
-	case tcell.KeyCtrlL:
+	} else if keyMatches(ev, 'l', vaxis.ModCtrl) {
 		app.win.Resize()
-	case tcell.KeyCtrlU, tcell.KeyPgUp:
+	} else if keyMatches(ev, 'u', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyPgUp, 0) {
 		app.win.ScrollUp()
 		app.requestHistory()
-	case tcell.KeyCtrlD, tcell.KeyPgDn:
+	} else if keyMatches(ev, 'd', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyPgDown, 0) {
 		app.win.ScrollDown()
-	case tcell.KeyCtrlN:
+	} else if keyMatches(ev, 'n', vaxis.ModCtrl) {
 		app.win.NextBuffer()
 		app.win.ScrollToBuffer()
-	case tcell.KeyCtrlP:
+	} else if keyMatches(ev, 'p', vaxis.ModCtrl) {
 		app.win.PreviousBuffer()
 		app.win.ScrollToBuffer()
-	case tcell.KeyRight:
-		if ev.Modifiers() == tcell.ModAlt {
-			app.win.NextBuffer()
-			app.win.ScrollToBuffer()
-		} else if ev.Modifiers() == tcell.ModShift {
-			app.win.NextUnreadBuffer()
-			app.win.ScrollToBuffer()
-		} else if ev.Modifiers() == tcell.ModCtrl {
-			app.win.InputRightWord()
-		} else {
-			app.win.InputRight()
-		}
-	case tcell.KeyLeft:
-		if ev.Modifiers() == tcell.ModAlt {
-			app.win.PreviousBuffer()
-			app.win.ScrollToBuffer()
-		} else if ev.Modifiers() == tcell.ModShift {
-			app.win.PreviousUnreadBuffer()
-			app.win.ScrollToBuffer()
-		} else if ev.Modifiers() == tcell.ModCtrl {
-			app.win.InputLeftWord()
-		} else {
-			app.win.InputLeft()
-		}
-	case tcell.KeyUp:
-		if ev.Modifiers() == tcell.ModAlt {
-			app.win.PreviousBuffer()
-		} else {
-			app.win.InputUp()
-		}
-	case tcell.KeyDown:
-		if ev.Modifiers() == tcell.ModAlt {
-			app.win.NextBuffer()
-		} else {
-			app.win.InputDown()
-		}
-	case tcell.KeyHome:
-		if ev.Modifiers() == tcell.ModAlt {
-			app.win.GoToBufferNo(0)
-		} else {
-			app.win.InputHome()
-		}
-	case tcell.KeyEnd:
-		if ev.Modifiers() == tcell.ModAlt {
-			maxInt := int(^uint(0) >> 1)
-			app.win.GoToBufferNo(maxInt)
-		} else {
-			app.win.InputEnd()
-		}
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		var ok bool
-		if ev.Modifiers() == tcell.ModAlt {
-			ok = app.win.InputDeleteWord()
-		} else {
-			ok = app.win.InputBackspace()
-		}
-		if ok {
+	} else if keyMatches(ev, vaxis.KeyRight, vaxis.ModAlt) {
+		app.win.NextBuffer()
+		app.win.ScrollToBuffer()
+	} else if keyMatches(ev, vaxis.KeyRight, vaxis.ModShift) {
+		app.win.NextUnreadBuffer()
+		app.win.ScrollToBuffer()
+	} else if keyMatches(ev, vaxis.KeyRight, vaxis.ModCtrl) {
+		app.win.InputRightWord()
+	} else if keyMatches(ev, vaxis.KeyRight, 0) {
+		app.win.InputRight()
+	} else if keyMatches(ev, vaxis.KeyLeft, vaxis.ModAlt) {
+		app.win.PreviousBuffer()
+		app.win.ScrollToBuffer()
+	} else if keyMatches(ev, vaxis.KeyLeft, vaxis.ModShift) {
+		app.win.PreviousUnreadBuffer()
+		app.win.ScrollToBuffer()
+	} else if keyMatches(ev, vaxis.KeyLeft, vaxis.ModCtrl) {
+		app.win.InputLeftWord()
+	} else if keyMatches(ev, vaxis.KeyLeft, 0) {
+		app.win.InputLeft()
+	} else if keyMatches(ev, vaxis.KeyUp, vaxis.ModAlt) {
+		app.win.PreviousBuffer()
+	} else if keyMatches(ev, vaxis.KeyUp, 0) {
+		app.win.InputUp()
+	} else if keyMatches(ev, vaxis.KeyDown, vaxis.ModAlt) {
+		app.win.NextBuffer()
+	} else if keyMatches(ev, vaxis.KeyDown, 0) {
+		app.win.InputDown()
+	} else if keyMatches(ev, vaxis.KeyHome, vaxis.ModAlt) {
+		app.win.GoToBufferNo(0)
+	} else if keyMatches(ev, vaxis.KeyHome, 0) {
+		app.win.InputHome()
+	} else if keyMatches(ev, vaxis.KeyEnd, vaxis.ModAlt) {
+		maxInt := int(^uint(0) >> 1)
+		app.win.GoToBufferNo(maxInt)
+	} else if keyMatches(ev, vaxis.KeyEnd, 0) {
+		app.win.InputEnd()
+	} else if keyMatches(ev, vaxis.KeyBackspace, vaxis.ModAlt) {
+		if app.win.InputDeleteWord() {
 			app.typing()
 		}
-	case tcell.KeyDelete:
-		ok := app.win.InputDelete()
-		if ok {
+	} else if keyMatches(ev, vaxis.KeyBackspace, 0) {
+		if app.win.InputBackspace() {
 			app.typing()
 		}
-	case tcell.KeyCtrlW:
-		ok := app.win.InputDeleteWord()
-		if ok {
+	} else if keyMatches(ev, vaxis.KeyDelete, 0) {
+		if app.win.InputDelete() {
 			app.typing()
 		}
-	case tcell.KeyCtrlR:
+	} else if keyMatches(ev, 'w', vaxis.ModCtrl) {
+		if app.win.InputDeleteWord() {
+			app.typing()
+		}
+	} else if keyMatches(ev, 'r', vaxis.ModCtrl) {
 		app.win.InputBackSearch()
-	case tcell.KeyTab:
-		ok := app.win.InputAutoComplete()
-		if ok {
+	} else if keyMatches(ev, vaxis.KeyTab, 0) {
+		if app.win.InputAutoComplete() {
 			app.typing()
 		}
-	case tcell.KeyEscape:
+	} else if keyMatches(ev, vaxis.KeyEsc, 0) {
 		app.win.CloseOverlay()
-	case tcell.KeyF7:
+	} else if keyMatches(ev, vaxis.KeyF07, 0) {
 		app.win.ToggleChannelList()
-	case tcell.KeyF8:
+	} else if keyMatches(ev, vaxis.KeyF08, 0) {
 		app.win.ToggleMemberList()
-	case tcell.KeyCR, tcell.KeyLF:
-		if app.pasting {
+	} else if keyMatches(ev, '\n', 0) || keyMatches(ev, '\r', 0) || keyMatches(ev, 'j', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyKeyPadEnter, 0) {
+		if ev.EventType == vaxis.EventPaste {
 			app.win.InputRune('\n')
-			break
-		}
-		netID, buffer := app.win.CurrentBuffer()
-		input := string(app.win.InputContent())
-		var err error
-		for _, part := range strings.Split(input, "\n") {
-			if err = app.handleInput(buffer, part); err != nil {
-				app.win.AddLine(netID, buffer, ui.Line{
-					At:        time.Now(),
-					Head:      "!!",
-					HeadColor: tcell.ColorRed,
-					Notify:    ui.NotifyUnread,
-					Body:      ui.PlainSprintf("%q: %s", input, err),
-				})
-				break
-			}
-		}
-		if err == nil {
-			app.win.InputFlush()
-		}
-	case tcell.KeyRune:
-		if ev.Modifiers() == tcell.ModAlt {
-			switch ev.Rune() {
-			case 'n':
-				app.win.ScrollDownHighlight()
-			case 'p':
-				app.win.ScrollUpHighlight()
-			case '1', '2', '3', '4', '5', '6', '7', '8', '9':
-				app.win.GoToBufferNo(int(ev.Rune()-'0') - 1)
-			}
 		} else {
-			app.win.InputRune(ev.Rune())
-			app.typing()
+			netID, buffer := app.win.CurrentBuffer()
+			input := string(app.win.InputContent())
+			var err error
+			for _, part := range strings.Split(input, "\n") {
+				if err = app.handleInput(buffer, part); err != nil {
+					app.win.AddLine(netID, buffer, ui.Line{
+						At:        time.Now(),
+						Head:      "!!",
+						HeadColor: ui.ColorRed,
+						Notify:    ui.NotifyUnread,
+						Body:      ui.PlainSprintf("%q: %s", input, err),
+					})
+					break
+				}
+			}
+			if err == nil {
+				app.win.InputFlush()
+			}
 		}
-	default:
-		return
+	} else if keyMatches(ev, 'n', vaxis.ModAlt) {
+		app.win.ScrollDownHighlight()
+	} else if keyMatches(ev, 'p', vaxis.ModAlt) {
+		app.win.ScrollUpHighlight()
+	} else if keyMatches(ev, '1', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad1, vaxis.ModAlt) {
+		app.win.GoToBufferNo(0)
+	} else if keyMatches(ev, '2', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad2, vaxis.ModAlt) {
+		app.win.GoToBufferNo(1)
+	} else if keyMatches(ev, '3', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad3, vaxis.ModAlt) {
+		app.win.GoToBufferNo(2)
+	} else if keyMatches(ev, '4', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad4, vaxis.ModAlt) {
+		app.win.GoToBufferNo(3)
+	} else if keyMatches(ev, '5', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad5, vaxis.ModAlt) {
+		app.win.GoToBufferNo(4)
+	} else if keyMatches(ev, '6', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad6, vaxis.ModAlt) {
+		app.win.GoToBufferNo(5)
+	} else if keyMatches(ev, '7', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad7, vaxis.ModAlt) {
+		app.win.GoToBufferNo(6)
+	} else if keyMatches(ev, '8', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad8, vaxis.ModAlt) {
+		app.win.GoToBufferNo(7)
+	} else if keyMatches(ev, '9', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad9, vaxis.ModAlt) {
+		app.win.GoToBufferNo(8)
 	}
 }
 
@@ -853,7 +848,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	if err != nil {
 		app.win.AddLine(netID, "", ui.Line{
 			Head:      "!!",
-			HeadColor: tcell.ColorRed,
+			HeadColor: ui.ColorRed,
 			Notify:    ui.NotifyUnread,
 			Body:      ui.PlainSprintf("Received corrupt message %q: %s", msg.String(), err),
 		})
@@ -894,8 +889,10 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 		var body ui.StyledStringBuilder
 		body.WriteString(fmt.Sprintf("%s\u2192%s", ev.FormerNick, s.Nick()))
-		textStyle := tcell.StyleDefault.Foreground(app.cfg.Colors.Status)
-		arrowStyle := tcell.StyleDefault
+		textStyle := vaxis.Style{
+			Foreground: app.cfg.Colors.Status,
+		}
+		var arrowStyle vaxis.Style
 		body.AddStyle(0, textStyle)
 		body.AddStyle(len(ev.FormerNick), arrowStyle)
 		body.AddStyle(body.Len()-len(s.Nick()), textStyle)
@@ -1007,7 +1004,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			Head:      "--",
 			HeadColor: app.cfg.Colors.Status,
 			Notify:    notify,
-			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+			Body: ui.Styled(body, vaxis.Style{
+				Foreground: app.cfg.Colors.Status,
+			}),
 			Highlight: notify == ui.NotifyHighlight,
 			Readable:  true,
 		})
@@ -1156,7 +1155,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			At:        msg.TimeOrNow(),
 			Head:      head,
 			HeadColor: app.cfg.Colors.Status,
-			Body:      ui.Styled(ev.Message, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+			Body: ui.Styled(ev.Message, vaxis.Style{
+				Foreground: app.cfg.Colors.Status,
+			}),
 		})
 		return
 	case irc.ErrorEvent:
@@ -1168,7 +1169,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				At:        msg.TimeOrNow(),
 				Head:      fmt.Sprintf("(%s) --", ev.Code),
 				HeadColor: app.cfg.Colors.Status,
-				Body:      ui.Styled(ev.Message, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+				Body: ui.Styled(ev.Message, vaxis.Style{
+					Foreground: app.cfg.Colors.Status,
+				}),
 			})
 			return
 		case irc.SeverityFail:
@@ -1257,7 +1260,7 @@ func (app *App) notifyHighlight(buffer, nick, content string, current bool) {
 			app.addStatusLine(netID, ui.Line{
 				At:        time.Now(),
 				Head:      "!!",
-				HeadColor: tcell.ColorRed,
+				HeadColor: ui.ColorRed,
 				Body:      ui.PlainString(body),
 			})
 		}
@@ -1280,7 +1283,7 @@ func (app *App) notifyHighlight(buffer, nick, content string, current bool) {
 		app.addStatusLine(netID, ui.Line{
 			At:        time.Now(),
 			Head:      "!!",
-			HeadColor: tcell.ColorRed,
+			HeadColor: ui.ColorRed,
 			Body:      ui.PlainString(body),
 		})
 	}
@@ -1335,8 +1338,10 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 	case irc.UserNickEvent:
 		var body ui.StyledStringBuilder
 		body.WriteString(fmt.Sprintf("%s\u2192%s", ev.FormerNick, ev.User))
-		textStyle := tcell.StyleDefault.Foreground(app.cfg.Colors.Status)
-		arrowStyle := tcell.StyleDefault
+		textStyle := vaxis.Style{
+			Foreground: app.cfg.Colors.Status,
+		}
+		var arrowStyle vaxis.Style
 		body.AddStyle(0, textStyle)
 		body.AddStyle(len(ev.FormerNick), arrowStyle)
 		body.AddStyle(body.Len()-len(ev.User), textStyle)
@@ -1352,9 +1357,13 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 	case irc.UserJoinEvent:
 		var body ui.StyledStringBuilder
 		body.Grow(len(ev.User) + 1)
-		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGreen))
+		body.SetStyle(vaxis.Style{
+			Foreground: vaxis.IndexColor(2),
+		})
 		body.WriteByte('+')
-		body.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
+		body.SetStyle(vaxis.Style{
+			Foreground: app.cfg.Colors.Status,
+		})
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
@@ -1368,9 +1377,13 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 	case irc.UserPartEvent:
 		var body ui.StyledStringBuilder
 		body.Grow(len(ev.User) + 1)
-		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorRed))
+		body.SetStyle(vaxis.Style{
+			Foreground: ui.ColorRed,
+		})
 		body.WriteByte('-')
-		body.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
+		body.SetStyle(vaxis.Style{
+			Foreground: app.cfg.Colors.Status,
+		})
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
@@ -1384,9 +1397,13 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 	case irc.UserQuitEvent:
 		var body ui.StyledStringBuilder
 		body.Grow(len(ev.User) + 1)
-		body.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorRed))
+		body.SetStyle(vaxis.Style{
+			Foreground: ui.ColorRed,
+		})
 		body.WriteByte('-')
-		body.SetStyle(tcell.StyleDefault.Foreground(app.cfg.Colors.Status))
+		body.SetStyle(vaxis.Style{
+			Foreground: app.cfg.Colors.Status,
+		})
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
@@ -1406,8 +1423,10 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Head:      "--",
 			HeadColor: app.cfg.Colors.Status,
 			Notify:    ui.NotifyUnread,
-			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
-			Readable:  true,
+			Body: ui.Styled(body, vaxis.Style{
+				Foreground: app.cfg.Colors.Status,
+			}),
+			Readable: true,
 		}
 	case irc.ModeChangeEvent:
 		body := fmt.Sprintf("[%s]", ev.Mode)
@@ -1417,7 +1436,9 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			At:        ev.Time,
 			Head:      "--",
 			HeadColor: app.cfg.Colors.Status,
-			Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+			Body: ui.Styled(body, vaxis.Style{
+				Foreground: app.cfg.Colors.Status,
+			}),
 			Mergeable: mergeable,
 			Data:      []irc.Event{ev},
 			Readable:  true,
@@ -1479,7 +1500,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	}
 
 	head := ev.User
-	headColor := tcell.ColorWhite
+	headColor := vaxis.IndexColor(15)
 	if isAction || isNotice {
 		head = "*"
 	} else {
@@ -1489,16 +1510,20 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	var body ui.StyledStringBuilder
 	if isNotice {
 		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
-		body.SetStyle(tcell.StyleDefault.Foreground(color))
+		body.SetStyle(vaxis.Style{
+			Foreground: color,
+		})
 		body.WriteString(ev.User)
-		body.SetStyle(tcell.StyleDefault)
+		body.SetStyle(vaxis.Style{})
 		body.WriteString(": ")
 		body.WriteStyledString(ui.IRCString(content))
 	} else if isAction {
 		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
-		body.SetStyle(tcell.StyleDefault.Foreground(color))
+		body.SetStyle(vaxis.Style{
+			Foreground: color,
+		})
 		body.WriteString(ev.User)
-		body.SetStyle(tcell.StyleDefault)
+		body.SetStyle(vaxis.Style{})
 		body.WriteString(" ")
 		body.WriteStyledString(ui.IRCString(content))
 	} else {
@@ -1625,16 +1650,14 @@ func (app *App) updatePrompt() {
 	command := isCommand(app.win.InputContent())
 	var prompt ui.StyledString
 	if buffer == "" || command {
-		prompt = ui.Styled(">",
-			tcell.
-				StyleDefault.
-				Foreground(app.cfg.Colors.Prompt),
+		prompt = ui.Styled(">", vaxis.Style{
+			Foreground: app.cfg.Colors.Prompt,
+		},
 		)
 	} else if s == nil {
-		prompt = ui.Styled("<offline>",
-			tcell.
-				StyleDefault.
-				Foreground(tcell.ColorRed),
+		prompt = ui.Styled("<offline>", vaxis.Style{
+			Foreground: ui.ColorRed,
+		},
 		)
 	} else {
 		prompt = ui.IdentString(app.cfg.Colors.Nicks, s.Nick(), true)
@@ -1659,7 +1682,28 @@ func (app *App) printTopic(netID, buffer string) (ok bool) {
 		At:        time.Now(),
 		Head:      "--",
 		HeadColor: app.cfg.Colors.Status,
-		Body:      ui.Styled(body, tcell.StyleDefault.Foreground(app.cfg.Colors.Status)),
+		Body: ui.Styled(body, vaxis.Style{
+			Foreground: app.cfg.Colors.Status,
+		}),
 	})
 	return true
+}
+
+func keyMatches(k vaxis.Key, r rune, mods vaxis.ModifierMask) bool {
+	m := k.Modifiers
+	m &^= vaxis.ModCapsLock
+	m &^= vaxis.ModNumLock
+	if k.Keycode == r && mods == m {
+		// ctrl+a and user pressed ctrl+a
+		// ctrl+. and user pressed ctrl+. on a US keyboard
+		return true
+	}
+	if m&vaxis.ModShift != 0 {
+		m &^= vaxis.ModShift
+		if k.ShiftedCode == r && mods == m {
+			// ctrl+. and user pressed ctrl+shift+; on a French keyboard
+			return true
+		}
+	}
+	return false
 }

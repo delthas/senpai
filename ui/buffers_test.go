@@ -7,7 +7,7 @@ import (
 
 func assertSplitPoints(t *testing.T, body string, expected []point) {
 	l := Line{Body: PlainString(body)}
-	l.computeSplitPoints()
+	l.computeSplitPoints(nil)
 
 	if len(l.splitPoints) != len(expected) {
 		t.Errorf("%q: expected %d split points got %d", body, len(expected), len(l.splitPoints))
@@ -72,9 +72,9 @@ func showSplit(s string, nls []int) string {
 
 func assertNewLines(t *testing.T, body string, width int, expected int) {
 	l := Line{Body: PlainString(body)}
-	l.computeSplitPoints()
+	l.computeSplitPoints(nil)
 
-	actual := l.NewLines(width)
+	actual := l.NewLines(nil, width)
 
 	if len(actual)+1 != expected {
 		s := showSplit(body, actual)

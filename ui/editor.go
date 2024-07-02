@@ -3,7 +3,7 @@ package ui
 import (
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
+	"git.sr.ht/~rockorager/vaxis"
 )
 
 type Completion struct {
@@ -11,40 +11,56 @@ type Completion struct {
 	EndIdx    int
 	Text      []rune
 	Display   []rune
-	CursorIdx int
+	CursorIdx int // in runes
+}
+
+type editorLine struct {
+	runes    []rune
+	clusters []int
+}
+
+func newEditorLine() editorLine {
+	return editorLine{
+		runes:    []rune{},
+		clusters: []int{0},
+	}
+}
+
+func (l *editorLine) copy() editorLine {
+	return editorLine{
+		runes:    append([]rune{}, l.runes...),
+		clusters: append([]int{}, l.clusters...),
+	}
 }
 
 // Editor is the text field where the user writes messages and commands.
 type Editor struct {
-	colors ConfigColors
+	ui *UI
 
 	// text contains the written runes. An empty slice means no text is written.
-	text [][]rune
+	text []editorLine
 
 	// history contains the original content of each previously sent message.
 	// It gets out of sync with text when history is modified à la readline,
 	// then overwrites text when a new message is added.
-	history [][]rune
+	history []editorLine
 
 	lineIdx int
 
-	// textWidth[i] contains the width of string(text[:i]). Therefore
+	// textWidth[i] contains the width of text.runes[:text.clusters[i]]. Therefore
 	// len(textWidth) is always strictly greater than 0 and textWidth[0] is
 	// always 0.
 	textWidth []int
 
-	// cursorIdx is the index in text of the placement of the cursor, or is
-	// equal to len(text) if the cursor is at the end.
+	// cursorIdx is the index of clusters in text of the placement of the cursor.
 	cursorIdx int
 
-	// offsetIdx is the number of elements of text that are skipped when
-	// rendering.
+	// offsetIdx is the number of clusters in text that are skipped when rendering.
 	offsetIdx int
 
 	// width is the width of the screen.
 	width int
 
-	autoComplete func(cursorIdx int, text []rune) []Completion
 	autoCache    []Completion
 	autoCacheIdx int
 
@@ -58,13 +74,12 @@ type Editor struct {
 
 // NewEditor returns a new Editor.
 // Call Resize() once before using it.
-func NewEditor(colors ConfigColors, autoComplete func(cursorIdx int, text []rune) []Completion) Editor {
+func NewEditor(ui *UI) Editor {
 	return Editor{
-		colors:       colors,
-		text:         [][]rune{{}},
-		history:      [][]rune{},
-		textWidth:    []int{0},
-		autoComplete: autoComplete,
+		ui:        ui,
+		text:      []editorLine{newEditorLine()},
+		history:   []editorLine{},
+		textWidth: []int{0},
 	}
 }
 
@@ -80,18 +95,57 @@ func (e *Editor) Resize(width int) {
 
 // Content result must not be modified.
 func (e *Editor) Content() []rune {
-	return e.text[e.lineIdx]
+	return e.text[e.lineIdx].runes
 }
 
-func (e *Editor) TextLen() int {
-	return len(e.text[e.lineIdx])
+func (e *Editor) Empty() bool {
+	return len(e.text[e.lineIdx].runes) == 0
+}
+
+// recompute must be called when runes is changed, to update
+// clusters, textWidth.
+func (e *Editor) recompute() {
+	c := make([]int, 0, len(e.text[e.lineIdx].runes)+1)
+	w := make([]int, 0, len(e.text[e.lineIdx].runes)+1)
+	nc := 0
+	nw := 0
+	for _, g := range vaxis.Characters(string(e.text[e.lineIdx].runes)) {
+		c = append(c, nc)
+		w = append(w, nw)
+		nc += len([]rune(g.Grapheme))
+		nw += stringWidth(e.ui.vx, g.Grapheme)
+	}
+	c = append(c, nc)
+	w = append(w, nw)
+	e.text[e.lineIdx].clusters = c
+	e.textWidth = w
+}
+
+// setCursor sets cursorIdx to the (grapheme cluster) offset
+// corresponding to the passed rune offset runeIdx, rounding up
+// to the next grapheme cluster as needed.
+func (e *Editor) setCursor(runeIdx int) {
+	for i, o := range e.text[e.lineIdx].clusters {
+		if o >= runeIdx {
+			e.cursorIdx = i
+			break
+		}
+	}
+	if e.width <= e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx] {
+		e.offsetIdx += 16
+		// If we went too far right, go back enough to show one cluster.
+		max := len(e.text[e.lineIdx].clusters) - 2
+		if max < e.offsetIdx {
+			e.offsetIdx = max
+		}
+	}
 }
 
 func (e *Editor) PutRune(r rune) {
 	e.autoCache = nil
 	lowerRune := runeToLower(r)
-	if e.backsearch && e.cursorIdx < e.TextLen() {
-		lowerNext := runeToLower(e.text[e.lineIdx][e.cursorIdx])
+	if e.backsearch && e.cursorIdx < len(e.text[e.lineIdx].clusters)-1 {
+		lowerNext := runeToLower(e.text[e.lineIdx].runes[e.text[e.lineIdx].clusters[e.cursorIdx]])
 		if lowerRune == lowerNext {
 			e.right()
 			e.backsearchPattern = append(e.backsearchPattern, lowerRune)
@@ -99,7 +153,6 @@ func (e *Editor) PutRune(r rune) {
 		}
 	}
 	e.putRune(r)
-	e.right()
 	if e.backsearch {
 		wasEmpty := len(e.backsearchPattern) == 0
 		e.backsearchPattern = append(e.backsearchPattern, lowerRune)
@@ -111,30 +164,32 @@ func (e *Editor) PutRune(r rune) {
 	}
 }
 
+// putRune inserts a rune at the current cursor position,
+// then updates moves the cursor position after that rune.
+// (If inserting the rune merged a grapheme cluster, we
+// move the cursor after that cluster.)
 func (e *Editor) putRune(r rune) {
-	e.text[e.lineIdx] = append(e.text[e.lineIdx], ' ')
-	copy(e.text[e.lineIdx][e.cursorIdx+1:], e.text[e.lineIdx][e.cursorIdx:])
-	e.text[e.lineIdx][e.cursorIdx] = r
-	e.bumpOldestChange()
+	ci := e.text[e.lineIdx].clusters[e.cursorIdx]
+	e.text[e.lineIdx].runes = append(e.text[e.lineIdx].runes, ' ')
+	copy(e.text[e.lineIdx].runes[ci+1:], e.text[e.lineIdx].runes[ci:])
+	e.text[e.lineIdx].runes[ci] = r
 
-	rw := runeWidth(r)
-	tw := e.textWidth[len(e.textWidth)-1]
-	e.textWidth = append(e.textWidth, tw+rw)
-	for i := e.cursorIdx + 1; i < len(e.textWidth); i++ {
-		e.textWidth[i] = rw + e.textWidth[i-1]
-	}
+	e.recompute()
+	e.setCursor(ci + 1)
+
+	e.bumpOldestChange()
 }
 
-func (e *Editor) RemRune() (ok bool) {
+func (e *Editor) RemCluster() (ok bool) {
 	ok = 0 < e.cursorIdx
 	if !ok {
 		return
 	}
-	e.remRuneAt(e.cursorIdx - 1)
+	e.remClusterAt(e.cursorIdx - 1)
 	e.left()
 	e.autoCache = nil
 	if e.backsearch {
-		if e.TextLen() == 0 || len(e.backsearchPattern) == 0 {
+		if e.Empty() || len(e.backsearchPattern) == 0 {
 			e.backsearchEnd()
 		} else {
 			e.backsearchPattern = e.backsearchPattern[:len(e.backsearchPattern)-1]
@@ -144,29 +199,24 @@ func (e *Editor) RemRune() (ok bool) {
 	return
 }
 
-func (e *Editor) RemRuneForward() (ok bool) {
-	ok = e.cursorIdx < len(e.text[e.lineIdx])
+func (e *Editor) RemClusterForward() (ok bool) {
+	ok = e.cursorIdx < len(e.text[e.lineIdx].clusters)-1
 	if !ok {
 		return
 	}
-	e.remRuneAt(e.cursorIdx)
+	e.remClusterAt(e.cursorIdx)
 	e.autoCache = nil
 	e.backsearchEnd()
 	return
 }
 
-func (e *Editor) remRuneAt(idx int) {
-	// TODO avoid looping twice
-	rw := e.textWidth[idx+1] - e.textWidth[idx]
-	for i := idx + 1; i < len(e.textWidth); i++ {
-		e.textWidth[i] -= rw
-	}
-	copy(e.textWidth[idx+1:], e.textWidth[idx+2:])
-	e.textWidth = e.textWidth[:len(e.textWidth)-1]
+func (e *Editor) remClusterAt(idx int) {
+	rs := e.text[e.lineIdx].clusters[idx]
+	re := e.text[e.lineIdx].clusters[idx+1]
+	copy(e.text[e.lineIdx].runes[rs:], e.text[e.lineIdx].runes[re:])
+	e.text[e.lineIdx].runes = e.text[e.lineIdx].runes[:len(e.text[e.lineIdx].runes)-(re-rs)]
 
-	copy(e.text[e.lineIdx][idx:], e.text[e.lineIdx][idx+1:])
-	e.text[e.lineIdx] = e.text[e.lineIdx][:len(e.text[e.lineIdx])-1]
-
+	e.recompute()
 	e.bumpOldestChange()
 }
 
@@ -182,16 +232,16 @@ func (e *Editor) RemWord() (ok bool) {
 	// Hello world|
 	// Hello |
 	// |
-	for e.cursorIdx > 0 && line[e.cursorIdx-1] == ' ' {
-		e.remRuneAt(e.cursorIdx - 1)
+	for e.cursorIdx > 0 && line.runes[line.clusters[e.cursorIdx-1]] == ' ' {
+		e.remClusterAt(e.cursorIdx - 1)
 		e.left()
 	}
 
 	for i := e.cursorIdx - 1; i >= 0; i -= 1 {
-		if line[i] == ' ' {
+		if line.runes[line.clusters[i]] == ' ' {
 			break
 		}
-		e.remRuneAt(i)
+		e.remClusterAt(i)
 		e.left()
 	}
 
@@ -201,19 +251,19 @@ func (e *Editor) RemWord() (ok bool) {
 }
 
 func (e *Editor) Flush() string {
-	content := string(e.text[e.lineIdx])
+	l := e.text[e.lineIdx]
+	content := string(l.runes)
 	if len(content) > 0 {
-		// intended []rune -> string -> []rune conversion to make copies
-		e.history = append(e.history, []rune(content))
+		e.history = append(e.history, l.copy())
 	}
 	for i, line := range e.history[e.oldestTextChange:] {
 		i := i + e.oldestTextChange
-		e.text[i] = append(e.text[i][:0], line...)
+		e.text[i] = line.copy()
 	}
 	if len(content) > 0 {
-		e.text = append(e.text, []rune{})
+		e.text = append(e.text, newEditorLine())
 	} else {
-		e.text[len(e.text)-1] = []rune{}
+		e.text[len(e.text)-1] = newEditorLine()
 	}
 	e.lineIdx = len(e.text) - 1
 	e.textWidth = e.textWidth[:1]
@@ -226,10 +276,10 @@ func (e *Editor) Flush() string {
 }
 
 func (e *Editor) Clear() bool {
-	if e.TextLen() == 0 {
+	if e.Empty() {
 		return false
 	}
-	e.text[e.lineIdx] = []rune{}
+	e.text[e.lineIdx] = newEditorLine()
 	e.bumpOldestChange()
 	e.textWidth = e.textWidth[:1]
 	e.cursorIdx = 0
@@ -240,10 +290,10 @@ func (e *Editor) Clear() bool {
 
 func (e *Editor) Set(text string) {
 	r := []rune(text)
-	e.text[e.lineIdx] = r
+	e.text[e.lineIdx].runes = r
+	e.recompute()
 	e.bumpOldestChange()
-	e.cursorIdx = len(r)
-	e.computeTextWidth()
+	e.cursorIdx = len(e.text[e.lineIdx].clusters) - 1
 	e.offsetIdx = 0
 	for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 		e.offsetIdx++
@@ -259,13 +309,14 @@ func (e *Editor) Right() {
 }
 
 func (e *Editor) right() {
-	if e.cursorIdx == len(e.text[e.lineIdx]) {
+	if e.cursorIdx == len(e.text[e.lineIdx].clusters)-1 {
 		return
 	}
 	e.cursorIdx++
 	if e.width <= e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx] {
 		e.offsetIdx += 16
-		max := len(e.text[e.lineIdx]) - 1
+		// If we went too far right, go back enough to show one cluster.
+		max := len(e.text[e.lineIdx].clusters) - 2
 		if max < e.offsetIdx {
 			e.offsetIdx = max
 		}
@@ -275,14 +326,14 @@ func (e *Editor) right() {
 func (e *Editor) RightWord() {
 	line := e.text[e.lineIdx]
 
-	if e.cursorIdx == len(line) {
+	if e.cursorIdx == len(line.clusters)-1 {
 		return
 	}
 
-	for e.cursorIdx < len(line) && line[e.cursorIdx] == ' ' {
+	for e.cursorIdx < len(line.clusters)-1 && line.runes[line.clusters[e.cursorIdx]] == ' ' {
 		e.Right()
 	}
-	for i := e.cursorIdx; i < len(line) && line[i] != ' '; i += 1 {
+	for i := e.cursorIdx; i < len(line.clusters)-1 && line.runes[line.clusters[i]] != ' '; i++ {
 		e.Right()
 	}
 }
@@ -312,10 +363,10 @@ func (e *Editor) LeftWord() {
 
 	line := e.text[e.lineIdx]
 
-	for e.cursorIdx > 0 && line[e.cursorIdx-1] == ' ' {
+	for e.cursorIdx > 0 && line.runes[line.clusters[e.cursorIdx-1]] == ' ' {
 		e.left()
 	}
-	for i := e.cursorIdx - 1; i >= 0 && line[i] != ' '; i -= 1 {
+	for i := e.cursorIdx - 1; i >= 0 && line.runes[line.clusters[i]] != ' '; i-- {
 		e.left()
 	}
 
@@ -334,10 +385,10 @@ func (e *Editor) Home() {
 }
 
 func (e *Editor) End() {
-	if e.cursorIdx == len(e.text[e.lineIdx]) {
+	if e.cursorIdx == len(e.text[e.lineIdx].clusters)-1 {
 		return
 	}
-	e.cursorIdx = len(e.text[e.lineIdx])
+	e.cursorIdx = len(e.text[e.lineIdx].clusters) - 1
 	for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 		e.offsetIdx++
 	}
@@ -354,7 +405,7 @@ func (e *Editor) Up() {
 		return
 	}
 	e.lineIdx--
-	e.computeTextWidth()
+	e.recompute()
 	e.cursorIdx = 0
 	e.offsetIdx = 0
 	e.autoCache = nil
@@ -372,7 +423,7 @@ func (e *Editor) Down() {
 		return
 	}
 	e.lineIdx++
-	e.computeTextWidth()
+	e.recompute()
 	e.cursorIdx = 0
 	e.offsetIdx = 0
 	e.autoCache = nil
@@ -382,7 +433,7 @@ func (e *Editor) Down() {
 
 func (e *Editor) AutoComplete() (ok bool) {
 	if e.autoCache == nil {
-		e.autoCache = e.autoComplete(e.cursorIdx, e.text[e.lineIdx])
+		e.autoCache = e.ui.config.AutoComplete(e.text[e.lineIdx].clusters[e.cursorIdx], e.text[e.lineIdx].runes)
 		if len(e.autoCache) == 0 {
 			e.autoCache = nil
 			return false
@@ -391,10 +442,10 @@ func (e *Editor) AutoComplete() (ok bool) {
 		return
 	}
 
-	e.text[e.lineIdx] = e.autoCache[e.autoCacheIdx].Text
+	e.text[e.lineIdx].runes = e.autoCache[e.autoCacheIdx].Text
+	e.recompute()
 	e.bumpOldestChange()
-	e.cursorIdx = e.autoCache[e.autoCacheIdx].CursorIdx
-	e.computeTextWidth()
+	e.setCursor(e.autoCache[e.autoCacheIdx].CursorIdx)
 	if len(e.textWidth) <= e.offsetIdx {
 		e.offsetIdx = 0
 	}
@@ -410,7 +461,7 @@ func (e *Editor) AutoComplete() (ok bool) {
 func (e *Editor) BackSearch() {
 	if !e.backsearch {
 		e.backsearch = true
-		e.backsearchPattern = []rune(strings.ToLower(string(e.text[e.lineIdx])))
+		e.backsearchPattern = []rune(strings.ToLower(string(e.text[e.lineIdx].runes)))
 	}
 	e.backsearchUpdate(e.lineIdx - 1)
 }
@@ -421,10 +472,10 @@ func (e *Editor) backsearchUpdate(start int) {
 	}
 	pattern := string(e.backsearchPattern)
 	for i := start; i >= 0; i-- {
-		if match := strings.Index(strings.ToLower(string(e.text[i])), pattern); match >= 0 {
+		if match := strings.Index(strings.ToLower(string(e.text[i].runes)), pattern); match >= 0 {
 			e.lineIdx = i
-			e.computeTextWidth()
-			e.cursorIdx = runeOffset(string(e.text[i]), match) + len(e.backsearchPattern)
+			e.recompute()
+			e.setCursor(runeOffset(string(e.text[i].runes), match) + len(e.backsearchPattern))
 			e.offsetIdx = 0
 			for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 				e.offsetIdx++
@@ -439,15 +490,6 @@ func (e *Editor) backsearchEnd() {
 	e.backsearch = false
 }
 
-func (e *Editor) computeTextWidth() {
-	e.textWidth = e.textWidth[:1]
-	rw := 0
-	for _, r := range e.text[e.lineIdx] {
-		rw += runeWidth(r)
-		e.textWidth = append(e.textWidth, rw)
-	}
-}
-
 // call this everytime e.text is modified
 func (e *Editor) bumpOldestChange() {
 	if e.oldestTextChange > e.lineIdx {
@@ -455,18 +497,18 @@ func (e *Editor) bumpOldestChange() {
 	}
 }
 
-func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
-	st := tcell.StyleDefault
+func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
+	var st vaxis.Style
 
 	x := x0
-	i := e.offsetIdx
-	text := e.text[e.lineIdx]
+	i := e.text[e.lineIdx].clusters[e.offsetIdx]
+	text := e.text[e.lineIdx].runes
 	showCursor := true
 
 	if len(text) == 0 && len(hint) > 0 && !e.backsearch {
 		i = 0
 		text = []rune(hint)
-		st = st.Foreground(e.colors.Status)
+		st.Foreground = e.ui.config.Colors.Status
 		showCursor = false
 	}
 
@@ -478,32 +520,37 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 		autoEnd = e.autoCache[e.autoCacheIdx].EndIdx
 	}
 
-	for i < len(text) && x < x0+e.width {
-		r := text[i]
+	ci := e.text[e.lineIdx].clusters[e.cursorIdx]
+	for i < len(text) {
+		r := text[i:]
 		s := st
-		if e.backsearch && i < e.cursorIdx && i >= e.cursorIdx-len(e.backsearchPattern) {
-			s = s.Underline(true)
+		if e.backsearch && i < ci && i >= ci-len(e.backsearchPattern) {
+			s.UnderlineStyle = vaxis.UnderlineSingle
 		}
 		if i >= autoStart && i < autoEnd {
-			s = s.Underline(true)
+			s.UnderlineStyle = vaxis.UnderlineSingle
 		}
 		if i == autoStart {
 			autoX = x
 		}
-		if r == '\n' {
-			s = s.Bold(true).Foreground(tcell.ColorRed)
-			r = '↲'
+		if r[0] == '\n' {
+			s.Attribute |= vaxis.AttrBold
+			s.Foreground = ColorRed
+			r = []rune{'↲'}
 		}
-		screen.SetContent(x, y, r, nil, s)
-		x += runeWidth(r)
-		i++
+		dx, di := printCluster(vx, x, y, x0+e.width, r, s)
+		if di == 0 {
+			break
+		}
+		x += dx
+		i += di
 	}
 	if i == autoStart {
 		autoX = x
 	}
 
 	for x < x0+e.width {
-		screen.SetContent(x, y, ' ', nil, st)
+		setCell(vx, x, y, ' ', st)
 		x++
 	}
 
@@ -533,27 +580,31 @@ func (e *Editor) Draw(screen tcell.Screen, x0, y int, hint string) {
 
 		x := autoX
 		y := y - i - 1
-		for _, r := range display {
-			if x >= x0+e.width {
+		i := 0
+		for i < len(display) {
+			s := vaxis.Style{
+				Background: vaxis.IndexColor(0),
+				Attribute:  vaxis.AttrReverse,
+			}
+			if i+autoOff == e.autoCacheIdx {
+				s.Attribute |= vaxis.AttrBold
+			} else {
+				s.Attribute |= vaxis.AttrDim
+			}
+			dx, di := printCluster(vx, x, y, x0+e.width, display[i:], s)
+			if di == 0 {
 				break
 			}
-			s := st.Background(tcell.ColorBlack)
-			s = s.Reverse(true)
-			if i+autoOff == e.autoCacheIdx {
-				s = s.Bold(true)
-			} else {
-				s = s.Dim(true)
-			}
-			screen.SetContent(x, y, r, nil, s)
-			x += runeWidth(r)
+			x += dx
+			i += di
 		}
 	}
 
 	if showCursor {
 		cursorX := x0 + e.textWidth[e.cursorIdx] - e.textWidth[e.offsetIdx]
-		screen.ShowCursor(cursorX, y)
+		vx.ShowCursor(cursorX, y, vaxis.CursorBeam)
 	} else {
-		screen.HideCursor()
+		vx.HideCursor()
 	}
 }
 
@@ -563,7 +614,7 @@ func runeToLower(r rune) rune {
 	return []rune(strings.ToLower(string(r)))[0]
 }
 
-// runeOffset returns the rune index of the rune starting at byte i in string s
+// runeOffset returns the rune index of the rune starting at byte pos in string s
 func runeOffset(s string, pos int) int {
 	n := 0
 	for i := range s {

@@ -12,14 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
-
 	"git.sr.ht/~delthas/senpai"
 )
 
 func main() {
-	tcell.SetEncodingFallback(tcell.EncodingFallbackASCII)
-
 	var configPath string
 	var nickname string
 	var debug bool

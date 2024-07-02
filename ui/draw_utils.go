@@ -6,44 +6,181 @@ import (
 	"sync"
 	"time"
 
+	"git.sr.ht/~rockorager/vaxis"
 	"github.com/delthas/go-localeinfo"
-
-	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/uniseg"
 )
 
-func printString(screen tcell.Screen, x *int, y int, s StyledString) {
-	style := tcell.StyleDefault
-	nextStyles := s.styles
-	for i, r := range s.string {
-		if 0 < len(nextStyles) && nextStyles[0].Start == i {
-			style = nextStyles[0].Style
-			nextStyles = nextStyles[1:]
-		}
-		screen.SetContent(*x, y, r, nil, style)
-		*x += runeWidth(r)
+var asciiStringCache []string
+
+func init() {
+	asciiStringCache = make([]string, 0x80)
+	for i := range asciiStringCache {
+		asciiStringCache[i] = string(rune(i))
 	}
 }
 
-func printIdent(screen tcell.Screen, x, y, width int, s StyledString) {
-	s.string = truncate(s.string, width, "\u2026")
-	x += width - stringWidth(s.string)
-	st := tcell.StyleDefault
+var runeWidthMap = make(map[rune]int)
+
+func runeWidth(vx *Vaxis, r rune) int {
+	if vx == nil { // For tests only
+		return 1
+	}
+	if r == '\n' {
+		r = '↲'
+	}
+	if r <= 0x1F {
+		return 0
+	}
+	if r <= 0x7F {
+		return 1
+	}
+	if n, ok := runeWidthMap[r]; ok {
+		return n
+	}
+	n := vx.RenderedWidth(string([]rune{r}))
+	runeWidthMap[r] = n
+	return n
+}
+
+func stringWidth(vx *Vaxis, s string) int {
+	if vx == nil { // For tests only
+		return len(s)
+	}
+	if len(s) == 1 { // Single-character ASCII fast path
+		if s[0] <= 0x1F {
+			return 0
+		}
+		if s[0] <= 0x7F {
+			return 1
+		}
+	}
+	r := []rune(s)
+	if len(r) == 1 { // Single-character fast path
+		return runeWidth(vx, r[0])
+	}
+	return vx.RenderedWidth(s)
+}
+
+func truncate(vx *Vaxis, s string, w int, tail string) string {
+	if stringWidth(vx, s) <= w {
+		return s
+	}
+	w -= stringWidth(vx, tail)
+
+	width := 0
+	var sb strings.Builder
+	for _, c := range vaxis.Characters(s) {
+		chWidth := stringWidth(vx, c.Grapheme)
+		if width+chWidth > w {
+			break
+		}
+		width += chWidth
+		sb.WriteString(c.Grapheme)
+	}
+	sb.WriteString(tail)
+	return sb.String()
+}
+
+var clusterWidthMap = make(map[string]int)
+
+// width in cells
+func firstCluster(vx *Vaxis, r []rune) (c string, width int) {
+	if len(r) == 0 { // Empty fast-path
+		return "", 0
+	}
+	if r[0] == '\t' {
+		return " ", 1
+	}
+	if r[0] <= 0x7F { // ASCII fast-path
+		return asciiStringCache[int(r[0])], runeWidth(vx, r[0])
+	}
+	c, _, _, _ = uniseg.FirstGraphemeClusterInString(string(r), -1)
+
+	var cw int
+	if n, ok := clusterWidthMap[c]; ok {
+		cw = n
+	} else {
+		cw = stringWidth(vx, c)
+		clusterWidthMap[c] = cw
+	}
+	return c, cw
+}
+
+func setCell(vx *Vaxis, x int, y int, r rune, st vaxis.Style) {
+	vx.window.SetCell(x, y, vaxis.Cell{
+		Character: vaxis.Character{
+			Grapheme: string([]rune{r}),
+		},
+		Style: st,
+	})
+}
+
+// limit = -1 means no limit
+// di is an offset in runes
+func printCluster(vx *Vaxis, x int, y int, limit int, r []rune, st vaxis.Style) (dx int, di int) {
+	if limit >= 0 && x >= limit {
+		return 0, 0
+	}
+	var c string
+	var w int
+	if len(r) > 0 && r[0] <= 0x7F { // ASCII fast-path
+		c = asciiStringCache[int(r[0])]
+		w = runeWidth(vx, r[0])
+		di = 1
+	} else {
+		c, w = firstCluster(vx, r)
+		di = len([]rune(c))
+	}
+	if limit >= 0 && w > limit-x {
+		return 0, 0
+	}
+	vx.window.SetCell(x, y, vaxis.Cell{
+		Character: vaxis.Character{
+			Grapheme: c,
+		},
+		Style: st,
+	})
+	return w, di
+}
+
+func printString(vx *Vaxis, x *int, y int, s StyledString) {
+	var st vaxis.Style
+	nextStyles := s.styles
+
+	i := 0
+	sr := []rune(s.string)
+	for len(sr) > 0 {
+		if 0 < len(nextStyles) && nextStyles[0].Start == i {
+			st = nextStyles[0].Style
+			nextStyles = nextStyles[1:]
+		}
+		dx, di := printCluster(vx, *x, y, -1, sr, st)
+		*x += dx
+		sr = sr[di:]
+	}
+}
+
+func printIdent(vx *Vaxis, x, y, width int, s StyledString) {
+	s.string = truncate(vx, s.string, width, "\u2026")
+	x += width - stringWidth(vx, s.string)
+	var st vaxis.Style
 	if len(s.styles) != 0 && s.styles[0].Start == 0 {
 		st = s.styles[0].Style
 	}
-	screen.SetContent(x-1, y, ' ', nil, st)
-	printString(screen, &x, y, s)
+	setCell(vx, x-1, y, ' ', st)
+	printString(vx, &x, y, s)
 	if len(s.styles) != 0 {
 		// TODO check if it's not a style that is from the truncated
 		// part of s.
 		st = s.styles[len(s.styles)-1].Style
 	}
-	screen.SetContent(x, y, ' ', nil, st)
+	setCell(vx, x, y, ' ', st)
 }
 
-func printNumber(screen tcell.Screen, x *int, y int, st tcell.Style, n int) {
+func printNumber(vx *Vaxis, x *int, y int, st vaxis.Style, n int) {
 	s := Styled(fmt.Sprintf("%d", n), st)
-	printString(screen, x, y, s)
+	printString(vx, x, y, s)
 }
 
 var dateConfig sync.Once
@@ -84,7 +221,7 @@ func loadDateInfo() {
 	}
 }
 
-func printDate(screen tcell.Screen, x int, y int, st tcell.Style, t time.Time) {
+func printDate(vx *Vaxis, x int, y int, st vaxis.Style, t time.Time) {
 	dateConfig.Do(loadDateInfo)
 	_, m, d := t.Date()
 	var left, right int
@@ -97,42 +234,40 @@ func printDate(screen tcell.Screen, x int, y int, st tcell.Style, t time.Time) {
 	l1 := rune(left%10) + '0'
 	r0 := rune(right/10) + '0'
 	r1 := rune(right%10) + '0'
-	screen.SetContent(x+0, y, l0, nil, st)
-	screen.SetContent(x+1, y, l1, nil, st)
-	screen.SetContent(x+2, y, '/', nil, st)
-	screen.SetContent(x+3, y, r0, nil, st)
-	screen.SetContent(x+4, y, r1, nil, st)
+
+	setCell(vx, x+0, y, l0, st)
+	setCell(vx, x+1, y, l1, st)
+	setCell(vx, x+2, y, '/', st)
+	setCell(vx, x+3, y, r0, st)
+	setCell(vx, x+4, y, r1, st)
 }
 
-func printTime(screen tcell.Screen, x int, y int, st tcell.Style, t time.Time) {
+func printTime(vx *Vaxis, x int, y int, st vaxis.Style, t time.Time) {
 	hr0 := rune(t.Hour()/10) + '0'
 	hr1 := rune(t.Hour()%10) + '0'
 	mn0 := rune(t.Minute()/10) + '0'
 	mn1 := rune(t.Minute()%10) + '0'
-	screen.SetContent(x+0, y, hr0, nil, st)
-	screen.SetContent(x+1, y, hr1, nil, st)
-	screen.SetContent(x+2, y, ':', nil, st)
-	screen.SetContent(x+3, y, mn0, nil, st)
-	screen.SetContent(x+4, y, mn1, nil, st)
+	setCell(vx, x+0, y, hr0, st)
+	setCell(vx, x+1, y, hr1, st)
+	setCell(vx, x+2, y, ':', st)
+	setCell(vx, x+3, y, mn0, st)
+	setCell(vx, x+4, y, mn1, st)
 }
 
-func clearArea(screen tcell.Screen, x0, y0, width, height int) {
+func clearArea(vx *Vaxis, x0, y0, width, height int) {
+	vx.window.New(x0, y0, width, height).Clear()
+}
+
+func drawHorizontalLine(vx *Vaxis, x0, y, width int) {
 	for x := x0; x < x0+width; x++ {
-		for y := y0; y < y0+height; y++ {
-			screen.SetContent(x, y, ' ', nil, tcell.StyleDefault)
-		}
+		setCell(vx, x, y, '─', vaxis.Style{
+			Foreground: ColorGray,
+		})
 	}
 }
 
-func drawHorizontalLine(screen tcell.Screen, x0, y, width int) {
-	st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-	for x := x0; x < x0+width; x++ {
-		screen.SetContent(x, y, 0x2500, nil, st)
-	}
-}
-
-func drawVerticalLine(screen tcell.Screen, x, y0, height int) {
+func drawVerticalLine(vx *Vaxis, x, y0, height int) {
 	for y := y0; y < y0+height; y++ {
-		screen.SetContent(x, y, 0x2502, nil, tcell.StyleDefault)
+		setCell(vx, x, y, '│', vaxis.Style{})
 	}
 }

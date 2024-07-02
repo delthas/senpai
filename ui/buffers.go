@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
+	"git.sr.ht/~rockorager/vaxis"
 )
 
 const Overlay = "/overlay"
@@ -16,7 +16,8 @@ func IsSplitRune(r rune) bool {
 }
 
 type point struct {
-	X, I  int
+	X     int // in cells
+	I     int // in bytes
 	Split bool
 }
 
@@ -40,7 +41,7 @@ type Line struct {
 	At        time.Time
 	Head      string
 	Body      StyledString
-	HeadColor tcell.Color
+	HeadColor vaxis.Color
 	Notify    NotifyType
 	Highlight bool
 	Readable  bool
@@ -56,7 +57,7 @@ func (l *Line) IsZero() bool {
 	return l.Body.string == ""
 }
 
-func (l *Line) computeSplitPoints() {
+func (l *Line) computeSplitPoints(vx *Vaxis) {
 	if l.splitPoints == nil {
 		l.splitPoints = []point{}
 	}
@@ -77,7 +78,7 @@ func (l *Line) computeSplitPoints() {
 		}
 
 		lastWasSplit = curIsSplit
-		width += runeWidth(r)
+		width += runeWidth(vx, r)
 	}
 
 	if !lastWasSplit {
@@ -89,7 +90,8 @@ func (l *Line) computeSplitPoints() {
 	}
 }
 
-func (l *Line) NewLines(width int) []int {
+// NewLines returns the offsets, in bytes, where the line should be split.
+func (l *Line) NewLines(vx *Vaxis, width int) []int {
 	// Beware! This function was made by your local Test Driven Developper™ who
 	// doesn't understand one bit of this function and how it works (though it
 	// might not work that well if you're here...).  The code below is thus very
@@ -149,20 +151,22 @@ func (l *Line) NewLines(width int) []int {
 			// terminal.  In this case, no newline is placed before (like in the
 			// 2nd if-else branch).  The for loop is used to place newlines in
 			// the word.
-			// TODO handle multi-codepoint graphemes?? :(
-			wordWidth := 0
-			h := 1
-			for j, r := range l.Body.string[sp1.I:sp2.I] {
-				wordWidth += runeWidth(r)
-				if h*width < x+wordWidth {
+			s := l.Body.string[sp1.I:sp2.I]
+			j := 0
+			for s != "" {
+				c, wordWidth := firstCluster(vx, []rune(s))
+				if width < x+wordWidth {
+					x = 0
 					l.newLines = append(l.newLines, sp1.I+j)
-					h++
 				}
+				x += wordWidth
+				j += len(c)
+				s = s[len(c):]
 			}
-			x = (x + wordWidth) % width
-			if x == 0 {
+			if x == width {
 				// The placement of the word is such that it ends right at the
 				// end of the row.
+				x = 0
 				l.newLines = append(l.newLines, sp2.I)
 			}
 		} else {
@@ -212,12 +216,12 @@ type buffer struct {
 	lines []Line
 	topic string
 
-	scrollAmt int
+	scrollAmt int // offset in lines from the bottom
 	isAtTop   bool
 }
 
 type BufferList struct {
-	colors ConfigColors
+	ui *UI
 
 	list    []buffer
 	overlay *buffer
@@ -229,18 +233,15 @@ type BufferList struct {
 	textWidth    int
 
 	showBufferNumbers bool
-
-	doMergeLine func(former *Line, addition Line)
 }
 
 // NewBufferList returns a new BufferList.
 // Call Resize() once before using it.
-func NewBufferList(colors ConfigColors, mergeLine func(*Line, Line)) BufferList {
+func NewBufferList(ui *UI) BufferList {
 	return BufferList{
-		colors:      colors,
-		list:        []buffer{},
-		clicked:     -1,
-		doMergeLine: mergeLine,
+		ui:      ui,
+		list:    []buffer{},
+		clicked: -1,
 	}
 }
 
@@ -276,7 +277,7 @@ func (bs *BufferList) To(i int) bool {
 		if len(bs.list) <= bs.current {
 			bs.current = len(bs.list) - 1
 		}
-		bs.clearRead(i)
+		bs.clearRead(bs.current)
 		b := bs.list[bs.current]
 		b.unreadRuler = b.read
 		if len(b.lines) > 0 {
@@ -423,12 +424,12 @@ func (bs *BufferList) RemoveNetwork(netID string) {
 }
 
 func (bs *BufferList) mergeLine(former *Line, addition Line) (keepLine bool) {
-	bs.doMergeLine(former, addition)
+	bs.ui.config.MergeLine(former, addition)
 	if former.Body.string == "" {
 		return false
 	}
 	former.width = 0
-	former.computeSplitPoints()
+	former.computeSplitPoints(bs.ui.vx)
 	return true
 }
 
@@ -453,10 +454,10 @@ func (bs *BufferList) AddLine(netID, title string, line Line) {
 		}
 		// TODO change b.scrollAmt if it's not 0 and bs.current is idx.
 	} else {
-		line.computeSplitPoints()
+		line.computeSplitPoints(bs.ui.vx)
 		b.lines = append(b.lines, line)
 		if b == current && 0 < b.scrollAmt {
-			b.scrollAmt += len(line.NewLines(bs.textWidth)) + 1
+			b.scrollAmt += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
 		}
 	}
 
@@ -495,7 +496,7 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 					if b.openedOnce {
 						line.Body = line.Body.ParseURLs()
 					}
-					line.computeSplitPoints()
+					line.computeSplitPoints(bs.ui.vx)
 				}
 				lines = append(lines, line)
 			}
@@ -577,7 +578,7 @@ func (bs *BufferList) UpdateRead() (netID, title string, timestamp time.Time) {
 		if y >= b.scrollAmt && line.Readable {
 			break
 		}
-		y += len(line.NewLines(bs.textWidth)) + 1
+		y += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
 	}
 	if line != nil && line.At.After(b.read) {
 		b.read = line.At
@@ -626,7 +627,7 @@ func (bs *BufferList) ScrollUpHighlight() bool {
 			b.scrollAmt = y - bs.tlHeight + 1
 			return true
 		}
-		y += len(line.NewLines(bs.textWidth)) + 1
+		y += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
 	}
 	return false
 }
@@ -640,7 +641,7 @@ func (bs *BufferList) ScrollDownHighlight() bool {
 		if line.Highlight {
 			yLastHighlight = y
 		}
-		y += len(line.NewLines(bs.textWidth)) + 1
+		y += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
 	}
 	b.scrollAmt = yLastHighlight
 	return b.scrollAmt != 0
@@ -671,7 +672,7 @@ func (bs *BufferList) cur() *buffer {
 	return &bs.list[bs.current]
 }
 
-func (bs *BufferList) DrawVerticalBufferList(screen tcell.Screen, x0, y0, width, height int, offset *int) {
+func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height int, offset *int) {
 	if y0+len(bs.list)-*offset < height {
 		*offset = y0 + len(bs.list) - height
 		if *offset < 0 {
@@ -680,25 +681,27 @@ func (bs *BufferList) DrawVerticalBufferList(screen tcell.Screen, x0, y0, width,
 	}
 
 	width--
-	drawVerticalLine(screen, x0+width, y0, height)
-	clearArea(screen, x0, y0, width, height)
+	drawVerticalLine(vx, x0+width, y0, height)
+	clearArea(vx, x0, y0, width, height)
 
 	indexPadding := 1 + int(math.Ceil(math.Log10(float64(len(bs.list)))))
 	for i, b := range bs.list[*offset:] {
 		bi := *offset + i
 		x := x0
 		y := y0 + i
-		st := tcell.StyleDefault
+		var st vaxis.Style
 		if b.unread {
-			st = st.Bold(true).Foreground(bs.colors.Unread)
+			st.Attribute |= vaxis.AttrBold
+			st.Foreground = bs.ui.config.Colors.Unread
 		}
 		if bi == bs.current || bi == bs.clicked {
-			st = st.Reverse(true)
+			st.Attribute |= vaxis.AttrReverse
 		}
 		if bs.showBufferNumbers {
-			indexSt := st.Foreground(tcell.ColorGray)
+			indexSt := st
+			indexSt.Foreground = ColorGray
 			indexText := fmt.Sprintf("%d:", bi+1)
-			printString(screen, &x, y, Styled(indexText, indexSt))
+			printString(vx, &x, y, Styled(indexText, indexSt))
 			x = x0 + indexPadding
 		}
 
@@ -707,28 +710,36 @@ func (bs *BufferList) DrawVerticalBufferList(screen tcell.Screen, x0, y0, width,
 			title = b.netName
 		} else {
 			if bi == bs.current || bi == bs.clicked {
-				screen.SetContent(x, y, ' ', nil, tcell.StyleDefault.Reverse(true))
-				screen.SetContent(x+1, y, ' ', nil, tcell.StyleDefault.Reverse(true))
+				st := vaxis.Style{
+					Attribute: vaxis.AttrReverse,
+				}
+				setCell(vx, x, y, ' ', st)
+				setCell(vx, x+1, y, ' ', st)
 			}
 			x += 2
 			title = b.title
 		}
-		title = truncate(title, width-(x-x0), "\u2026")
-		printString(screen, &x, y, Styled(title, st))
+		title = truncate(vx, title, width-(x-x0), "\u2026")
+		printString(vx, &x, y, Styled(title, st))
 
 		if bi == bs.current || bi == bs.clicked {
-			st := tcell.StyleDefault.Reverse(true)
-			for ; x < x0+width; x++ {
-				screen.SetContent(x, y, ' ', nil, st)
+			st := vaxis.Style{
+				Attribute: vaxis.AttrReverse,
 			}
-			screen.SetContent(x, y, 0x2590, nil, st)
+			for ; x < x0+width; x++ {
+				setCell(vx, x, y, ' ', st)
+			}
+			setCell(vx, x, y, ' ', st)
+			setCell(vx, x, y, '▐', st)
 		}
 
 		if b.highlights != 0 {
-			highlightSt := st.Foreground(tcell.ColorRed).Reverse(true)
+			highlightSt := st
+			highlightSt.Foreground = ColorRed
+			highlightSt.Attribute |= vaxis.AttrReverse
 			highlightText := fmt.Sprintf(" %d ", b.highlights)
 			x = x0 + width - len(highlightText)
-			printString(screen, &x, y, Styled(highlightText, highlightSt))
+			printString(vx, &x, y, Styled(highlightText, highlightSt))
 		}
 	}
 }
@@ -741,7 +752,7 @@ func (bs *BufferList) HorizontalBufferOffset(x int, offset int) int {
 				return -1
 			}
 		}
-		x -= bufferWidth(&b)
+		x -= bs.bufferWidth(&b)
 		if x < 0 {
 			return offset + i
 		}
@@ -761,7 +772,7 @@ func (bs *BufferList) GetLeftMost(screenWidth int) int {
 		if leftMost < bs.current {
 			width++
 		}
-		width += bufferWidth(&bs.list[leftMost])
+		width += bs.bufferWidth(&bs.list[leftMost])
 		if width > screenWidth {
 			return leftMost + 1 // Went offscreen, need to go one step back
 		}
@@ -770,12 +781,12 @@ func (bs *BufferList) GetLeftMost(screenWidth int) int {
 	return 0
 }
 
-func bufferWidth(b *buffer) int {
+func (bs *BufferList) bufferWidth(b *buffer) int {
 	width := 0
 	if b.title == "" {
-		width += stringWidth(b.netName)
+		width += stringWidth(bs.ui.vx, b.netName)
 	} else {
-		width += stringWidth(b.title)
+		width += stringWidth(bs.ui.vx, b.title)
 	}
 	if 0 < b.highlights {
 		width += 2 + len(fmt.Sprintf("%d", b.highlights))
@@ -783,12 +794,12 @@ func bufferWidth(b *buffer) int {
 	return width
 }
 
-func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, width int, offset *int) {
+func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, offset *int) {
 	x := width
 	for i := len(bs.list) - 1; i >= 0; i-- {
 		b := &bs.list[i]
 		x--
-		x -= bufferWidth(b)
+		x -= bs.bufferWidth(b)
 		if x <= 10 {
 			break
 		}
@@ -803,45 +814,47 @@ func (bs *BufferList) DrawHorizontalBufferList(screen tcell.Screen, x0, y0, widt
 		if width <= x-x0 {
 			break
 		}
-		st := tcell.StyleDefault
+		var st vaxis.Style
 		if b.unread {
-			st = st.Bold(true).Foreground(bs.colors.Unread)
+			st.Attribute |= vaxis.AttrBold
+			st.Foreground = bs.ui.config.Colors.Unread
 		} else if i == bs.current {
-			st = st.Underline(true)
+			st.UnderlineStyle = vaxis.UnderlineSingle
 		}
 		if i == bs.clicked {
-			st = st.Reverse(true)
+			st.Attribute |= vaxis.AttrReverse
 		}
 
 		var title string
 		if b.title == "" {
-			st = st.Dim(true)
+			st.Attribute |= vaxis.AttrDim
 			title = b.netName
 		} else {
 			title = b.title
 		}
-		title = truncate(title, width-x, "\u2026")
-		printString(screen, &x, y0, Styled(title, st))
+		title = truncate(vx, title, width-x, "\u2026")
+		printString(vx, &x, y0, Styled(title, st))
 
 		if 0 < b.highlights {
-			st = st.Foreground(tcell.ColorRed).Reverse(true)
-			screen.SetContent(x, y0, ' ', nil, st)
+			st.Foreground = ColorRed
+			st.Attribute |= vaxis.AttrReverse
+			setCell(vx, x, y0, ' ', st)
 			x++
-			printNumber(screen, &x, y0, st, b.highlights)
-			screen.SetContent(x, y0, ' ', nil, st)
+			printNumber(vx, &x, y0, st, b.highlights)
+			setCell(vx, x, y0, ' ', st)
 			x++
 		}
-		screen.SetContent(x, y0, ' ', nil, tcell.StyleDefault)
+		setCell(vx, x, y0, ' ', vaxis.Style{})
 		x++
 	}
 	for x < width {
-		screen.SetContent(x, y0, ' ', nil, tcell.StyleDefault)
+		setCell(vx, x, y0, ' ', vaxis.Style{})
 		x++
 	}
 }
 
-func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int) {
-	clearArea(screen, x0, y0, bs.tlInnerWidth+nickColWidth+9, bs.tlHeight+2)
+func (bs *BufferList) DrawTimeline(vx *Vaxis, x0, y0, nickColWidth int) {
+	clearArea(vx, x0, y0, bs.tlInnerWidth+nickColWidth+9, bs.tlHeight+2)
 
 	b := bs.cur()
 	if !b.openedOnce {
@@ -852,9 +865,9 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 	}
 
 	xTopic := x0
-	printString(screen, &xTopic, y0, Styled(b.topic, tcell.StyleDefault))
+	printString(vx, &xTopic, y0, Styled(b.topic, vaxis.Style{}))
 	y0++
-	drawHorizontalLine(screen, x0, y0, bs.tlInnerWidth+nickColWidth+9)
+	drawHorizontalLine(vx, x0, y0, bs.tlInnerWidth+nickColWidth+9)
 	y0++
 
 	if bs.textWidth < bs.tlInnerWidth {
@@ -871,15 +884,17 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 		x1 := x0 + 9 + nickColWidth
 
 		line := &b.lines[i]
-		nls := line.NewLines(bs.textWidth)
+		nls := line.NewLines(bs.ui.vx, bs.textWidth)
 
 		if !rulerDrawn {
 			isRead := !line.At.After(b.unreadRuler)
 			if isRead && yi > y0 {
 				yi--
-				st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-				printIdent(screen, x0+7, yi, nickColWidth, Styled("--", st))
-				drawHorizontalLine(screen, x0, yi, 9+nickColWidth+bs.tlInnerWidth)
+				st := vaxis.Style{
+					Foreground: ColorGray,
+				}
+				printIdent(vx, x0+7, yi, nickColWidth, Styled("--", st))
+				drawHorizontalLine(vx, x0, yi, 9+nickColWidth+bs.tlInnerWidth)
 				rulerDrawn = true
 			}
 		}
@@ -898,36 +913,45 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 			showDate = yb != ya || mb != ma || dd != da
 		}
 		if showDate {
-			st := tcell.StyleDefault.Bold(true)
+			st := vaxis.Style{
+				Attribute: vaxis.AttrBold,
+			}
 			// as a special case, always draw the first visible message date, even if it is a continuation line
 			yd := yi
 			if yd < y0 {
 				yd = y0
 			}
-			printDate(screen, x0, yd, st, line.At.Local())
+			printDate(vx, x0, yd, st, line.At.Local())
 		} else if b.lines[i-1].At.Truncate(time.Minute) != line.At.Truncate(time.Minute) && yi >= y0 {
-			st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-			printTime(screen, x0, yi, st, line.At.Local())
+			st := vaxis.Style{
+				Foreground: ColorGray,
+			}
+			printTime(vx, x0, yi, st, line.At.Local())
 		}
 
 		if yi >= y0 {
-			identSt := tcell.StyleDefault.
-				Foreground(line.HeadColor).
-				Reverse(line.Highlight)
-			printIdent(screen, x0+7, yi, nickColWidth, Styled(line.Head, identSt))
+			identSt := vaxis.Style{
+				Foreground: line.HeadColor,
+			}
+			if line.Highlight {
+				identSt.Attribute |= vaxis.AttrReverse
+			}
+			printIdent(vx, x0+7, yi, nickColWidth, Styled(line.Head, identSt))
 		}
 
 		x := x1
 		y := yi
-		style := tcell.StyleDefault
+		var style vaxis.Style
 		nextStyles := line.Body.styles
 
-		for i, r := range line.Body.string {
-			if 0 < len(nextStyles) && nextStyles[0].Start == i {
+		lbi := 0
+		l := []rune(line.Body.string)
+		for len(l) > 0 {
+			if 0 < len(nextStyles) && nextStyles[0].Start == lbi {
 				style = nextStyles[0].Style
 				nextStyles = nextStyles[1:]
 			}
-			if 0 < len(nls) && i == nls[0] {
+			if 0 < len(nls) && lbi == nls[0] {
 				x = x1
 				y++
 				nls = nls[1:]
@@ -936,14 +960,23 @@ func (bs *BufferList) DrawTimeline(screen tcell.Screen, x0, y0, nickColWidth int
 				}
 			}
 
-			if y != yi && x == x1 && IsSplitRune(r) {
+			if y != yi && x == x1 && IsSplitRune(l[0]) {
+				lbi += len(string(l[0]))
+				l = l[1:]
 				continue
 			}
 
 			if y >= y0 {
-				screen.SetContent(x, y, r, nil, style)
+				dx, di := printCluster(vx, x, y, -1, l, style)
+				x += dx
+				lbi += len(string(l[:di]))
+				l = l[di:]
+			} else {
+				c, cw := firstCluster(vx, l)
+				x += cw
+				lbi += len(c)
+				l = l[len([]rune(c)):]
 			}
-			x += runeWidth(r)
 		}
 	}
 

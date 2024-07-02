@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"git.sr.ht/~rockorager/vaxis"
-	"github.com/gdamore/tcell/v2"
 
 	"git.sr.ht/~delthas/senpai/irc"
 )
@@ -27,15 +26,20 @@ type Config struct {
 }
 
 type ConfigColors struct {
-	Status tcell.Color
-	Prompt tcell.Color
-	Unread tcell.Color
+	Status vaxis.Color
+	Prompt vaxis.Color
+	Unread vaxis.Color
 	Nicks  ColorScheme
 }
 
+type Vaxis struct {
+	*vaxis.Vaxis
+	window vaxis.Window
+}
+
 type UI struct {
-	screen tcell.Screen
-	Events chan tcell.Event
+	vx     *Vaxis
+	Events chan vaxis.Event
 	exit   atomic.Value // bool
 	config Config
 
@@ -68,34 +72,33 @@ func New(config Config) (ui *UI, err error) {
 		ui.memberWidth = config.MemberColWidth
 	}
 
-	ui.screen, err = tcell.NewScreen()
+	var vx *vaxis.Vaxis
+	vx, err = vaxis.New(vaxis.Options{
+		DisableMouse: !config.Mouse,
+		CSIuBitMask:  vaxis.CSIuDisambiguate | vaxis.CSIuReportEvents | vaxis.CSIuAlternateKeys | vaxis.CSIuAllKeys | vaxis.CSIuAssociatedText,
+	})
 	if err != nil {
 		return
 	}
-
-	err = ui.screen.Init()
-	if err != nil {
-		return
+	ui.vx = &Vaxis{
+		Vaxis:  vx,
+		window: vx.Window(),
 	}
-	if ui.screen.HasMouse() && config.Mouse {
-		ui.screen.EnableMouse()
-	}
-	ui.screen.EnablePaste()
-	ui.screen.SetCursorStyle(tcell.CursorStyleSteadyBar)
-	ui.screen.SetTitle("senpai")
-	ui.screen.SetAppID("senpai")
 
-	_, h := ui.screen.Size()
-	ui.screen.Clear()
-	ui.screen.ShowCursor(0, h-2)
+	ui.vx.SetTitle("senpai")
+	ui.vx.SetAppID("senpai")
+
+	_, h := ui.vx.window.Size()
+	ui.vx.window.Clear()
+	ui.vx.ShowCursor(0, h-2, vaxis.CursorBeam)
 
 	ui.exit.Store(false)
 
-	ui.Events = make(chan tcell.Event, 128)
+	ui.Events = make(chan vaxis.Event, 128)
 	go func() {
 		for !ui.ShouldExit() {
-			ev := ui.screen.PollEvent()
-			if ev == nil {
+			ev := ui.vx.PollEvent()
+			if _, ok := ev.(vaxis.QuitEvent); ok {
 				ui.Exit()
 				break
 			}
@@ -104,8 +107,8 @@ func New(config Config) (ui *UI, err error) {
 		close(ui.Events)
 	}()
 
-	ui.bs = NewBufferList(config.Colors, ui.config.MergeLine)
-	ui.e = NewEditor(config.Colors, ui.config.AutoComplete)
+	ui.bs = NewBufferList(ui)
+	ui.e = NewEditor(ui)
 	ui.Resize()
 
 	return
@@ -120,11 +123,8 @@ func (ui *UI) Exit() {
 }
 
 func (ui *UI) Close() {
-	// See: https://github.com/gdamore/tcell/issues/623
-	ui.screen.SetCursorStyle(tcell.CursorStyleDefault)
-	ui.screen.Sync()
-
-	ui.screen.Fini()
+	ui.vx.Refresh() // TODO is this needed?
+	ui.vx.Close()
 }
 
 func (ui *UI) Buffer(i int) (netID, title string, ok bool) {
@@ -425,11 +425,11 @@ func (ui *UI) SetTitle(title string) {
 		return
 	}
 	ui.title = title
-	ui.screen.SetTitle(title)
+	ui.vx.SetTitle(title)
 }
 
 func (ui *UI) SetMouseShape(shape vaxis.MouseShape) {
-	ui.screen.Vaxis().SetMouseShape(shape)
+	ui.vx.SetMouseShape(shape)
 }
 
 // InputContent result must not be modified.
@@ -474,11 +474,11 @@ func (ui *UI) InputDown() {
 }
 
 func (ui *UI) InputBackspace() (ok bool) {
-	return ui.e.RemRune()
+	return ui.e.RemCluster()
 }
 
 func (ui *UI) InputDelete() (ok bool) {
-	return ui.e.RemRuneForward()
+	return ui.e.RemClusterForward()
 }
 
 func (ui *UI) InputDeleteWord() (ok bool) {
@@ -506,7 +506,8 @@ func (ui *UI) InputBackSearch() {
 }
 
 func (ui *UI) Resize() {
-	w, h := ui.screen.Size()
+	ui.vx.window = ui.vx.Window() // Refresh window size
+	w, h := ui.vx.window.Size()
 	innerWidth := w - 9 - ui.channelWidth - ui.config.NickColWidth - ui.memberWidth
 	if innerWidth <= 0 {
 		innerWidth = 1 // will break display somewhat, but this is an edge case
@@ -522,32 +523,32 @@ func (ui *UI) Resize() {
 		ui.bs.ResizeTimeline(innerWidth, h-2, textWidth)
 	}
 	ui.ScrollToBuffer()
-	ui.screen.Sync()
+	ui.vx.Refresh()
 }
 
 func (ui *UI) Size() (int, int) {
-	return ui.screen.Size()
+	return ui.vx.window.Size()
 }
 
 func (ui *UI) Beep() {
-	ui.screen.Beep()
+	ui.vx.Bell()
 }
 
 func (ui *UI) Notify(title string, body string) {
-	ui.screen.Notify(title, body)
+	ui.vx.Notify(title, body)
 }
 
 func (ui *UI) Draw(members []irc.Member) {
-	w, h := ui.screen.Size()
+	w, h := ui.vx.window.Size()
 
-	ui.bs.DrawTimeline(ui.screen, ui.channelWidth, 0, ui.config.NickColWidth)
+	ui.bs.DrawTimeline(ui.vx, ui.channelWidth, 0, ui.config.NickColWidth)
 	if ui.channelWidth == 0 {
-		ui.bs.DrawHorizontalBufferList(ui.screen, 0, h-1, w-ui.memberWidth, &ui.channelOffset)
+		ui.bs.DrawHorizontalBufferList(ui.vx, 0, h-1, w-ui.memberWidth, &ui.channelOffset)
 	} else {
-		ui.bs.DrawVerticalBufferList(ui.screen, 0, 0, ui.channelWidth, h, &ui.channelOffset)
+		ui.bs.DrawVerticalBufferList(ui.vx, 0, 0, ui.channelWidth, h, &ui.channelOffset)
 	}
 	if ui.memberWidth != 0 {
-		ui.drawVerticalMemberList(ui.screen, w-ui.memberWidth, 0, ui.memberWidth, h, members, &ui.memberOffset)
+		ui.drawVerticalMemberList(ui.vx, w-ui.memberWidth, 0, ui.memberWidth, h, members, &ui.memberOffset)
 	}
 	if ui.channelWidth == 0 {
 		ui.drawStatusBar(ui.channelWidth, h-3, w-ui.memberWidth)
@@ -556,19 +557,21 @@ func (ui *UI) Draw(members []irc.Member) {
 	}
 
 	prompt := ui.prompt
-	if ui.bs.HasOverlay() && ui.e.TextLen() == 0 {
-		prompt = Styled(">", tcell.StyleDefault.Foreground(ui.config.Colors.Prompt))
+	if ui.bs.HasOverlay() && ui.e.Empty() {
+		prompt = Styled(">", vaxis.Style{
+			Foreground: ui.config.Colors.Prompt,
+		})
 	}
 	if ui.channelWidth == 0 {
 		for x := 0; x < 9+ui.config.NickColWidth; x++ {
-			ui.screen.SetContent(x, h-2, ' ', nil, tcell.StyleDefault)
+			setCell(ui.vx, x, h-2, ' ', vaxis.Style{})
 		}
-		printIdent(ui.screen, 7, h-2, ui.config.NickColWidth, prompt)
+		printIdent(ui.vx, 7, h-2, ui.config.NickColWidth, prompt)
 	} else {
 		for x := ui.channelWidth; x < 9+ui.channelWidth+ui.config.NickColWidth; x++ {
-			ui.screen.SetContent(x, h-1, ' ', nil, tcell.StyleDefault)
+			setCell(ui.vx, x, h-1, ' ', vaxis.Style{})
 		}
-		printIdent(ui.screen, ui.channelWidth+7, h-1, ui.config.NickColWidth, prompt)
+		printIdent(ui.vx, ui.channelWidth+7, h-1, ui.config.NickColWidth, prompt)
 	}
 
 	var hint string
@@ -576,12 +579,12 @@ func (ui *UI) Draw(members []irc.Member) {
 		hint = ui.overlayHint
 	}
 	if ui.channelWidth == 0 {
-		ui.e.Draw(ui.screen, 9+ui.config.NickColWidth, h-2, hint)
+		ui.e.Draw(ui.vx, 9+ui.config.NickColWidth, h-2, hint)
 	} else {
-		ui.e.Draw(ui.screen, 9+ui.channelWidth+ui.config.NickColWidth, h-1, hint)
+		ui.e.Draw(ui.vx, 9+ui.channelWidth+ui.config.NickColWidth, h-1, hint)
 	}
 
-	ui.screen.Show()
+	ui.vx.Render()
 }
 
 func (ui *UI) ScrollToBuffer() {
@@ -590,7 +593,7 @@ func (ui *UI) ScrollToBuffer() {
 		return
 	}
 
-	w, h := ui.screen.Size()
+	w, h := ui.vx.window.Size()
 	var first int
 	if ui.channelWidth > 0 {
 		first = ui.bs.current - h + 1
@@ -603,28 +606,32 @@ func (ui *UI) ScrollToBuffer() {
 }
 
 func (ui *UI) drawStatusBar(x0, y, width int) {
-	clearArea(ui.screen, x0, y, width, 1)
+	clearArea(ui.vx, x0, y, width, 1)
 
 	if ui.status == "" {
 		return
 	}
 
 	var s StyledStringBuilder
-	s.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
+	s.SetStyle(vaxis.Style{
+		Foreground: ColorGray,
+	})
 	s.WriteString("--")
 
 	x := x0 + 5 + ui.config.NickColWidth
-	printString(ui.screen, &x, y, s.StyledString())
+	printString(ui.vx, &x, y, s.StyledString())
 	x += 2
 
 	s.Reset()
-	s.SetStyle(tcell.StyleDefault.Foreground(tcell.ColorGray))
+	s.SetStyle(vaxis.Style{
+		Foreground: ColorGray,
+	})
 	s.WriteString(ui.status)
 
-	printString(ui.screen, &x, y, s.StyledString())
+	printString(ui.vx, &x, y, s.StyledString())
 }
 
-func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height int, members []irc.Member, offset *int) {
+func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, members []irc.Member, offset *int) {
 	if y0+len(members)-*offset < height {
 		*offset = y0 + len(members) - height
 		if *offset < 0 {
@@ -632,15 +639,17 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 		}
 	}
 
-	drawVerticalLine(screen, x0, y0, height)
+	drawVerticalLine(vx, x0, y0, height)
 	x0++
 	width--
-	clearArea(screen, x0, y0, width, height)
+	clearArea(vx, x0, y0, width, height)
 
 	if _, channel := ui.bs.Current(); channel == "" {
 		x := x0 + 1
-		printString(screen, &x, y0, Styled("Help", tcell.StyleDefault.Foreground(ui.config.Colors.Status)))
-		drawHorizontalLine(screen, x0, y0+1, width)
+		printString(vx, &x, y0, Styled("Help", vaxis.Style{
+			Foreground: ui.config.Colors.Status,
+		}))
+		drawHorizontalLine(vx, x0, y0+1, width)
 		y0 += 2
 
 		lines := []string{
@@ -649,10 +658,13 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 			"→Message user",
 		}
 		for i, line := range lines {
-			reverse := i*2 == ui.memberClicked
+			var st vaxis.Style
+			if i*2 == ui.memberClicked {
+				st.Attribute |= vaxis.AttrReverse
+			}
 			x := x0
-			printString(screen, &x, y0, Styled(line, tcell.StyleDefault.Reverse(reverse)))
-			drawHorizontalLine(screen, x0, y0+1, width)
+			printString(vx, &x, y0, Styled(line, st))
+			drawHorizontalLine(vx, x0, y0+1, width)
 			y0 += 2
 		}
 		return
@@ -669,49 +681,66 @@ func (ui *UI) drawVerticalMemberList(screen tcell.Screen, x0, y0, width, height 
 		} else {
 			memberString = fmt.Sprintf("%d member", len(members))
 		}
-		memberString = truncate(memberString, width-1, "\u2026")
+		memberString = truncate(vx, memberString, width-1, "\u2026")
 		xMembers := x0 + 1
-		printString(screen, &xMembers, y0, Styled(memberString, tcell.StyleDefault.Foreground(ui.config.Colors.Status)))
+		printString(vx, &xMembers, y0, Styled(memberString, vaxis.Style{
+			Foreground: ui.config.Colors.Status,
+		}))
 	}
 	y0++
 	height--
-	drawHorizontalLine(screen, x0, y0, width)
+	drawHorizontalLine(vx, x0, y0, width)
 	y0++
 	height--
 
 	padding := 1
 	for _, m := range members {
 		if m.Disconnected {
-			padding = runeWidth(0x274C)
+			padding = runeWidth(vx, 0x274C)
 			break
 		}
 	}
 
 	for i, m := range members[*offset:] {
-		reverse := i+*offset == ui.memberClicked
+		var attr vaxis.AttributeMask
+		if i+*offset == ui.memberClicked {
+			attr |= vaxis.AttrReverse
+		}
 		x := x0
 		y := y0 + i
 		if m.Disconnected {
-			disconnectedSt := tcell.StyleDefault.Foreground(tcell.ColorRed).Reverse(reverse)
-			printString(screen, &x, y, Styled("\u274C", disconnectedSt))
+			disconnectedSt := vaxis.Style{
+				Foreground: ColorRed,
+				Attribute:  attr,
+			}
+			printString(vx, &x, y, Styled("\u274C", disconnectedSt))
 		} else if m.PowerLevel != "" {
 			x += padding - 1
 			powerLevelText := m.PowerLevel[:1]
-			powerLevelSt := tcell.StyleDefault.Foreground(tcell.ColorGreen).Reverse(reverse)
-			printString(screen, &x, y, Styled(powerLevelText, powerLevelSt))
+			powerLevelSt := vaxis.Style{
+				Foreground: vaxis.IndexColor(2),
+				Attribute:  attr,
+			}
+			printString(vx, &x, y, Styled(powerLevelText, powerLevelSt))
 		} else {
 			x += padding
 		}
 
 		var name StyledString
-		nameText := truncate(m.Name.Name, width-1, "\u2026")
+		nameText := truncate(vx, m.Name.Name, width-1, "\u2026")
 		if m.Away {
-			name = Styled(nameText, tcell.StyleDefault.Foreground(tcell.ColorGray).Reverse(reverse))
+			name = Styled(nameText, vaxis.Style{
+				Foreground: ColorGray,
+				Attribute:  attr,
+			})
 		} else {
 			color := IdentColor(ui.config.Colors.Nicks, m.Name.Name, m.Self)
-			name = Styled(nameText, tcell.StyleDefault.Foreground(color).Reverse(reverse))
+			name = Styled(nameText, vaxis.Style{
+				Foreground: color,
+				Attribute:  attr,
+			})
 		}
 
-		printString(screen, &x, y, name)
+		printString(vx, &x, y, name)
 	}
 }
