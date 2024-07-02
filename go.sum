@@ -1,7 +1,7 @@
+git.sr.ht/~delthas/vaxis v0.8.6-0.20240702234839-1922cc2973f6 h1:we7TiRN0uoGHTgGUXbmBZXwgUkGBOm4CbeC8ip41uhQ=
+git.sr.ht/~delthas/vaxis v0.8.6-0.20240702234839-1922cc2973f6/go.mod h1:h94aKek3frIV1hJbdXjqnBqaLkbWXvV+UxAsQHg9bns=
 git.sr.ht/~emersion/go-scfg v0.0.0-20240128091534-2ae16e782082 h1:9Udx5fm4vRtmgDIBjy2ef5QioHbzpw5oHabbhpAUyEw=
 git.sr.ht/~emersion/go-scfg v0.0.0-20240128091534-2ae16e782082/go.mod h1:ybgvEJTIx5XbaspSviB3KNa6OdPmAZqDoSud7z8fFlw=
-git.sr.ht/~rockorager/vaxis v0.9.2 h1:OKPaCG3S4b6jWnwUPC0zX+Zw16hhLcSgC2mLw/nwsV0=
-git.sr.ht/~rockorager/vaxis v0.9.2/go.mod h1:h94aKek3frIV1hJbdXjqnBqaLkbWXvV+UxAsQHg9bns=
 github.com/containerd/console v1.0.4 h1:F2g4+oChYvBTsASRTz8NP6iIAi97J3TtSAsLbIFn4ro=
 github.com/containerd/console v1.0.4/go.mod h1:YynlIjWYF8myEu6sdkwKIvGQq+cOckRm6So2avqoYAk=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

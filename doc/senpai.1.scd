@@ -76,6 +76,15 @@ In order to select text with a mouse, hold SHIFT while clicking and dragging
 the mouse. *Clicking and dragging without holding SHIFT will not work, as
 senpai eats these events for eg selecting channels.*
 
+# OPENING LINKS
+
+In order to open links, refer to your terminal manual. On most terminals,
+opening links is done by holding CTRL, or SHIFT, while clicking the link.
+On the *foot* terminal, links can be opened by pressing CTRL+SHIFT+O.
+
+Additionally, by simply clicking an image link with the mouse, a small preview
+will be shown, which can be closed by clicking again anywhere in the interface.
+
 # KEYBOARD SHORTCUTS
 
 *CTRL-A*

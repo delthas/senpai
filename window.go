@@ -45,6 +45,15 @@ func (app *App) addStatusLine(netID string, line ui.Line) {
 }
 
 func (app *App) setStatus() {
+	if app.imageLoading && app.win.ImageReady() {
+		app.imageLoading = false
+		app.imageOverlay = true
+	}
+	if app.imageLoading {
+		app.win.SetStatus("Loading image...")
+		return
+	}
+
 	netID, buffer := app.win.CurrentBuffer()
 	s := app.sessions[netID]
 	if s == nil {

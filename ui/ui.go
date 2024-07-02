@@ -2,11 +2,13 @@ package ui
 
 import (
 	"fmt"
+	"image"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"git.sr.ht/~rockorager/vaxis"
+	"git.sr.ht/~rockorager/vaxis/widgets/align"
 
 	"git.sr.ht/~delthas/senpai/irc"
 )
@@ -37,9 +39,16 @@ type Vaxis struct {
 	window vaxis.Window
 }
 
+type clickEvent struct {
+	xb    int
+	xe    int
+	y     int
+	event interface{}
+}
+
 type UI struct {
 	vx     *Vaxis
-	Events chan vaxis.Event
+	Events chan any
 	exit   atomic.Value // bool
 	config Config
 
@@ -59,11 +68,16 @@ type UI struct {
 
 	channelColClicked bool
 	memberColClicked  bool
+
+	clickEvents []clickEvent
+
+	image vaxis.Image
 }
 
 func New(config Config) (ui *UI, err error) {
 	ui = &UI{
-		config: config,
+		config:      config,
+		clickEvents: make([]clickEvent, 0, 128),
 	}
 	if config.ChanColEnabled {
 		ui.channelWidth = config.ChanColWidth
@@ -94,7 +108,7 @@ func New(config Config) (ui *UI, err error) {
 
 	ui.exit.Store(false)
 
-	ui.Events = make(chan vaxis.Event, 128)
+	ui.Events = make(chan any, 128)
 	go func() {
 		for !ui.ShouldExit() {
 			ev := ui.vx.PollEvent()
@@ -217,6 +231,15 @@ func (ui *UI) ClickedMember() int {
 
 func (ui *UI) ClickMember(i int) {
 	ui.memberClicked = i
+}
+
+func (ui *UI) Click(x, y int) {
+	for _, ev := range ui.clickEvents {
+		if x >= ev.xb && x < ev.xe && y == ev.y {
+			ui.Events <- ev.event
+			break
+		}
+	}
 }
 
 func (ui *UI) ScrollUp() {
@@ -523,6 +546,9 @@ func (ui *UI) Resize() {
 		ui.bs.ResizeTimeline(innerWidth, h-2, textWidth)
 	}
 	ui.ScrollToBuffer()
+	if ui.image != nil {
+		ui.image.Resize(w, h)
+	}
 	ui.vx.Refresh()
 }
 
@@ -538,10 +564,41 @@ func (ui *UI) Notify(title string, body string) {
 	ui.vx.Notify(title, body)
 }
 
+func (ui *UI) ImageReady() bool {
+	if ui.image == nil {
+		return false
+	}
+	iw, ih := ui.image.CellSize()
+	return iw != 0 || ih != 0
+}
+
+func (ui *UI) ShowImage(img image.Image) bool {
+	if img == nil {
+		if ui.image != nil {
+			ui.image.Destroy()
+			ui.image = nil
+		}
+		return true
+	}
+
+	vi, err := ui.vx.NewImage(img)
+	if err != nil {
+		return false
+	}
+	w, h := ui.vx.window.Size()
+	w = w * 9 / 10
+	h = h * 9 / 10
+	vi.Resize(w, h)
+	ui.image = vi
+	return true
+}
+
 func (ui *UI) Draw(members []irc.Member) {
+	ui.clickEvents = ui.clickEvents[:0]
+
 	w, h := ui.vx.window.Size()
 
-	ui.bs.DrawTimeline(ui.vx, ui.channelWidth, 0, ui.config.NickColWidth)
+	ui.bs.DrawTimeline(ui, ui.channelWidth, 0, ui.config.NickColWidth)
 	if ui.channelWidth == 0 {
 		ui.bs.DrawHorizontalBufferList(ui.vx, 0, h-1, w-ui.memberWidth, &ui.channelOffset)
 	} else {
@@ -582,6 +639,11 @@ func (ui *UI) Draw(members []irc.Member) {
 		ui.e.Draw(ui.vx, 9+ui.config.NickColWidth, h-2, hint)
 	} else {
 		ui.e.Draw(ui.vx, 9+ui.channelWidth+ui.config.NickColWidth, h-1, hint)
+	}
+
+	if ui.image != nil {
+		iw, ih := ui.image.CellSize()
+		ui.image.Draw(align.Center(ui.vx.window, iw, ih))
 	}
 
 	ui.vx.Render()

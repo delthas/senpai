@@ -22,3 +22,5 @@ require (
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 )
+
+replace git.sr.ht/~rockorager/vaxis => git.sr.ht/~delthas/vaxis v0.8.6-0.20240702234839-1922cc2973f6

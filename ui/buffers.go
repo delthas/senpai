@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"git.sr.ht/~rockorager/vaxis"
+
+	"git.sr.ht/~delthas/senpai/events"
 )
 
 const Overlay = "/overlay"
@@ -853,7 +855,8 @@ func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, off
 	}
 }
 
-func (bs *BufferList) DrawTimeline(vx *Vaxis, x0, y0, nickColWidth int) {
+func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
+	vx := ui.vx
 	clearArea(vx, x0, y0, bs.tlInnerWidth+nickColWidth+9, bs.tlHeight+2)
 
 	b := bs.cur()
@@ -966,6 +969,7 @@ func (bs *BufferList) DrawTimeline(vx *Vaxis, x0, y0, nickColWidth int) {
 				continue
 			}
 
+			xb := x
 			if y >= y0 {
 				dx, di := printCluster(vx, x, y, -1, l, style)
 				x += dx
@@ -976,6 +980,21 @@ func (bs *BufferList) DrawTimeline(vx *Vaxis, x0, y0, nickColWidth int) {
 				x += cw
 				lbi += len(c)
 				l = l[len([]rune(c)):]
+			}
+
+			if style.Hyperlink != "" {
+				ui.clickEvents = append(ui.clickEvents, clickEvent{
+					xb: xb,
+					xe: x,
+					y:  y,
+					event: &events.EventClickLink{
+						EventClick: events.EventClick{
+							NetID:  b.netID,
+							Buffer: b.title,
+						},
+						Link: style.Hyperlink,
+					},
+				})
 			}
 		}
 	}

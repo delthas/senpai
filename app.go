@@ -4,7 +4,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,6 +22,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
 
+	"git.sr.ht/~delthas/senpai/events"
 	"git.sr.ht/~delthas/senpai/irc"
 	"git.sr.ht/~delthas/senpai/ui"
 )
@@ -109,6 +115,9 @@ type App struct {
 	lastCloseTime   time.Time
 
 	lastConfirm string
+
+	imageLoading bool
+	imageOverlay bool
 }
 
 func NewApp(cfg Config) (app *App, err error) {
@@ -481,6 +490,13 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
 	case statusLine:
 		app.addStatusLine(ev.netID, ev.line)
+	case *events.EventClickLink:
+		app.handleLinkEvent(ev)
+	case *events.EventImageLoaded:
+		app.win.ShowImage(ev.Image)
+		if ev.Image == nil {
+			app.imageLoading = false
+		}
 	default:
 		// TODO: missing event types
 	}
@@ -490,6 +506,15 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 	x, y := ev.Col, ev.Row
 	w, h := app.win.Size()
+
+	if app.imageOverlay && ev.Button == vaxis.MouseLeftButton {
+		if ev.EventType == vaxis.EventPress {
+			app.win.ShowImage(nil)
+			app.imageOverlay = false
+		}
+		return
+	}
+
 	if ev.EventType == vaxis.EventPress {
 		if ev.Button == vaxis.MouseWheelUp {
 			if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
@@ -527,6 +552,8 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
 			} else if x > w-app.win.MemberWidth() && y >= 2 {
 				app.win.ClickMember(y - 2 + app.win.MemberOffset())
+			} else {
+				app.win.Click(x, y)
 			}
 		}
 		if ev.Button == vaxis.MouseMiddleButton {
@@ -779,6 +806,57 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 	} else if keyMatches(ev, '9', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad9, vaxis.ModAlt) {
 		app.win.GoToBufferNo(8)
 	}
+}
+
+func (app *App) fetchImage(link string) (image.Image, error) {
+	c := http.Client{
+		Timeout: 6 * time.Second,
+	}
+	res, err := c.Head(link)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+	}
+	contentType := res.Header.Get("Content-Type")
+	switch contentType {
+	case "image/gif", "image/jpeg", "image/png":
+	default:
+		return nil, fmt.Errorf("unexpected content type: %v", contentType)
+	}
+	res, err = c.Get(link)
+	if err != nil {
+		return nil, err
+	}
+	img, _, err := image.Decode(res.Body)
+	res.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+func (app *App) handleLinkEvent(ev *events.EventClickLink) {
+	app.imageLoading = true
+	go func() {
+		img, err := app.fetchImage(ev.Link)
+		if err != nil {
+			app.events <- event{
+				src: "*",
+				content: &events.EventImageLoaded{
+					Image: nil,
+				},
+			}
+		} else {
+			app.events <- event{
+				src: "*",
+				content: &events.EventImageLoaded{
+					Image: img,
+				},
+			}
+		}
+	}()
 }
 
 // requestHistory is a wrapper around irc.Session.RequestHistory to only request
