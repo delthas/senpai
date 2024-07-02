@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
+	"git.sr.ht/~rockorager/vaxis"
 	"golang.org/x/time/rate"
 )
 
@@ -429,20 +429,24 @@ func (s *Session) Away(message string) {
 }
 
 func splitChunks(s string, chunkLen int) (chunks []string) {
-	if chunkLen <= 0 {
+	if chunkLen <= 0 || len(s) <= chunkLen {
 		return []string{s}
 	}
-	for chunkLen < len(s) {
-		i := chunkLen
-		min := chunkLen - utf8.UTFMax
-		for min <= i && !utf8.RuneStart(s[i]) {
-			i--
+
+	b := 0
+	n := 0
+	for _, c := range vaxis.Characters(s) {
+		cw := len(c.Grapheme)
+		if n+cw > chunkLen {
+			chunks = append(chunks, s[b:b+n])
+			b += n
+			n = cw
+			continue
 		}
-		chunks = append(chunks, s[:i])
-		s = s[i:]
+		n += cw
 	}
-	if len(s) != 0 {
-		chunks = append(chunks, s)
+	if b < len(s) {
+		chunks = append(chunks, s[b:])
 	}
 	return
 }
