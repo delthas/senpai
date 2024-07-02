@@ -572,21 +572,21 @@ func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 		}
 	}
 
-	for i, completion := range e.autoCache[autoOff : autoOff+autoCount] {
+	for ci, completion := range e.autoCache[autoOff : autoOff+autoCount] {
 		display := completion.Display
 		if display == nil {
 			display = completion.Text[completion.StartIdx:]
 		}
 
 		x := autoX
-		y := y - i - 1
+		y := y - ci - 1
 		i := 0
 		for i < len(display) {
 			s := vaxis.Style{
 				Background: vaxis.IndexColor(0),
 				Attribute:  vaxis.AttrReverse,
 			}
-			if i+autoOff == e.autoCacheIdx {
+			if ci+autoOff == e.autoCacheIdx {
 				s.Attribute |= vaxis.AttrBold
 			} else {
 				s.Attribute |= vaxis.AttrDim
