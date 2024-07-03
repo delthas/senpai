@@ -295,7 +295,7 @@ func (e *Editor) Set(text string) {
 	e.bumpOldestChange()
 	e.cursorIdx = len(e.text[e.lineIdx].clusters) - 1
 	e.offsetIdx = 0
-	for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
+	for e.offsetIdx < len(e.textWidth)-1 && e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 		e.offsetIdx++
 	}
 	e.autoCache = nil
@@ -389,7 +389,7 @@ func (e *Editor) End() {
 		return
 	}
 	e.cursorIdx = len(e.text[e.lineIdx].clusters) - 1
-	for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
+	for e.offsetIdx < len(e.textWidth)-1 && e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 		e.offsetIdx++
 	}
 	e.autoCache = nil
@@ -449,7 +449,7 @@ func (e *Editor) AutoComplete() (ok bool) {
 	if len(e.textWidth) <= e.offsetIdx {
 		e.offsetIdx = 0
 	}
-	for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
+	for e.offsetIdx < len(e.textWidth)-1 && e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 		e.offsetIdx++
 	}
 	e.autoCache = nil
@@ -477,7 +477,7 @@ func (e *Editor) backsearchUpdate(start int) {
 			e.recompute()
 			e.setCursor(runeOffset(string(e.text[i].runes), match) + len(e.backsearchPattern))
 			e.offsetIdx = 0
-			for e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
+			for e.offsetIdx < len(e.textWidth)-1 && e.width < e.textWidth[e.cursorIdx]-e.textWidth[e.offsetIdx]+16 {
 				e.offsetIdx++
 			}
 			e.autoCache = nil
