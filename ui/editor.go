@@ -302,6 +302,13 @@ func (e *Editor) Set(text string) {
 	e.backsearchEnd()
 }
 
+func (e *Editor) Enter() bool {
+	if e.autoCache != nil {
+		return e.AutoComplete()
+	}
+	return false
+}
+
 func (e *Editor) Right() {
 	e.right()
 	e.autoCache = nil

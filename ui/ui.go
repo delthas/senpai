@@ -464,6 +464,11 @@ func (ui *UI) InputRune(r rune) {
 	ui.e.PutRune(r)
 }
 
+// InputEnter returns true if the event was eaten
+func (ui *UI) InputEnter() bool {
+	return ui.e.Enter()
+}
+
 func (ui *UI) InputRight() {
 	ui.e.Right()
 }

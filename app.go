@@ -763,7 +763,7 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 	} else if keyMatches(ev, '\n', 0) || keyMatches(ev, '\r', 0) || keyMatches(ev, 'j', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyKeyPadEnter, 0) {
 		if ev.EventType == vaxis.EventPaste {
 			app.win.InputRune('\n')
-		} else {
+		} else if !app.win.InputEnter() {
 			netID, buffer := app.win.CurrentBuffer()
 			input := string(app.win.InputContent())
 			var err error
