@@ -85,10 +85,8 @@ func NewEditor(ui *UI) Editor {
 
 func (e *Editor) Resize(width int) {
 	if width < e.width {
-		e.cursorIdx = 0
-		e.offsetIdx = 0
-		e.autoCache = nil
-		e.backsearchEnd()
+		// Reset cursor to the same size, to recompute offsetIdx
+		e.setCursor(e.textWidth[e.cursorIdx])
 	}
 	e.width = width
 }
