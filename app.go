@@ -41,6 +41,8 @@ type bound struct {
 
 	firstMessage string
 	lastMessage  string
+
+	complete bool
 }
 
 // Compare returns 0 if line is within bounds, -1 if before, 1 if after.
@@ -267,6 +269,7 @@ func (app *App) eventLoop() {
 					s.ReadSet(buffer, timestamp)
 				}
 			}
+			app.maybeRequestHistory()
 			app.setStatus()
 			app.updatePrompt()
 			app.setBufferNumbers()
@@ -523,7 +526,6 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				app.win.ScrollMemberUpBy(4)
 			} else {
 				app.win.ScrollUpBy(4)
-				app.requestHistory()
 			}
 		}
 		if ev.Button == vaxis.MouseWheelDown {
@@ -686,7 +688,6 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 		app.win.Resize()
 	} else if keyMatches(ev, 'u', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyPgUp, 0) {
 		app.win.ScrollUp()
-		app.requestHistory()
 	} else if keyMatches(ev, 'd', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyPgDown, 0) {
 		app.win.ScrollDown()
 	} else if keyMatches(ev, 'n', vaxis.ModCtrl) {
@@ -859,18 +860,22 @@ func (app *App) handleLinkEvent(ev *events.EventClickLink) {
 	}()
 }
 
-// requestHistory is a wrapper around irc.Session.RequestHistory to only request
+// maybeRequestHistory is a wrapper around irc.Session.RequestHistory to only request
 // history when needed.
-func (app *App) requestHistory() {
+func (app *App) maybeRequestHistory() {
 	if app.win.HasOverlay() {
 		return
 	}
 	netID, buffer := app.win.CurrentBuffer()
+	if app.messageBounds[boundKey{netID, buffer}].complete {
+		return
+	}
 	s := app.sessions[netID]
 	if s == nil {
 		return
 	}
-	if app.win.IsAtTop() && buffer != "" {
+	_, h := app.win.Size()
+	if l := app.win.LinesAboveOffset(); l < h*2 && buffer != "" {
 		if bound, ok := app.messageBounds[boundKey{netID, buffer}]; ok {
 			s.NewHistoryRequest(buffer).
 				WithLimit(200).
@@ -1184,8 +1189,21 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			}
 		}
 		app.win.AddLines(netID, ev.Target, linesBefore, linesAfter)
+
 		if !boundsNew.IsZero() {
 			app.messageBounds[boundKey{netID, ev.Target}] = boundsNew
+		}
+		if len(ev.Messages) < 10 {
+			// We're getting a non-full page: mark as complete to avoid indefinitely fetching the history.
+			// This should ideally be equal to the CHATHISTORY LIMIT, but it can be non advertised, or
+			// a full page could sometimes be less than a limit (because it could be filtered).
+			// It is also not zero, because bounds are inclusive, and not one, because we truncate based on
+			// the second of the message (because some bouncers have a second-level resolution).
+			// Be safe and pick 10 messages: less messages means that this was not a full page and we are done
+			// with fetching the backlog.
+			b := app.messageBounds[boundKey{netID, ev.Target}]
+			b.complete = true
+			app.messageBounds[boundKey{netID, ev.Target}] = b
 		}
 	case irc.SearchEvent:
 		app.win.OpenOverlay("Press Escape to close the search results")

@@ -326,8 +326,8 @@ func (ui *UI) ScrollMemberDownBy(n int) {
 	ui.memberOffset += n
 }
 
-func (ui *UI) IsAtTop() bool {
-	return ui.bs.IsAtTop()
+func (ui *UI) LinesAboveOffset() int {
+	return ui.bs.LinesAboveOffset()
 }
 
 func (ui *UI) OpenOverlay(hint string) {

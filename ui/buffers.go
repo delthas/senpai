@@ -445,7 +445,7 @@ func (bs *BufferList) AddLine(netID, title string, line Line) {
 	n := len(b.lines)
 	line.At = line.At.UTC()
 
-	if !line.Mergeable && current.openedOnce {
+	if !line.Mergeable && b.openedOnce {
 		line.Body = line.Body.ParseURLs()
 	}
 
@@ -649,9 +649,12 @@ func (bs *BufferList) ScrollDownHighlight() bool {
 	return b.scrollAmt != 0
 }
 
-func (bs *BufferList) IsAtTop() bool {
+// LinesAboveOffset returns a rough approximate of the number of lines
+// above the offset (that is, starting from the bottom of the screen,
+// up to the first line).
+func (bs *BufferList) LinesAboveOffset() int {
 	b := bs.cur()
-	return b.isAtTop
+	return len(b.lines) - b.scrollAmt
 }
 
 func (bs *BufferList) at(netID, title string) (int, *buffer) {
