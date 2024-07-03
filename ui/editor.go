@@ -444,7 +444,9 @@ func (e *Editor) AutoComplete() (ok bool) {
 			return false
 		}
 		e.autoCacheIdx = 0
-		return
+		if len(e.autoCache) > 1 {
+			return false
+		}
 	}
 
 	e.text[e.lineIdx].runes = e.autoCache[e.autoCacheIdx].Text
