@@ -275,6 +275,9 @@ func (ui *UI) ScrollChannelUpBy(n int) {
 
 func (ui *UI) ScrollChannelDownBy(n int) {
 	ui.channelOffset += n
+	if ui.channelOffset > len(ui.bs.list) {
+		ui.channelOffset = len(ui.bs.list)
+	}
 }
 
 func (ui *UI) HorizontalBufferOffset(x int) int {
