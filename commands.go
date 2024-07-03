@@ -977,6 +977,9 @@ func (app *App) handleInput(buffer, content string) error {
 	if cmdName == "" {
 		return fmt.Errorf("lone slash at the beginning")
 	}
+	if strings.HasPrefix("BUFFER", cmdName) {
+		cmdName = "BUFFER"
+	}
 
 	var chosenCMDName string
 	var found bool
