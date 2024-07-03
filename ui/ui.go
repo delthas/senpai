@@ -174,7 +174,7 @@ func (ui *UI) ClickedBuffer() int {
 }
 
 func (ui *UI) ClickBuffer(i int) {
-	if i < len(ui.bs.list) {
+	if i >= 0 && i < len(ui.bs.list) {
 		ui.bs.clicked = i
 	}
 }
@@ -221,8 +221,8 @@ func (ui *UI) GoToBufferNo(i int) {
 	}
 }
 
-func (ui *UI) ShowBufferNumbers(enable bool) {
-	ui.bs.ShowBufferNumbers(enable)
+func (ui *UI) FilterBuffers(enable bool, query string) {
+	ui.bs.FilterBuffers(enable, query)
 }
 
 func (ui *UI) ClickedMember() int {
@@ -284,8 +284,8 @@ func (ui *UI) HorizontalBufferOffset(x int) int {
 	return ui.bs.HorizontalBufferOffset(x, ui.channelOffset)
 }
 
-func (ui *UI) ChannelOffset() int {
-	return ui.channelOffset
+func (ui *UI) VerticalBufferOffset(y int) int {
+	return ui.bs.VerticalBufferOffset(y, ui.channelOffset)
 }
 
 func (ui *UI) MemberOffset() int {
@@ -393,7 +393,13 @@ func (ui *UI) AddLines(netID, buffer string, before, after []Line) {
 func (ui *UI) JumpBuffer(sub string) bool {
 	subLower := strings.ToLower(sub)
 	for i, b := range ui.bs.list {
-		if strings.Contains(strings.ToLower(b.title), subLower) {
+		var title string
+		if b.title == "" {
+			title = b.netName
+		} else {
+			title = b.title
+		}
+		if strings.Contains(strings.ToLower(title), subLower) {
 			if ui.bs.To(i) {
 				ui.memberOffset = 0
 			}

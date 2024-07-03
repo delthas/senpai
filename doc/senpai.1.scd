@@ -99,6 +99,9 @@ will be shown, which can be closed by clicking again anywhere in the interface.
 *CTRL-F*
 	Prepare for search: add /search to input line.
 
+*CTRL-K*
+	Prepare for jumping to a buffer: add /buffer to input line.
+
 *CTRL-U*, *PgUp*
 	Go up in the timeline.
 
@@ -206,8 +209,10 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *LIST* [pattern]
 	List public channels, optionally matching the specified pattern.
 
-*BUFFER* <name>
-	Switch to the buffer containing _name_.
+*BUFFER* <index|name>
+	Switch to the buffer at the _index_ position, or containing _name_.
+	The buffer list will be filtered according to the passed name; entering the
+	command will select the first buffer in the list.
 
 *WHOIS* <nickname>
 	Get information about someone who is connected.

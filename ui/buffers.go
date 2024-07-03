@@ -234,7 +234,8 @@ type BufferList struct {
 	tlHeight     int
 	textWidth    int
 
-	showBufferNumbers bool
+	filterBuffers      bool
+	filterBuffersQuery string // lowercased
 }
 
 // NewBufferList returns a new BufferList.
@@ -298,8 +299,9 @@ func (bs *BufferList) To(i int) bool {
 	return false
 }
 
-func (bs *BufferList) ShowBufferNumbers(enabled bool) {
-	bs.showBufferNumbers = enabled
+func (bs *BufferList) FilterBuffers(enable bool, query string) {
+	bs.filterBuffers = enable
+	bs.filterBuffersQuery = strings.ToLower(query)
 }
 
 func (bs *BufferList) Next() {
@@ -684,16 +686,20 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 			*offset = 0
 		}
 	}
+	off := bs.VerticalBufferOffset(0, *offset)
+	if off < 0 {
+		off = len(bs.list)
+	}
 
 	width--
 	drawVerticalLine(vx, x0+width, y0, height)
 	clearArea(vx, x0, y0, width, height)
 
 	indexPadding := 1 + int(math.Ceil(math.Log10(float64(len(bs.list)))))
-	for i, b := range bs.list[*offset:] {
-		bi := *offset + i
+	y := y0
+	for i, b := range bs.list[off:] {
+		bi := off + i
 		x := x0
-		y := y0 + i
 		var st vaxis.Style
 		if b.unread {
 			st.Attribute |= vaxis.AttrBold
@@ -702,7 +708,18 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 		if bi == bs.current || bi == bs.clicked {
 			st.Attribute |= vaxis.AttrReverse
 		}
-		if bs.showBufferNumbers {
+
+		var title string
+		if b.title == "" {
+			title = b.netName
+		} else {
+			title = b.title
+		}
+
+		if bs.filterBuffers {
+			if !strings.Contains(strings.ToLower(title), bs.filterBuffersQuery) {
+				continue
+			}
 			indexSt := st
 			indexSt.Foreground = ColorGray
 			indexText := fmt.Sprintf("%d:", bi+1)
@@ -710,10 +727,7 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 			x = x0 + indexPadding
 		}
 
-		var title string
-		if b.title == "" {
-			title = b.netName
-		} else {
+		if b.title != "" {
 			if bi == bs.current || bi == bs.clicked {
 				st := vaxis.Style{
 					Attribute: vaxis.AttrReverse,
@@ -722,7 +736,6 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 				setCell(vx, x+1, y, ' ', st)
 			}
 			x += 2
-			title = b.title
 		}
 		title = truncate(vx, title, width-(x-x0), "\u2026")
 		printString(vx, &x, y, Styled(title, st))
@@ -746,11 +759,28 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 			x = x0 + width - len(highlightText)
 			printString(vx, &x, y, Styled(highlightText, highlightSt))
 		}
+
+		y++
 	}
 }
 
 func (bs *BufferList) HorizontalBufferOffset(x int, offset int) int {
-	for i, b := range bs.list[offset:] {
+	if bs.filterBuffers {
+		offset = 0
+	}
+	i := 0
+	for bi, b := range bs.list[offset:] {
+		if bs.filterBuffers {
+			var title string
+			if b.title == "" {
+				title = b.netName
+			} else {
+				title = b.title
+			}
+			if !strings.Contains(strings.ToLower(title), bs.filterBuffersQuery) {
+				continue
+			}
+		}
 		if i > 0 {
 			x--
 			if x < 0 {
@@ -759,8 +789,35 @@ func (bs *BufferList) HorizontalBufferOffset(x int, offset int) int {
 		}
 		x -= bs.bufferWidth(&b)
 		if x < 0 {
-			return offset + i
+			return offset + bi
 		}
+		i++
+	}
+	return -1
+}
+
+func (bs *BufferList) VerticalBufferOffset(y int, offset int) int {
+	if !bs.filterBuffers {
+		return offset + y
+	}
+
+	for i, b := range bs.list {
+		var title string
+		if b.title == "" {
+			title = b.netName
+		} else {
+			title = b.title
+		}
+
+		if bs.filterBuffers {
+			if !strings.Contains(strings.ToLower(title), bs.filterBuffersQuery) {
+				continue
+			}
+		}
+		if y == 0 {
+			return i
+		}
+		y--
 	}
 	return -1
 }
@@ -814,8 +871,13 @@ func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, off
 	}
 	x = x0
 
-	for i, b := range bs.list[*offset:] {
-		i := i + *offset
+	off := bs.HorizontalBufferOffset(0, *offset)
+	if off < 0 {
+		off = len(bs.list)
+	}
+
+	for i, b := range bs.list[off:] {
+		i := i + off
 		if width <= x-x0 {
 			break
 		}
@@ -837,6 +899,13 @@ func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, off
 		} else {
 			title = b.title
 		}
+
+		if bs.filterBuffers {
+			if !strings.Contains(strings.ToLower(title), bs.filterBuffersQuery) {
+				continue
+			}
+		}
+
 		title = truncate(vx, title, width-x, "\u2026")
 		printString(vx, &x, y0, Styled(title, st))
 

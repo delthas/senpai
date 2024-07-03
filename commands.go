@@ -165,8 +165,8 @@ func init() {
 			AllowHome: true,
 			MinArgs:   1,
 			MaxArgs:   1,
-			Usage:     "<name>",
-			Desc:      "switch to the buffer containing a substring",
+			Usage:     "<index|name>",
+			Desc:      "switch to the buffer at the position or containing a substring",
 			Handle:    commandDoBuffer,
 		},
 		"WHOIS": {

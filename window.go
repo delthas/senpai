@@ -1,6 +1,7 @@
 package senpai
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -79,17 +80,29 @@ func (app *App) setStatus() {
 func (app *App) setBufferNumbers() {
 	input := app.win.InputContent()
 	if !isCommand(input) {
-		app.win.ShowBufferNumbers(false)
+		app.win.FilterBuffers(false, "")
 		return
 	}
-	commandEnd := len(input)
-	for i := 1; i < len(input); i++ {
-		if input[i] == ' ' {
-			commandEnd = i
-			break
-		}
+	cmd, arg, _ := strings.Cut(string(input[1:]), " ")
+	if cmd == "" || !strings.HasPrefix("buffer", cmd) {
+		app.win.FilterBuffers(false, "")
+		return
 	}
-	command := string(input[1:commandEnd])
-	showBufferNumbers := len(command) != 0 && strings.HasPrefix("buffer", command)
-	app.win.ShowBufferNumbers(showBufferNumbers)
+	if _, err := strconv.Atoi(arg); err == nil {
+		// Do not filter buffers if we are passing a buffer index
+		arg = ""
+	}
+	app.win.FilterBuffers(true, arg)
+}
+
+func (app *App) clearBufferCommand() {
+	input := app.win.InputContent()
+	if !isCommand(input) {
+		return
+	}
+	cmd, _, _ := strings.Cut(string(input[1:]), " ")
+	if cmd == "" || !strings.HasPrefix("buffer", cmd) {
+		return
+	}
+	app.win.InputClear()
 }

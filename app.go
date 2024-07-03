@@ -546,7 +546,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				app.win.ClickChannelCol(true)
 				app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
 			} else if x < app.win.ChannelWidth() {
-				app.win.ClickBuffer(y + app.win.ChannelOffset())
+				app.win.ClickBuffer(app.win.VerticalBufferOffset(y))
 			} else if app.win.ChannelWidth() == 0 && y == h-1 {
 				app.win.ClickBuffer(app.win.HorizontalBufferOffset(x))
 			} else if x == w-app.win.MemberWidth() {
@@ -561,7 +561,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 		if ev.Button == vaxis.MouseMiddleButton {
 			i := -1
 			if x < app.win.ChannelWidth() {
-				i = y + app.win.ChannelOffset()
+				i = app.win.VerticalBufferOffset(y)
 			} else if app.win.ChannelWidth() == 0 && y == h-1 {
 				i = app.win.HorizontalBufferOffset(x)
 			}
@@ -578,12 +578,14 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 	}
 	if ev.EventType == vaxis.EventRelease {
 		if x < app.win.ChannelWidth()-1 {
-			if i := y + app.win.ChannelOffset(); i == app.win.ClickedBuffer() {
+			if i := app.win.VerticalBufferOffset(y); i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
+				app.clearBufferCommand()
 			}
 		} else if app.win.ChannelWidth() == 0 && y == h-1 {
 			if i := app.win.HorizontalBufferOffset(x); i >= 0 && i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
+				app.clearBufferCommand()
 			}
 		} else if x > w-app.win.MemberWidth() {
 			if i := y - 2 + app.win.MemberOffset(); i >= 0 && i == app.win.ClickedMember() {
@@ -679,6 +681,10 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 	} else if keyMatches(ev, 'f', vaxis.ModCtrl) {
 		if len(app.win.InputContent()) == 0 {
 			app.win.InputSet("/search ")
+		}
+	} else if keyMatches(ev, 'k', vaxis.ModCtrl) {
+		if len(app.win.InputContent()) == 0 {
+			app.win.InputSet("/buffer ")
 		}
 	} else if keyMatches(ev, 'a', vaxis.ModCtrl) {
 		app.win.InputHome()
