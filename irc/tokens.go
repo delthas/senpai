@@ -480,17 +480,21 @@ func (m members) Len() int {
 }
 
 func (m members) Less(i, j int) bool {
-	if m.m[i].PowerLevel != "" && m.m[j].PowerLevel == "" {
-		return true
-	} else if m.m[i].PowerLevel == "" && m.m[j].PowerLevel != "" {
-		return false
-	} else if m.m[i].PowerLevel != m.m[j].PowerLevel {
-		pi := strings.IndexByte(m.prefixes, m.m[i].PowerLevel[0])
-		pj := strings.IndexByte(m.prefixes, m.m[j].PowerLevel[0])
-		return pi < pj
+	var pi, pj int
+	if m.m[i].PowerLevel != "" {
+		pi = strings.IndexByte(m.prefixes, m.m[i].PowerLevel[0])
 	} else {
-		return strings.ToLower(m.m[i].Name.Name) < strings.ToLower(m.m[j].Name.Name)
+		pi = len(m.prefixes)
 	}
+	if m.m[j].PowerLevel != "" {
+		pj = strings.IndexByte(m.prefixes, m.m[j].PowerLevel[0])
+	} else {
+		pj = len(m.prefixes)
+	}
+	if pi != pj {
+		return pi < pj
+	}
+	return strings.ToLower(m.m[i].Name.Name) < strings.ToLower(m.m[j].Name.Name)
 }
 
 func (m members) Swap(i, j int) {
