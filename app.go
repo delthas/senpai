@@ -743,11 +743,7 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 		if app.win.InputDeleteWord() {
 			app.typing()
 		}
-	} else if keyMatches(ev, vaxis.KeyBackspace, 0) {
-		if app.win.InputBackspace() {
-			app.typing()
-		}
-	} else if keyMatches(ev, vaxis.KeyBackspace, vaxis.ModShift) {
+	} else if keyMatches(ev, vaxis.KeyBackspace, 0) || keyMatches(ev, vaxis.KeyBackspace, vaxis.ModShift) {
 		if app.win.InputBackspace() {
 			app.typing()
 		}

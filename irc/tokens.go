@@ -470,24 +470,31 @@ type Member struct {
 	Self         bool // Added by senpai
 }
 
-type members []Member
+type members struct {
+	m        []Member
+	prefixes string
+}
 
 func (m members) Len() int {
-	return len(m)
+	return len(m.m)
 }
 
 func (m members) Less(i, j int) bool {
-	if m[i].PowerLevel != "" && m[j].PowerLevel == "" {
+	if m.m[i].PowerLevel != "" && m.m[j].PowerLevel == "" {
 		return true
-	} else if m[i].PowerLevel == "" && m[j].PowerLevel != "" {
+	} else if m.m[i].PowerLevel == "" && m.m[j].PowerLevel != "" {
 		return false
+	} else if m.m[i].PowerLevel != m.m[j].PowerLevel {
+		pi := strings.IndexByte(m.prefixes, m.m[i].PowerLevel[0])
+		pj := strings.IndexByte(m.prefixes, m.m[j].PowerLevel[0])
+		return pi < pj
 	} else {
-		return strings.ToLower(m[i].Name.Name) < strings.ToLower(m[j].Name.Name)
+		return strings.ToLower(m.m[i].Name.Name) < strings.ToLower(m.m[j].Name.Name)
 	}
 }
 
 func (m members) Swap(i, j int) {
-	m[i], m[j] = m[j], m[i]
+	m.m[i], m.m[j] = m.m[j], m.m[i]
 }
 
 // ParseNameReply parses the last parameter of RPL_NAMREPLY, according to the

@@ -298,7 +298,10 @@ func (s *Session) Names(target string) []Member {
 			Self: true,
 		})
 	}
-	sort.Sort(members(names))
+	sort.Sort(members{
+		m:        names,
+		prefixes: s.prefixSymbols,
+	})
 	return names
 }
 
