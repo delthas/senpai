@@ -369,7 +369,8 @@ func (ui *UI) AddLine(netID, buffer string, line Line) {
 
 	curNetID, curBuffer := ui.bs.Current()
 	_, b := ui.bs.at(netID, buffer)
-	if b != nil && line.Notify == NotifyHighlight && (curNetID != netID || curBuffer != buffer) {
+	focused := ui.bs.focused && curNetID == netID && curBuffer == buffer
+	if b != nil && line.Notify == NotifyHighlight && !focused {
 		var header string
 		if buffer != line.Head {
 			header = fmt.Sprintf("%s — %s", buffer, line.Head)
@@ -430,6 +431,14 @@ func (ui *UI) JumpBufferNetwork(netID, buffer string) bool {
 		}
 	}
 	return false
+}
+
+func (ui *UI) Focused() bool {
+	return ui.bs.Focused()
+}
+
+func (ui *UI) SetFocused(focused bool) {
+	ui.bs.SetFocused(focused)
 }
 
 func (ui *UI) SetTopic(netID, buffer string, topic string) {

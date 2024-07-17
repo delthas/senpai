@@ -263,10 +263,12 @@ func (app *App) eventLoop() {
 		}
 
 		if !app.pasting {
-			if netID, buffer, timestamp := app.win.UpdateRead(); buffer != "" {
-				s := app.sessions[netID]
-				if s != nil {
-					s.ReadSet(buffer, timestamp)
+			if app.win.Focused() {
+				if netID, buffer, timestamp := app.win.UpdateRead(); buffer != "" {
+					s := app.sessions[netID]
+					if s != nil {
+						s.ReadSet(buffer, timestamp)
+					}
 				}
 			}
 			app.maybeRequestHistory()
@@ -493,6 +495,10 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.handleMouseEvent(ev)
 	case vaxis.Key:
 		app.handleKeyEvent(ev)
+	case vaxis.FocusIn:
+		app.win.SetFocused(true)
+	case vaxis.FocusOut:
+		app.win.SetFocused(false)
 	case *ui.NotifyEvent:
 		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
 	case statusLine:
@@ -1127,7 +1133,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.win.AddLine(netID, buffer, line)
 		if line.Notify == ui.NotifyHighlight {
 			curNetID, curBuffer := app.win.CurrentBuffer()
-			current := curNetID == netID && curBuffer == buffer
+			current := app.win.Focused() && curNetID == netID && curBuffer == buffer
 			app.notifyHighlight(buffer, ev.User, line.Body.String(), current)
 		}
 		if !s.IsChannel(msg.Params[0]) && !s.IsMe(ev.User) {
@@ -1340,7 +1346,7 @@ func (app *App) isHighlight(s *irc.Session, content string) bool {
 // notifyHighlight executes the script at "on-highlight-path" according to the given
 // message context.
 func (app *App) notifyHighlight(buffer, nick, content string, current bool) {
-	if app.cfg.OnHighlightBeep {
+	if !current && app.cfg.OnHighlightBeep {
 		app.win.Beep()
 	}
 

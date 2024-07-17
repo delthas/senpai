@@ -229,6 +229,7 @@ type BufferList struct {
 	overlay *buffer
 	current int
 	clicked int
+	focused bool
 
 	tlInnerWidth int
 	tlHeight     int
@@ -245,6 +246,7 @@ func NewBufferList(ui *UI) BufferList {
 		ui:      ui,
 		list:    []buffer{},
 		clicked: -1,
+		focused: true,
 	}
 }
 
@@ -465,10 +467,10 @@ func (bs *BufferList) AddLine(netID, title string, line Line) {
 		}
 	}
 
-	if line.Notify != NotifyNone && b != current {
+	if line.Notify != NotifyNone && (!bs.focused || b != current) {
 		b.unread = true
 	}
-	if line.Notify == NotifyHighlight && b != current {
+	if line.Notify == NotifyHighlight && (!bs.focused || b != current) {
 		b.highlights++
 	}
 	if b == current && b.unreadSkip == optionalUnset && len(b.lines) > 0 {
@@ -485,7 +487,7 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 	if b == nil {
 		return
 	}
-	updateRead := b != bs.cur() && !b.read.IsZero()
+	updateRead := (!bs.focused || b != bs.cur()) && !b.read.IsZero()
 
 	lines := make([]Line, 0, len(before)+len(b.lines)+len(after))
 	for _, buf := range []*[]Line{&before, &b.lines, &after} {
@@ -522,6 +524,17 @@ func (bs *BufferList) AddLines(netID, title string, before, after []Line) {
 		} else {
 			b.unreadSkip = optionalFalse
 		}
+	}
+}
+
+func (bs *BufferList) Focused() bool {
+	return bs.focused
+}
+
+func (bs *BufferList) SetFocused(focused bool) {
+	bs.focused = focused
+	if focused {
+		bs.clearRead(bs.current)
 	}
 }
 
