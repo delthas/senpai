@@ -174,9 +174,7 @@ func (ui *UI) ClickedBuffer() int {
 }
 
 func (ui *UI) ClickBuffer(i int) {
-	if i >= 0 && i < len(ui.bs.list) {
-		ui.bs.clicked = i
-	}
+	ui.bs.clicked = i
 }
 
 func (ui *UI) ClickChannelCol(v bool) {
