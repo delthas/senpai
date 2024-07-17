@@ -161,7 +161,7 @@ func printString(vx *Vaxis, x *int, y int, s StyledString) {
 	}
 }
 
-func printIdent(vx *Vaxis, x, y, width int, s StyledString) {
+func printIdent(vx *Vaxis, x, y, width int, s StyledString) (xb int, xe int) {
 	s.string = truncate(vx, s.string, width, "\u2026")
 	x += width - stringWidth(vx, s.string)
 	var st vaxis.Style
@@ -169,6 +169,7 @@ func printIdent(vx *Vaxis, x, y, width int, s StyledString) {
 		st = s.styles[0].Style
 	}
 	setCell(vx, x-1, y, ' ', st)
+	xb = x
 	printString(vx, &x, y, s)
 	if len(s.styles) != 0 {
 		// TODO check if it's not a style that is from the truncated
@@ -176,6 +177,8 @@ func printIdent(vx *Vaxis, x, y, width int, s StyledString) {
 		st = s.styles[len(s.styles)-1].Style
 	}
 	setCell(vx, x, y, ' ', st)
+	xe = x
+	return
 }
 
 func printNumber(vx *Vaxis, x *int, y int, st vaxis.Style, n int) {

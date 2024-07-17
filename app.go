@@ -503,6 +503,8 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
 	case statusLine:
 		app.addStatusLine(ev.netID, ev.line)
+	case *events.EventClickNick:
+		app.handleNickEvent(ev)
 	case *events.EventClickLink:
 		app.handleLinkEvent(ev)
 	case *events.EventImageLoaded:
@@ -822,6 +824,20 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 		app.win.GoToBufferNo(7)
 	} else if keyMatches(ev, '9', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad9, vaxis.ModAlt) {
 		app.win.GoToBufferNo(8)
+	}
+}
+
+func (app *App) handleNickEvent(ev *events.EventClickNick) {
+	s := app.sessions[ev.NetID]
+	if s == nil {
+		return
+	}
+	i, added := app.win.AddBuffer(ev.NetID, "", ev.Nick)
+	app.win.JumpBufferIndex(i)
+	if added {
+		s.MonitorAdd(ev.Nick)
+		s.ReadGet(ev.Nick)
+		s.NewHistoryRequest(ev.Nick).WithLimit(500).Latest()
 	}
 }
 

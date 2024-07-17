@@ -1032,7 +1032,22 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 			if line.Highlight {
 				identSt.Attribute |= vaxis.AttrReverse
 			}
-			printIdent(vx, x0+7, yi, nickColWidth, Styled(line.Head, identSt))
+			xb, xe := printIdent(vx, x0+7, yi, nickColWidth, Styled(line.Head, identSt))
+
+			if !strings.HasSuffix(line.Head, "--") && !strings.HasSuffix(line.Head, "!!") {
+				ui.clickEvents = append(ui.clickEvents, clickEvent{
+					xb: xb,
+					xe: xe,
+					y:  yi,
+					event: &events.EventClickNick{
+						EventClick: events.EventClick{
+							NetID:  b.netID,
+							Buffer: b.title,
+						},
+						Nick: line.Head,
+					},
+				})
+			}
 		}
 
 		x := x1
