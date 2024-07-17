@@ -280,11 +280,15 @@ func (app *App) eventLoop() {
 				currentMembers = s.Names(buffer)
 			}
 			app.win.Draw(currentMembers)
-			if netID != "" && buffer != "" {
-				app.win.SetTitle(fmt.Sprintf("%s — senpai", buffer))
-			} else {
-				app.win.SetTitle("senpai")
+			var title strings.Builder
+			if higlights := app.win.Highlights(); higlights > 0 {
+				fmt.Fprintf(&title, "(%d) ", higlights)
 			}
+			if netID != "" && buffer != "" {
+				fmt.Fprintf(&title, "%s - ", buffer)
+			}
+			title.WriteString("senpai")
+			app.win.SetTitle(title.String())
 		}
 	}
 	go func() {

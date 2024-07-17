@@ -659,6 +659,14 @@ func (bs *BufferList) LinesAboveOffset() int {
 	return len(b.lines) - b.scrollAmt
 }
 
+func (bs *BufferList) Highlights() int {
+	n := 0
+	for _, b := range bs.list {
+		n += b.highlights
+	}
+	return n
+}
+
 func (bs *BufferList) at(netID, title string) (int, *buffer) {
 	if netID == "" && title == Overlay {
 		return -1, bs.overlay

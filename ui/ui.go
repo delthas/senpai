@@ -578,6 +578,10 @@ func (ui *UI) Notify(title string, body string) {
 	ui.vx.Notify(title, body)
 }
 
+func (ui *UI) Highlights() int {
+	return ui.bs.Highlights()
+}
+
 func (ui *UI) ImageReady() bool {
 	if ui.image == nil {
 		return false
