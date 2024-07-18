@@ -118,8 +118,8 @@ func (s StyledString) ParseURLs() StyledString {
 			}
 			if st.Start == ub {
 				// a style already starts at this position, edit it
-				lastStyle.Style.Hyperlink = link
-				lastStyle.Style.HyperlinkParams = fmt.Sprintf("id=%v", id)
+				st.Style.Hyperlink = link
+				st.Style.HyperlinkParams = fmt.Sprintf("id=%v", id)
 			}
 			lastStyle = st
 			styles = append(styles, st)
