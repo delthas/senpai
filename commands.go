@@ -595,6 +595,9 @@ func commandDoPart(app *App, args []string) (err error) {
 func commandDoQuery(app *App, args []string) (err error) {
 	netID, _ := app.win.CurrentBuffer()
 	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
 	target := args[0]
 	if s.IsChannel(target) {
 		return fmt.Errorf("cannot query a channel, use JOIN instead")
