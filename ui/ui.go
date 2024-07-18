@@ -10,6 +10,7 @@ import (
 	"git.sr.ht/~rockorager/vaxis"
 	"git.sr.ht/~rockorager/vaxis/widgets/align"
 
+	"git.sr.ht/~delthas/senpai/events"
 	"git.sr.ht/~delthas/senpai/irc"
 )
 
@@ -72,6 +73,8 @@ type UI struct {
 	clickEvents []clickEvent
 
 	image vaxis.Image
+
+	mouseLinks bool
 }
 
 func New(config Config) (ui *UI, err error) {
@@ -105,6 +108,8 @@ func New(config Config) (ui *UI, err error) {
 	_, h := ui.vx.window.Size()
 	ui.vx.window.Clear()
 	ui.vx.ShowCursor(0, h-2, vaxis.CursorBeam)
+
+	ui.mouseLinks = ui.config.LocalIntegrations && strings.HasPrefix(ui.vx.TerminalID(), "foot")
 
 	ui.exit.Store(false)
 
@@ -237,10 +242,12 @@ func (ui *UI) ClickMember(i int) {
 	ui.memberClicked = i
 }
 
-func (ui *UI) Click(x, y int) {
+func (ui *UI) Click(x, y int, event vaxis.Mouse) {
 	for _, ev := range ui.clickEvents {
 		if x >= ev.xb && x < ev.xe && y == ev.y {
-			ui.Events <- ev.event
+			e := ev.event
+			e.(events.EventClickSetEvent).SetEvent(event)
+			ui.Events <- e
 			break
 		}
 	}

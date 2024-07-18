@@ -1061,6 +1061,10 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 			if 0 < len(nextStyles) && nextStyles[0].Start == lbi {
 				style = nextStyles[0].Style
 				nextStyles = nextStyles[1:]
+
+				if bs.ui.mouseLinks && style.Hyperlink != "" && style.UnderlineStyle == 0 {
+					style.UnderlineStyle = vaxis.UnderlineDotted
+				}
 			}
 			if 0 < len(nls) && lbi == nls[0] {
 				x = x1
@@ -1100,7 +1104,8 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 							NetID:  b.netID,
 							Buffer: b.title,
 						},
-						Link: style.Hyperlink,
+						Link:  style.Hyperlink,
+						Mouse: ui.mouseLinks,
 					},
 				})
 			}

@@ -1,10 +1,23 @@
 package events
 
-import "image"
+import (
+	"image"
+
+	"git.sr.ht/~rockorager/vaxis"
+)
+
+type EventClickSetEvent interface {
+	SetEvent(vaxis.Mouse)
+}
 
 type EventClick struct {
+	Event  vaxis.Mouse
 	NetID  string
 	Buffer string
+}
+
+func (e *EventClick) SetEvent(ev vaxis.Mouse) {
+	e.Event = ev
 }
 
 type EventClickNick struct {
@@ -14,7 +27,8 @@ type EventClickNick struct {
 
 type EventClickLink struct {
 	EventClick
-	Link string
+	Link  string
+	Mouse bool
 }
 
 type EventImageLoaded struct {

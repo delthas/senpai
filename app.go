@@ -571,7 +571,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 			} else if x > w-app.win.MemberWidth() && y >= 2 {
 				app.win.ClickMember(y - 2 + app.win.MemberOffset())
 			} else {
-				app.win.Click(x, y)
+				app.win.Click(x, y, ev)
 			}
 		}
 		if ev.Button == vaxis.MouseMiddleButton {
@@ -590,6 +590,9 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 					app.win.RemoveBuffer(netID, channel)
 				}
 			}
+		}
+		if ev.Button == vaxis.MouseRightButton {
+			app.win.Click(x, y, ev)
 		}
 	}
 	if ev.EventType == vaxis.EventRelease {
@@ -871,6 +874,19 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 }
 
 func (app *App) handleLinkEvent(ev *events.EventClickLink) {
+	if ev.Event.Modifiers == vaxis.ModCtrl {
+		if strings.HasPrefix(ev.Link, "-") {
+			// Avoid injection of parameters.
+			// Sadly xdg-open does not support "--"...
+			return
+		}
+		go func() {
+			cmd := exec.Command("xdg-open", ev.Link)
+			cmd.Run()
+		}()
+		return
+	}
+
 	app.imageLoading = true
 	go func() {
 		img, err := app.fetchImage(ev.Link)
