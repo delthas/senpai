@@ -489,6 +489,7 @@ func (app *App) uiLoop() {
 }
 
 func (app *App) handleUIEvent(ev interface{}) bool {
+	// TODO: when a no-modifier no-button mouse motion event is sent, just set the mouse cursor and avoid redrawing
 	// TODO: eat QuitEvent here?
 	switch ev := ev.(type) {
 	case vaxis.Resize:
@@ -600,14 +601,12 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 		if ev.Button == vaxis.MouseLeftButton {
 			if x == app.win.ChannelWidth()-1 {
 				app.win.ClickChannelCol(true)
-				app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
 			} else if x < app.win.ChannelWidth() {
 				app.win.ClickBuffer(app.win.VerticalBufferOffset(y))
 			} else if app.win.ChannelWidth() == 0 && y == h-1 {
 				app.win.ClickBuffer(app.win.HorizontalBufferOffset(x))
 			} else if x == w-app.win.MemberWidth() {
 				app.win.ClickMemberCol(true)
-				app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
 			} else if x > w-app.win.MemberWidth() && y >= 2 {
 				app.win.ClickMember(y - 2 + app.win.MemberOffset())
 			} else {
@@ -709,6 +708,12 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 		app.win.ClickMember(-1)
 		app.win.ClickChannelCol(false)
 		app.win.ClickMemberCol(false)
+	}
+	if x == app.win.ChannelWidth()-1 || x == w-app.win.MemberWidth() {
+		app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
+	} else if app.win.HasEvent(x, y) {
+		app.win.SetMouseShape(vaxis.MouseShapeClickable)
+	} else {
 		app.win.SetMouseShape(vaxis.MouseShapeDefault)
 	}
 }

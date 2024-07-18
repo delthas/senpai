@@ -253,6 +253,15 @@ func (ui *UI) Click(x, y int, event vaxis.Mouse) {
 	}
 }
 
+func (ui *UI) HasEvent(x, y int) bool {
+	for _, ev := range ui.clickEvents {
+		if x >= ev.xb && x < ev.xe && y == ev.y {
+			return true
+		}
+	}
+	return false
+}
+
 func (ui *UI) ScrollUp() {
 	ui.bs.ScrollUp(ui.bs.tlHeight / 2)
 }
