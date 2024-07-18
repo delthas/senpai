@@ -11,7 +11,8 @@ senpai is an IRC client that works best with bouncers:
 - no logs are kept,
 - history is fetched from the server via [CHATHISTORY],
 - networks are fetched from the server via [bouncer-networks],
-- messages can be searched in logs via [SEARCH].
+- messages can be searched in logs via [SEARCH],
+- files can be uploaded via [FILEHOST] (with drag & drop!)
 
 ## Quick demo
 
@@ -102,5 +103,6 @@ Copyright (C) 2021 The senpai Contributors
 [bouncer-networks]: https://git.sr.ht/~emersion/soju/tree/master/item/doc/ext/bouncer-networks.md
 [CHATHISTORY]: https://ircv3.net/specs/extensions/chathistory
 [SEARCH]: https://github.com/ircv3/ircv3-specifications/pull/496
+[FILEHOST]: https://codeberg.org/emersion/soju/src/branch/master/doc/ext/filehost.md
 [Libera.Chat]: https://libera.chat/
 [ml]: https://lists.sr.ht/~delthas/senpai-dev

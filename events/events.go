@@ -34,3 +34,9 @@ type EventClickLink struct {
 type EventImageLoaded struct {
 	Image image.Image // nil if error
 }
+
+type EventFileUpload struct {
+	Progress float64
+	Location string
+	Error    string
+}

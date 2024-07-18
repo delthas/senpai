@@ -8,10 +8,13 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
+	"mime"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -94,10 +97,11 @@ type boundKey struct {
 }
 
 type App struct {
-	win      *ui.UI
-	sessions map[string]*irc.Session // map of network IDs to their current session
-	pasting  bool
-	events   chan event
+	win              *ui.UI
+	sessions         map[string]*irc.Session // map of network IDs to their current session
+	pasting          bool
+	pastingInputOnly bool // true is pasting started when the editor input was empty
+	events           chan event
 
 	cfg        Config
 	highlights []string
@@ -120,6 +124,8 @@ type App struct {
 
 	imageLoading bool
 	imageOverlay bool
+
+	uploadingProgress *float64
 }
 
 func NewApp(cfg Config) (app *App, err error) {
@@ -489,8 +495,17 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.win.Resize()
 	case vaxis.PasteStartEvent:
 		app.pasting = true
+		app.pastingInputOnly = len(app.win.InputContent()) == 0
 	case vaxis.PasteEndEvent:
 		app.pasting = false
+		if app.pastingInputOnly {
+			app.pastingInputOnly = false
+
+			path := string(app.win.InputContent())
+			if _, err := os.Stat(path); err == nil {
+				app.win.InputSet(fmt.Sprintf("/upload %v", path))
+			}
+		}
 	case vaxis.Mouse:
 		app.handleMouseEvent(ev)
 	case vaxis.Key:
@@ -511,6 +526,31 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.win.ShowImage(ev.Image)
 		if ev.Image == nil {
 			app.imageLoading = false
+		}
+	case *events.EventFileUpload:
+		if ev.Location != "" {
+			app.uploadingProgress = nil
+			if len(app.win.InputContent()) == 0 {
+				app.win.InputSet(ev.Location)
+			} else {
+				netID, buffer := app.win.CurrentBuffer()
+				app.win.AddLine(netID, buffer, ui.Line{
+					At:   time.Now(),
+					Head: "--",
+					Body: ui.PlainString(fmt.Sprintf("File uploaded at: %v", ev.Location)),
+				})
+			}
+		} else if ev.Error != "" {
+			app.uploadingProgress = nil
+			netID, buffer := app.win.CurrentBuffer()
+			app.win.AddLine(netID, buffer, ui.Line{
+				At:        time.Now(),
+				Head:      "!!",
+				HeadColor: ui.ColorRed,
+				Body:      ui.PlainString(fmt.Sprintf("File upload failed: %v", ev.Error)),
+			})
+		} else {
+			app.uploadingProgress = &ev.Progress
 		}
 	default:
 		// TODO: missing event types
@@ -902,6 +942,70 @@ func (app *App) handleLinkEvent(ev *events.EventClickLink) {
 				src: "*",
 				content: &events.EventImageLoaded{
 					Image: img,
+				},
+			}
+		}
+	}()
+}
+
+func (app *App) upload(url string, f *os.File, size int64) (string, error) {
+	defer f.Close()
+	c := http.Client{
+		Timeout: 30 * time.Second,
+	}
+	r := ReadProgress{
+		Reader: f,
+		period: 250 * time.Millisecond,
+		f: func(n int64) {
+			app.events <- event{
+				src: "*",
+				content: &events.EventFileUpload{
+					Progress: float64(n) / float64(size),
+				},
+			}
+		},
+	}
+	req, err := http.NewRequest("POST", url, &r)
+	if err != nil {
+		return "", fmt.Errorf("creating upload request: %v", err)
+	}
+	if app.cfg.Password != nil {
+		req.SetBasicAuth(app.cfg.User, *app.cfg.Password)
+	}
+	req.Header.Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+		"filename": filepath.Base(f.Name()),
+	}))
+	res, err := c.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("uploading: %v", err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("uploading: unexpected status code: %d", res.StatusCode)
+	}
+	location, err := res.Location()
+	if err != nil {
+		return "", fmt.Errorf("uploading: reading file URL: %v", err)
+	}
+	return location.String(), nil
+}
+
+func (app *App) handleUpload(url string, f *os.File, size int64) {
+	var progress float64 = 0
+	app.uploadingProgress = &progress
+	go func() {
+		location, err := app.upload(url, f, size)
+		if err != nil {
+			app.events <- event{
+				src: "*",
+				content: &events.EventFileUpload{
+					Error: err.Error(),
+				},
+			}
+		} else {
+			app.events <- event{
+				src: "*",
+				content: &events.EventFileUpload{
+					Location: location,
 				},
 			}
 		}
@@ -1469,6 +1573,7 @@ func (app *App) completions(cursorIdx int, text []rune) []ui.Completion {
 		cs = app.completionsChannelTopic(cs, cursorIdx, text)
 		cs = app.completionsChannelMembers(cs, cursorIdx, text)
 	}
+	cs = app.completionsUpload(cs, cursorIdx, text)
 	cs = app.completionsMsg(cs, cursorIdx, text)
 	cs = app.completionsCommands(cs, cursorIdx, text)
 	cs = app.completionsEmoji(cs, cursorIdx, text)
@@ -1960,4 +2065,24 @@ func keyMatches(k vaxis.Key, r rune, mods vaxis.ModifierMask) bool {
 		}
 	}
 	return false
+}
+
+type ReadProgress struct {
+	io.Reader
+	period time.Duration
+	f      func(int64)
+
+	n    int64
+	last time.Time
+}
+
+func (r *ReadProgress) Read(buf []byte) (int, error) {
+	n, err := r.Reader.Read(buf)
+	r.n += int64(n)
+	now := time.Now()
+	if now.Sub(r.last) > r.period {
+		r.last = now
+		r.f(r.n)
+	}
+	return n, err
 }

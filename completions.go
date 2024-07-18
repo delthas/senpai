@@ -2,6 +2,8 @@ package senpai
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"git.sr.ht/~delthas/senpai/ui"
@@ -103,6 +105,68 @@ func (app *App) completionsMsg(cs []ui.Completion, cursorIdx int, text []rune) [
 				CursorIdx: 5 + len(nickComp),
 			})
 		}
+	}
+	return cs
+}
+
+func (app *App) completionsUpload(cs []ui.Completion, cursorIdx int, text []rune) []ui.Completion {
+	if !hasPrefix(text, []rune("/upload ")) {
+		return cs
+	}
+	if app.cfg.Transient || !app.cfg.LocalIntegrations {
+		return cs
+	}
+	_, path, ok := strings.Cut(string(text[:cursorIdx]), " ")
+	if !ok {
+		return cs
+	}
+
+	dirPath := ""
+	dirPrefix := ""
+	if path == "" {
+		if filepath.Separator != '/' {
+			return cs
+		}
+		dirPath = "/"
+	} else if strings.HasSuffix(path, string(filepath.Separator)) {
+		dirPath = path
+	} else {
+		dirPath = filepath.Dir(path)
+		dirPrefix = filepath.Base(path)
+	}
+	dir, err := os.ReadDir(dirPath)
+	if err != nil {
+		return cs
+	}
+
+	for _, e := range dir {
+		if !strings.HasPrefix(e.Name(), dirPrefix) {
+			continue
+		}
+		name := e.Name()
+		var isDir bool
+		if e.IsDir() {
+			isDir = true
+		} else if e.Type() == os.ModeSymlink {
+			if fi, err := os.Stat(filepath.Join(dirPath, name)); err == nil && fi.IsDir() {
+				isDir = true
+			}
+		}
+		if isDir {
+			name += string(filepath.Separator)
+		}
+		if path == "" {
+			name = "/" + name
+		}
+		if name == dirPrefix {
+			continue
+		}
+		cs = append(cs, ui.Completion{
+			StartIdx:  cursorIdx - len([]rune(dirPrefix)),
+			EndIdx:    cursorIdx,
+			Text:      []rune(string(text[:cursorIdx]) + name[len(dirPrefix):] + string(text[cursorIdx:])),
+			CursorIdx: cursorIdx + len([]rune(name)) - len([]rune(dirPrefix)),
+		})
 	}
 	return cs
 }

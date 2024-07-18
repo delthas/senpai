@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -71,6 +72,14 @@ func init() {
 		"NP": {
 			Desc:   "send the current song that is being played on the system",
 			Handle: commandDoNP,
+		},
+		"UPLOAD": {
+			AllowHome: true,
+			MinArgs:   1,
+			MaxArgs:   1,
+			Usage:     "<file path>",
+			Desc:      "upload a local file to the bouncer",
+			Handle:    commandDoUpload,
 		},
 		"MSG": {
 			AllowHome: true,
@@ -482,6 +491,37 @@ func commandDoNP(app *App, args []string) (err error) {
 		return fmt.Errorf("no song was detected")
 	}
 	return commandDoMe(app, []string{fmt.Sprintf("np: %s", song)})
+}
+
+func commandDoUpload(app *App, args []string) (err error) {
+	if app.cfg.Transient || !app.cfg.LocalIntegrations {
+		return fmt.Errorf("usage of UPLOAD is disabled")
+	}
+	s := app.CurrentSession()
+	if s == nil {
+		return errOffline
+	}
+	upload := s.UploadURL()
+	if upload == "" {
+		return fmt.Errorf("file upload is not supported on this server; try using soju and enabling file upload")
+	}
+	path := args[0]
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("opening file: %v", err)
+	}
+	if fi.Size() > 50*1024*1024 {
+		// Best-effort limit, taking from current soju
+		return fmt.Errorf("file too large: maximum 50MB per file")
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("opening file: %v", err)
+	}
+
+	app.handleUpload(upload, f, fi.Size())
+	return nil
 }
 
 func commandDoMsg(app *App, args []string) (err error) {

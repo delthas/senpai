@@ -139,6 +139,7 @@ type Session struct {
 	prefixModes   string
 	monitor       bool
 	whox          bool
+	upload        string
 
 	users          map[string]*User        // known users.
 	channels       map[string]Channel      // joined channels.
@@ -231,6 +232,11 @@ func (s *Session) BouncerService() string {
 		return "BouncerServ"
 	}
 	return ""
+}
+
+// UploadURL returns the URL to which files can be uploaded according to the FILEHOST specification.
+func (s *Session) UploadURL() string {
+	return s.upload
 }
 
 func (s *Session) Nick() string {
@@ -2082,6 +2088,8 @@ func (s *Session) updateFeatures(features []string) {
 			s.prefixSymbols = value[numPrefixes+2:]
 		case "WHOX":
 			s.whox = true
+		case "SOJU.IM/FILEHOST":
+			s.upload = value
 		}
 	}
 }

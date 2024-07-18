@@ -1,6 +1,7 @@
 package senpai
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +50,10 @@ func (app *App) setStatus() {
 	if app.imageLoading && app.win.ImageReady() {
 		app.imageLoading = false
 		app.imageOverlay = true
+	}
+	if app.uploadingProgress != nil {
+		app.win.SetStatus(fmt.Sprintf("Uploading file (%02.1f%%)...", *app.uploadingProgress*100))
+		return
 	}
 	if app.imageLoading {
 		app.win.SetStatus("Loading image...")

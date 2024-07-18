@@ -203,6 +203,9 @@ _name_ is matched case-insensitively.  It can be one of the following:
 	Send the current song that is being played on the system. Uses DBus/MPRIS
 	internally.
 
+*UPLOAD* <file path>
+	Upload a local file to the bouncer.
+
 *QUOTE* <raw message>
 	Send _raw message_ verbatim.
 
