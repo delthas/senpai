@@ -530,6 +530,14 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 		return
 	}
 
+	if ev.Button == vaxis.MouseLeftButton && (ev.EventType == vaxis.EventRelease || ev.EventType == vaxis.EventMotion) {
+		if app.win.ChannelColClicked() {
+			app.win.ResizeChannelCol(x + 1)
+		} else if app.win.MemberColClicked() {
+			app.win.ResizeMemberCol(w - x)
+		}
+	}
+
 	if ev.EventType == vaxis.EventPress {
 		if ev.Button == vaxis.MouseWheelUp {
 			if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
@@ -550,11 +558,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 			}
 		}
 		if ev.Button == vaxis.MouseLeftButton {
-			if app.win.ChannelColClicked() {
-				app.win.ResizeChannelCol(x + 1)
-			} else if app.win.MemberColClicked() {
-				app.win.ResizeMemberCol(w - x)
-			} else if x == app.win.ChannelWidth()-1 {
+			if x == app.win.ChannelWidth()-1 {
 				app.win.ClickChannelCol(true)
 				app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
 			} else if x < app.win.ChannelWidth() {
@@ -662,11 +666,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 		app.win.ClickMember(-1)
 		app.win.ClickChannelCol(false)
 		app.win.ClickMemberCol(false)
-		if x == app.win.ChannelWidth()-1 || x == w-app.win.MemberWidth() {
-			app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
-		} else {
-			app.win.SetMouseShape(vaxis.MouseShapeDefault)
-		}
+		app.win.SetMouseShape(vaxis.MouseShapeDefault)
 	}
 }
 

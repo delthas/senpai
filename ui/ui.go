@@ -191,6 +191,9 @@ func (ui *UI) ResizeChannelCol(x int) {
 	} else if x > 24 {
 		x = 24
 	}
+	if ui.channelWidth == x {
+		return
+	}
 	ui.channelWidth = x
 	ui.Resize()
 }
@@ -208,6 +211,9 @@ func (ui *UI) ResizeMemberCol(x int) {
 		x = 6
 	} else if x > 24 {
 		x = 24
+	}
+	if ui.memberWidth == x {
+		return
 	}
 	ui.memberWidth = x
 	ui.Resize()
