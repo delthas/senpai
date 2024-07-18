@@ -1460,6 +1460,16 @@ func (app *App) completions(cursorIdx int, text []rune) []ui.Completion {
 	return cs
 }
 
+type mergedEvent struct {
+	oldNick        string
+	nick           string
+	firstConnected int // -1: offline; 1: online
+	lastConnected  int // -1: offline; 1: online
+	modeSet        string
+	modeUnset      string
+	channelMode    string
+}
+
 // formatEvent returns a formatted ui.Line for an irc.Event.
 func (app *App) formatEvent(ev irc.Event) ui.Line {
 	switch ev := ev.(type) {
@@ -1558,8 +1568,6 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		}
 	case irc.ModeChangeEvent:
 		body := fmt.Sprintf("[%s]", ev.Mode)
-		// simple mode event: <+/-><mode> <nick>
-		mergeable := len(strings.Split(ev.Mode, " ")) == 2
 		return ui.Line{
 			At:        ev.Time,
 			Head:      "--",
@@ -1567,9 +1575,64 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 			Body: ui.Styled(body, vaxis.Style{
 				Foreground: app.cfg.Colors.Status,
 			}),
-			Mergeable: mergeable,
+			Mergeable: true,
 			Data:      []irc.Event{ev},
 			Readable:  true,
+		}
+	case *mergedEvent:
+		var body ui.StyledStringBuilder
+		if ev.nick != "" && ((ev.firstConnected != 0 && ev.firstConnected == ev.lastConnected) || ev.modeSet != "" || ev.modeUnset != "" || (ev.oldNick != "" && ev.oldNick != ev.nick)) {
+			if ev.firstConnected != 0 && ev.firstConnected == ev.lastConnected {
+				if ev.firstConnected == -1 {
+					body.SetStyle(vaxis.Style{
+						Foreground: ui.ColorRed,
+					})
+					body.WriteByte('-')
+				} else {
+					body.SetStyle(vaxis.Style{
+						Foreground: vaxis.IndexColor(2),
+					})
+					body.WriteByte('+')
+				}
+			}
+			if ev.modeSet != "" || ev.modeUnset != "" {
+				body.SetStyle(vaxis.Style{
+					Foreground: app.cfg.Colors.Status,
+				})
+				body.WriteByte('[')
+				if ev.modeSet != "" {
+					body.WriteByte('+')
+					body.WriteString(ev.modeSet)
+				}
+				if ev.modeUnset != "" {
+					body.WriteByte('-')
+					body.WriteString(ev.modeSet)
+				}
+				body.WriteByte(']')
+			}
+			if ev.oldNick != "" && ev.oldNick != ev.nick {
+				body.SetStyle(vaxis.Style{
+					Foreground: app.cfg.Colors.Status,
+				})
+				body.WriteString(ev.oldNick)
+				body.SetStyle(vaxis.Style{})
+				body.WriteString("\u2192")
+			}
+			body.SetStyle(vaxis.Style{
+				Foreground: app.cfg.Colors.Status,
+			})
+			body.WriteString(ev.nick)
+		} else if ev.nick == "" && ev.channelMode != "" {
+			body.SetStyle(vaxis.Style{
+				Foreground: app.cfg.Colors.Status,
+			})
+			fmt.Fprintf(&body, "[%s]", ev.channelMode)
+		} else {
+			return ui.Line{}
+		}
+		return ui.Line{
+			// Only the Body is used for merged events
+			Body: body.StyledString(),
 		}
 	default:
 		return ui.Line{}
@@ -1672,82 +1735,129 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 
 func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 	events := append(former.Data.([]irc.Event), addition.Data.([]irc.Event)...)
-	type flow struct {
-		hide  bool
-		state int // -1: newly offline; 1: newly online
+	flows := make([]*mergedEvent, 0, len(events))
+	flowNick := func(nick string) *mergedEvent {
+		nickCf := strings.ToLower(nick)
+		for _, f := range flows {
+			if strings.ToLower(f.nick) == nickCf {
+				return f
+			}
+		}
+		return nil
 	}
-	flows := make(map[string]*flow)
 
-	eventFlows := make([]*flow, len(events))
-
-	for i, ev := range events {
+	for _, ev := range events {
 		switch ev := ev.(type) {
 		case irc.UserNickEvent:
-			userCf := strings.ToLower(ev.User)
-			f, ok := flows[strings.ToLower(ev.FormerNick)]
-			if ok {
-				flows[userCf] = f
-				delete(flows, strings.ToLower(ev.FormerNick))
-				eventFlows[i] = f
+			if f := flowNick(ev.User); f != nil {
+				// Drop any existing flow on the target user, effectively replacing it
+				// with this new nick. Not very "accurate", but handles disconnects/reconnects/alternate nicks
+				// quietly enough.
+				for i, ff := range flows {
+					if f == ff {
+						flows = append(flows[:i], flows[i+1:]...)
+						break
+					}
+				}
+			}
+			f := flowNick(ev.FormerNick)
+			if f != nil {
+				f.nick = ev.User
 			} else {
-				f = &flow{}
-				flows[userCf] = f
-				eventFlows[i] = f
+				flows = append(flows, &mergedEvent{
+					oldNick: ev.FormerNick,
+					nick:    ev.User,
+				})
 			}
 		case irc.UserJoinEvent:
-			userCf := strings.ToLower(ev.User)
-			f, ok := flows[userCf]
-			if ok {
-				if f.state == -1 {
-					f.hide = true
-					delete(flows, userCf)
+			f := flowNick(ev.User)
+			if f != nil {
+				if f.firstConnected == 0 {
+					f.firstConnected = 1
 				}
+				f.lastConnected = 1
+				f.modeSet = ""
+				f.modeUnset = ""
 			} else {
-				f = &flow{
-					state: 1,
-				}
-				flows[userCf] = f
-				eventFlows[i] = f
+				flows = append(flows, &mergedEvent{
+					nick:           ev.User,
+					firstConnected: 1,
+					lastConnected:  1,
+				})
 			}
 		case irc.UserPartEvent:
-			userCf := strings.ToLower(ev.User)
-			f, ok := flows[userCf]
-			if ok {
-				if f.state == 1 {
-					f.hide = true
-					delete(flows, userCf)
+			f := flowNick(ev.User)
+			if f != nil {
+				if f.firstConnected == 0 {
+					f.firstConnected = -1
 				}
+				f.lastConnected = -1
+				f.modeSet = ""
+				f.modeUnset = ""
 			} else {
-				f = &flow{
-					state: -1,
-				}
-				flows[userCf] = f
-				eventFlows[i] = f
+				flows = append(flows, &mergedEvent{
+					nick:           ev.User,
+					firstConnected: -1,
+					lastConnected:  -1,
+				})
 			}
 		case irc.UserQuitEvent:
-			userCf := strings.ToLower(ev.User)
-			f, ok := flows[userCf]
-			if ok {
-				if f.state == 1 {
-					f.hide = true
-					delete(flows, userCf)
+			f := flowNick(ev.User)
+			if f != nil {
+				if f.firstConnected == 0 {
+					f.firstConnected = -1
 				}
+				f.lastConnected = -1
+				f.modeSet = ""
+				f.modeUnset = ""
 			} else {
-				f = &flow{
-					state: -1,
-				}
-				flows[userCf] = f
-				eventFlows[i] = f
+				flows = append(flows, &mergedEvent{
+					nick:           ev.User,
+					firstConnected: -1,
+					lastConnected:  -1,
+				})
 			}
 		case irc.ModeChangeEvent:
-			userCf := strings.ToLower(strings.Split(ev.Mode, " ")[1])
-			f, ok := flows[userCf]
-			if ok {
-				eventFlows[i] = f
+			// best-effort heuristic for guessing simple user mode changes:
+			// expect "<+/-><chars> <args...>" with as many chars as args
+
+			mode := strings.Split(ev.Mode, " ")
+			modeStr := mode[0]
+			modeArgs := mode[1:]
+			if len(modeStr) > 0 && (modeStr[0] == '+' || modeStr[0] == '-') && len(modeArgs) == len(modeStr)-1 {
+				set := modeStr[0] == '+'
+				for i, nick := range modeArgs {
+					f := flowNick(nick)
+					if f == nil {
+						f = &mergedEvent{
+							nick: nick,
+						}
+						flows = append(flows, f)
+					}
+
+					mode := string(modeStr[i+1])
+					if set {
+						if strings.Contains(f.modeUnset, mode) {
+							f.modeUnset = strings.Replace(f.modeUnset, mode, "", -1)
+						} else if !strings.Contains(f.modeSet, mode) {
+							f.modeSet += mode
+						}
+					} else {
+						if strings.Contains(f.modeSet, mode) {
+							f.modeSet = strings.Replace(f.modeSet, mode, "", -1)
+						} else if !strings.Contains(f.modeUnset, mode) {
+							f.modeUnset += mode
+						}
+					}
+				}
 			} else {
-				f = &flow{}
-				flows[userCf] = f
-				eventFlows[i] = f
+				if f := flowNick(""); f != nil && f.channelMode == ev.Mode {
+					// setting the same channel mode string, ignore
+				} else {
+					flows = append(flows, &mergedEvent{
+						channelMode: ev.Mode,
+					})
+				}
 			}
 		}
 	}
@@ -1755,11 +1865,11 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 	newBody := new(ui.StyledStringBuilder)
 	newBody.Grow(128)
 	first := true
-	for i, ev := range events {
-		if f := eventFlows[i]; f == nil || f.hide {
+	for _, f := range flows {
+		l := app.formatEvent(f)
+		if l.IsZero() {
 			continue
 		}
-		l := app.formatEvent(ev)
 		if first {
 			first = false
 		} else {
