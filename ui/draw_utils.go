@@ -157,6 +157,7 @@ func printString(vx *Vaxis, x *int, y int, s StyledString) {
 		}
 		dx, di := printCluster(vx, *x, y, -1, sr, st)
 		*x += dx
+		i += len(string(sr[:di]))
 		sr = sr[di:]
 	}
 }

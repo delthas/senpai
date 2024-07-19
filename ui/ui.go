@@ -461,7 +461,7 @@ func (ui *UI) SetFocused(focused bool) {
 	ui.bs.SetFocused(focused)
 }
 
-func (ui *UI) SetTopic(netID, buffer string, topic string) {
+func (ui *UI) SetTopic(netID, buffer string, topic StyledString) {
 	ui.bs.SetTopic(netID, buffer, topic)
 }
 

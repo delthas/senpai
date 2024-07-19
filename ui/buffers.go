@@ -216,7 +216,7 @@ type buffer struct {
 	unreadSkip optional
 
 	lines []Line
-	topic string
+	topic StyledString
 
 	scrollAmt int // offset in lines from the bottom
 	isAtTop   bool
@@ -538,7 +538,7 @@ func (bs *BufferList) SetFocused(focused bool) {
 	}
 }
 
-func (bs *BufferList) SetTopic(netID, title string, topic string) {
+func (bs *BufferList) SetTopic(netID, title string, topic StyledString) {
 	_, b := bs.at(netID, title)
 	if b == nil {
 		return
@@ -961,7 +961,45 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 	}
 
 	xTopic := x0
-	printString(vx, &xTopic, y0, Styled(b.topic, vaxis.Style{}))
+	{
+		// TODO: factorize this (same code for drawing timeline)
+
+		var st vaxis.Style
+		nextStyles := b.topic.styles
+
+		i := 0
+		sr := []rune(b.topic.string)
+		for len(sr) > 0 {
+			if 0 < len(nextStyles) && nextStyles[0].Start == i {
+				st = nextStyles[0].Style
+				nextStyles = nextStyles[1:]
+
+				if bs.ui.mouseLinks && st.Hyperlink != "" && st.UnderlineStyle == 0 {
+					st.UnderlineStyle = vaxis.UnderlineDotted
+				}
+			}
+			dx, di := printCluster(vx, xTopic, y0, -1, sr, st)
+			xTopic += dx
+			i += len(string(sr[:di]))
+			sr = sr[di:]
+
+			if st.Hyperlink != "" {
+				ui.clickEvents = append(ui.clickEvents, clickEvent{
+					xb: xTopic - dx,
+					xe: xTopic,
+					y:  y0,
+					event: &events.EventClickLink{
+						EventClick: events.EventClick{
+							NetID:  b.netID,
+							Buffer: b.title,
+						},
+						Link:  st.Hyperlink,
+						Mouse: ui.mouseLinks,
+					},
+				})
+			}
+		}
+	}
 	y0++
 	drawHorizontalLine(vx, x0, y0, bs.tlInnerWidth+nickColWidth+9)
 	y0++
