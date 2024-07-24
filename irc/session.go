@@ -57,6 +57,7 @@ var SupportedCapabilities = map[string]struct{}{
 	"echo-message":     {},
 	"extended-monitor": {},
 	"invite-notify":    {},
+	"labeled-response": {},
 	"message-tags":     {},
 	"multi-prefix":     {},
 	"server-time":      {},
@@ -837,6 +838,16 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 					for channel := range s.channels {
 						s.out <- NewMessage("NAMES", channel)
 					}
+				} else if c.Name == "labeled-response" {
+					if c.Enable {
+						s.out <- Message{
+							Command: labelEnableCommand,
+						}
+					} else {
+						s.out <- Message{
+							Command: labelDisableCommand,
+						}
+					}
 				}
 			}
 		case "NAK":
@@ -856,6 +867,11 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			for _, c := range ParseCaps(caps) {
 				delete(s.availableCaps, c.Name)
 				delete(s.enabledCaps, c.Name)
+				if c.Name == "labeled-response" {
+					s.out <- Message{
+						Command: labelDisableCommand,
+					}
+				}
 			}
 		}
 	case "JOIN":
