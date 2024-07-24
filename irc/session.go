@@ -139,6 +139,7 @@ type Session struct {
 	prefixModes   string
 	monitor       bool
 	whox          bool
+	listMask      bool
 	upload        string
 
 	users          map[string]*User        // known users.
@@ -150,6 +151,7 @@ type Session struct {
 	searchBatchID  string                  // ID of the search targets batch being processed.
 	searchBatch    SearchEvent             // search batch being processed.
 	monitors       map[string]struct{}     // set of users we want to monitor (and keep even if they are disconnected).
+	pendingList    ListEvent               // current list response being received (flushed on list end).
 
 	pendingChannels map[string]time.Time // set of join requests stamps for channels.
 
@@ -237,6 +239,10 @@ func (s *Session) BouncerService() string {
 // UploadURL returns the URL to which files can be uploaded according to the FILEHOST specification.
 func (s *Session) UploadURL() string {
 	return s.upload
+}
+
+func (s *Session) HasListMask() bool {
+	return s.listMask
 }
 
 func (s *Session) Nick() string {
@@ -1494,7 +1500,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		// useless stats delimiter
 	case rplEndofwhois:
 		// useless whois delimiter
-	case rplListstart, rplListend:
+	case rplListstart:
 		// useless list delimiter
 	case rplEndofinvitelist, rplEndofinvexlist:
 		// useless invite list delimiter
@@ -1722,14 +1728,16 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		if err := msg.ParseParams(nil, &channel, &count, &topic); err != nil {
 			return nil, err
 		}
-		text := fmt.Sprintf("There are %4s users on channel %s", count, channel)
-		if topic != "" {
-			text += " -- " + topic
-		}
-		return InfoEvent{
-			Prefix:  "List",
-			Message: text,
-		}, nil
+		s.pendingList = append(s.pendingList, ListItem{
+			Channel: channel,
+			Count:   count,
+			Topic:   topic,
+		})
+		return nil, nil
+	case rplListend:
+		list := s.pendingList
+		s.pendingList = nil
+		return list, nil
 	case rplChannelmodeis:
 		var channel string
 		if err := msg.ParseParams(nil, &channel); err != nil {
@@ -2059,6 +2067,8 @@ func (s *Session) updateFeatures(features []string) {
 			if err == nil {
 				s.historyLimit = historyLimit
 			}
+		case "ELIST":
+			s.listMask = strings.Contains(strings.ToUpper(value), "M")
 		case "LINELEN":
 			linelen, err := strconv.Atoi(value)
 			if err == nil && linelen != 0 {

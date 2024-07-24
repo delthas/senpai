@@ -640,6 +640,10 @@ func (ui *UI) ShowImage(img image.Image) bool {
 	return true
 }
 
+func (ui *UI) AsyncCompletions(id int, cs []Completion) {
+	ui.e.AsyncCompletions(id, cs)
+}
+
 func (ui *UI) Draw(members []irc.Member) {
 	ui.clickEvents = ui.clickEvents[:0]
 

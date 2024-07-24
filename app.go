@@ -96,6 +96,12 @@ type boundKey struct {
 	target string
 }
 
+type pendingCompletion struct {
+	id       int
+	f        completionAsync
+	deadline time.Time
+}
+
 type App struct {
 	win              *ui.UI
 	sessions         map[string]*irc.Session // map of network IDs to their current session
@@ -116,6 +122,9 @@ type App struct {
 
 	networkLock sync.RWMutex        // locks networks
 	networks    map[string]struct{} // set of network IDs we want to connect to; to be locked with networkLock
+
+	pendingCompletions    map[string][]pendingCompletion
+	pendingCompletionsOff int
 
 	lastMessageTime time.Time
 	lastCloseTime   time.Time
@@ -146,11 +155,12 @@ func NewApp(cfg Config) (app *App, err error) {
 		networks: map[string]struct{}{
 			"": {}, // add the master network by default
 		},
-		sessions:      map[string]*irc.Session{},
-		events:        make(chan event, eventChanSize),
-		cfg:           cfg,
-		messageBounds: map[boundKey]bound{},
-		monitor:       make(map[string]map[string]struct{}),
+		pendingCompletions: make(map[string][]pendingCompletion),
+		sessions:           map[string]*irc.Session{},
+		events:             make(chan event, eventChanSize),
+		cfg:                cfg,
+		messageBounds:      map[boundKey]bound{},
+		monitor:            make(map[string]map[string]struct{}),
 	}
 
 	if cfg.Highlights != nil {
@@ -1099,6 +1109,29 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.lastMessageTime = t
 	}
 
+	if cs, ok := app.pendingCompletions[netID]; ok {
+		now := time.Now()
+		for i := 0; i < len(cs); i++ {
+			c := &cs[i]
+			var r []ui.Completion
+			eat := false
+			if c.deadline.After(now) {
+				r = c.f(ev)
+				if r == nil {
+					continue
+				}
+				eat = true
+			}
+			app.win.AsyncCompletions(c.id, r)
+			copy(cs[i:], cs[i+1:])
+			app.pendingCompletions[netID] = app.pendingCompletions[netID][:len(cs)-1]
+			i--
+			if eat {
+				return
+			}
+		}
+	}
+
 	// Mutate UI state
 	switch ev := ev.(type) {
 	case irc.RegisteredEvent:
@@ -1397,6 +1430,21 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			}
 			app.win.RemoveNetworkBuffers(ev.ID)
 		}
+	case irc.ListEvent:
+		for _, item := range ev {
+			text := fmt.Sprintf("There are %4s users on channel %s", item.Count, item.Channel)
+			if item.Topic != "" {
+				text += " -- " + item.Topic
+			}
+			app.addStatusLine(netID, ui.Line{
+				At:        msg.TimeOrNow(),
+				Head:      "List --",
+				HeadColor: app.cfg.Colors.Status,
+				Body: ui.Styled(text, vaxis.Style{
+					Foreground: app.cfg.Colors.Status,
+				}),
+			})
+		}
 	case irc.InfoEvent:
 		var head string
 		if ev.Prefix != "" {
@@ -1578,10 +1626,25 @@ func (app *App) completions(cursorIdx int, text []rune) []ui.Completion {
 		cs = app.completionsChannelTopic(cs, cursorIdx, text)
 		cs = app.completionsChannelMembers(cs, cursorIdx, text)
 	}
+	cs = app.completionsJoin(cs, cursorIdx, text)
 	cs = app.completionsUpload(cs, cursorIdx, text)
 	cs = app.completionsMsg(cs, cursorIdx, text)
 	cs = app.completionsCommands(cs, cursorIdx, text)
 	cs = app.completionsEmoji(cs, cursorIdx, text)
+
+	for i := 0; i < len(cs); i++ {
+		c := &cs[i]
+		if c.Async == nil {
+			continue
+		}
+		c.AsyncID = app.pendingCompletionsOff
+		app.pendingCompletionsOff++
+		app.pendingCompletions[netID] = append(app.pendingCompletions[netID], pendingCompletion{
+			id:       c.AsyncID,
+			f:        c.Async.(completionAsync),
+			deadline: time.Now().Add(4 * time.Second),
+		})
+	}
 
 	return cs
 }

@@ -6,8 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"git.sr.ht/~delthas/senpai/irc"
 	"git.sr.ht/~delthas/senpai/ui"
 )
+
+type completionAsync func(e irc.Event) []ui.Completion
 
 func (app *App) completionsChannelMembers(cs []ui.Completion, cursorIdx int, text []rune) []ui.Completion {
 	var start int
@@ -46,6 +49,52 @@ func (app *App) completionsChannelMembers(cs []ui.Completion, cursorIdx int, tex
 			})
 		}
 	}
+	return cs
+}
+
+func (app *App) completionsJoin(cs []ui.Completion, cursorIdx int, text []rune) []ui.Completion {
+	if !hasPrefix(text[:cursorIdx], []rune("/join #")) {
+		return cs
+	}
+	netID, _ := app.win.CurrentBuffer()
+	s := app.sessions[netID] // is not nil
+	if s == nil {
+		return cs
+	}
+	if !s.HasListMask() {
+		return cs
+	}
+
+	post := append([]rune{}, text[cursorIdx:]...)
+	channel := append([]rune{}, text[6:]...)
+	if len(channel) < 3 {
+		// Require at least 2 characters for a search, to avoid triggering large LISTs in completions
+		return cs
+	}
+
+	s.List(string(channel) + "*")
+
+	cs = append(cs, ui.Completion{
+		Async: completionAsync(func(e irc.Event) []ui.Completion {
+			l, ok := e.(irc.ListEvent)
+			if !ok {
+				return nil
+			}
+			cs := make([]ui.Completion, len(l))
+			for i, e := range l {
+				text := []rune("/join ")
+				text = append(text, []rune(e.Channel)...)
+				text = append(text, post...)
+				cs[i] = ui.Completion{
+					StartIdx:  6,
+					EndIdx:    6 + len([]rune(e.Channel)),
+					Text:      text,
+					CursorIdx: cursorIdx + len([]rune(e.Channel)) - len(channel),
+				}
+			}
+			return cs
+		}),
+	})
 	return cs
 }
 

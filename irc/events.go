@@ -68,7 +68,7 @@ type TopicChangeEvent struct {
 	Channel string
 	Topic   string
 	Time    time.Time
-	Who	string
+	Who     string
 }
 
 type ModeChangeEvent struct {
@@ -91,6 +91,14 @@ type MessageEvent struct {
 	Content         string
 	Time            time.Time
 }
+
+type ListItem struct {
+	Channel string
+	Count   string
+	Topic   string
+}
+
+type ListEvent []ListItem
 
 type HistoryEvent struct {
 	Target   string

@@ -7,6 +7,9 @@ import (
 )
 
 type Completion struct {
+	Async   any // not nil if this completion is asynchronously loading values
+	AsyncID int
+
 	StartIdx  int
 	EndIdx    int
 	Text      []rune
@@ -444,9 +447,12 @@ func (e *Editor) AutoComplete() (ok bool) {
 			return false
 		}
 		e.autoCacheIdx = 0
-		if len(e.autoCache) > 1 {
+		if len(e.autoCache) > 1 || e.autoCache[0].Async != nil {
 			return false
 		}
+	}
+	if e.autoCache[e.autoCacheIdx].Async != nil {
+		return false
 	}
 
 	e.text[e.lineIdx].runes = e.autoCache[e.autoCacheIdx].Text
@@ -463,6 +469,26 @@ func (e *Editor) AutoComplete() (ok bool) {
 
 	e.backsearchEnd()
 	return true
+}
+
+func (e *Editor) AsyncCompletions(id int, cs []Completion) {
+	for i := 0; i < len(e.autoCache); i++ {
+		c := &e.autoCache[i]
+		if c.AsyncID != id {
+			continue
+		}
+		a := append([]Completion{}, e.autoCache[:i]...)
+		a = append(a, cs...)
+		a = append(a, e.autoCache[i+1:]...)
+		e.autoCache = a
+		break
+	}
+	if len(e.autoCache) == 0 {
+		e.autoCache = nil
+		e.autoCacheIdx = 0
+	} else if e.autoCacheIdx >= len(e.autoCache) {
+		e.autoCacheIdx = len(e.autoCache) - 1
+	}
 }
 
 func (e *Editor) BackSearch() {
@@ -584,6 +610,9 @@ func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 		if display == nil {
 			display = completion.Text[completion.StartIdx:]
 		}
+		if completion.Async != nil {
+			display = []rune("Loading...")
+		}
 
 		x := autoX
 		y := y - ci - 1
@@ -597,6 +626,9 @@ func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 				s.Attribute |= vaxis.AttrBold
 			} else {
 				s.Attribute |= vaxis.AttrDim
+			}
+			if completion.Async != nil {
+				s.Attribute |= vaxis.AttrItalic
 			}
 			dx, di := printCluster(vx, x, y, x0+e.width, display[i:], s)
 			if di == 0 {
