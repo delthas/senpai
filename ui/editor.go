@@ -610,8 +610,13 @@ func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 		if display == nil {
 			display = completion.Text[completion.StartIdx:]
 		}
+		var unselectable bool
 		if completion.Async != nil {
 			display = []rune("Loading...")
+			unselectable = true
+		} else if (ci == 0 && autoOff > 0) || (ci == autoCount-1 && autoOff+autoCount < len(e.autoCache)) {
+			display = []rune("...")
+			unselectable = true
 		}
 
 		x := autoX
@@ -627,7 +632,7 @@ func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 			} else {
 				s.Attribute |= vaxis.AttrDim
 			}
-			if completion.Async != nil {
+			if unselectable {
 				s.Attribute |= vaxis.AttrItalic
 			}
 			dx, di := printCluster(vx, x, y, x0+e.width, display[i:], s)
