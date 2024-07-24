@@ -12,8 +12,10 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -929,7 +931,19 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 }
 
 func (app *App) handleLinkEvent(ev *events.EventClickLink) {
-	if ev.Event.Modifiers == vaxis.ModCtrl {
+	var open bool
+	if ev.Mouse {
+		open = true
+		if ev.Event.Modifiers != vaxis.ModCtrl {
+			if u, err := url.Parse(ev.Link); err == nil {
+				switch strings.ToLower(path.Ext(u.Path)) {
+				case ".jpg", ".jpeg", ".png", ".gif":
+					open = false
+				}
+			}
+		}
+	}
+	if open {
 		if strings.HasPrefix(ev.Link, "-") {
 			// Avoid injection of parameters.
 			// Sadly xdg-open does not support "--"...
