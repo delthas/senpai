@@ -3,6 +3,7 @@
 
 GO ?= go
 RM ?= rm
+INSTALL ?= install
 SCDOC ?= scdoc
 GIT ?= git
 GOFLAGS ?=
@@ -41,23 +42,19 @@ res/icon.48.png: res/icon.svg
 clean:
 	$(RM) -rf senpai doc/senpai.1 doc/senpai.5
 install:
-	mkdir -p $(DESTDIR)$(PREFIX)/$(BINDIR)
-	mkdir -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
-	mkdir -p $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
-	mkdir -p $(DESTDIR)$(PREFIX)/$(APPDIR)
-	mkdir -p $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/48x48/apps
-	mkdir -p $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps
-	cp -f senpai $(DESTDIR)$(PREFIX)/$(BINDIR)
-	cp -f doc/senpai.1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
-	cp -f doc/senpai.5 $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
-	cp -f contrib/senpai.desktop $(DESTDIR)$(PREFIX)/$(APPDIR)/senpai.desktop
-	cp -f res/icon.48.png $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/48x48/apps/senpai.png
-	cp -f res/icon.svg $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps/senpai.svg
+	$(INSTALL) -D -T senpai $(DESTDIR)$(PREFIX)/$(BINDIR)/senpai
+	$(INSTALL) -D -T -m644 doc/senpai.1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/senpai.1
+	$(INSTALL) -D -T -m644 doc/senpai.5 $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/senpai.5
+	$(INSTALL) -D -T -m644 contrib/senpai.desktop $(DESTDIR)$(PREFIX)/$(APPDIR)/senpai.desktop
+	$(INSTALL) -D -T -m644 res/icon.48.png $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/48x48/apps/senpai.png
+	$(INSTALL) -D -T -m644 res/icon.svg $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps/senpai.svg
 uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/$(BINDIR)/senpai
 	$(RM) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/senpai.1
 	$(RM) $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/senpai.5
 	$(RM) $(DESTDIR)$(PREFIX)/$(APPDIR)/senpai.desktop
+	$(RM) $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/48x48/apps/senpai.png
+	$(RM) $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps/senpai.svg
 
 emoji:
 	curl -sSfL -o emoji.json "https://raw.githubusercontent.com/github/gemoji/master/db/emoji.json"
