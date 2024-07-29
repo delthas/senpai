@@ -922,7 +922,7 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	img, _, err := image.Decode(res.Body)
+	img, _, err := ui.DecodeImage(res.Body)
 	res.Body.Close()
 	if err != nil {
 		return nil, err
