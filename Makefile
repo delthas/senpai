@@ -42,12 +42,18 @@ res/icon.48.png: res/icon.svg
 clean:
 	$(RM) -rf senpai doc/senpai.1 doc/senpai.5
 install:
-	$(INSTALL) -D -T senpai $(DESTDIR)$(PREFIX)/$(BINDIR)/senpai
-	$(INSTALL) -D -T -m644 doc/senpai.1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/senpai.1
-	$(INSTALL) -D -T -m644 doc/senpai.5 $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/senpai.5
-	$(INSTALL) -D -T -m644 contrib/senpai.desktop $(DESTDIR)$(PREFIX)/$(APPDIR)/senpai.desktop
-	$(INSTALL) -D -T -m644 res/icon.48.png $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/48x48/apps/senpai.png
-	$(INSTALL) -D -T -m644 res/icon.svg $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps/senpai.svg
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/$(BINDIR)
+	$(INSTALL) senpai $(DESTDIR)$(PREFIX)/$(BINDIR)/senpai
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man1
+	$(INSTALL) -m644 doc/senpai.1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/senpai.1
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/$(MANDIR)/man5
+	$(INSTALL) -m644 doc/senpai.5 $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/senpai.5
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/$(APPDIR)
+	$(INSTALL) -m644 contrib/senpai.desktop $(DESTDIR)$(PREFIX)/$(APPDIR)/senpai.desktop
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/48x48/apps
+	$(INSTALL) -m644 res/icon.48.png $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/48x48/apps/senpai.png
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps
+	$(INSTALL) -m644 res/icon.svg $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps/senpai.svg
 uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/$(BINDIR)/senpai
 	$(RM) $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/senpai.1
