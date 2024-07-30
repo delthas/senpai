@@ -19,7 +19,7 @@ func notifyDBus(title, content string) int {
 	}
 	var r uint32
 	obj := conn.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
-	err = obj.Call("org.freedesktop.Notifications.Notify", 0, "senpai", uint32(0), "image-path", title, content, []string{
+	err = obj.Call("org.freedesktop.Notifications.Notify", 0, "senpai", uint32(0), "senpai", title, content, []string{
 		"default", "Open",
 	}, map[string]dbus.Variant{
 		"category":      dbus.MakeVariant("im.received"),
