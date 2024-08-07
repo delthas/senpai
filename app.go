@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"html"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -15,8 +16,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -901,7 +902,22 @@ func (app *App) handleNickEvent(ev *events.EventClickNick) {
 	}
 }
 
+var patternOpenGraphImage = regexp.MustCompile(`<meta property="og:image" content="(.*?)"/>`)
+
 func (app *App) fetchImage(link string) (image.Image, error) {
+	if u, err := url.Parse(link); err == nil {
+		changed := true
+		switch u.Host {
+		case "twitter.com", "x.com":
+			u.Host = "fixupx.com"
+		default:
+			changed = false
+		}
+		if changed {
+			link = u.String()
+		}
+	}
+
 	c := http.Client{
 		Timeout: 6 * time.Second,
 	}
@@ -912,15 +928,36 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
-	contentType := res.Header.Get("Content-Type")
+	contentType, _, err := mime.ParseMediaType(res.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, fmt.Errorf("unexpected content type: %v", res.Header.Get("Content-Type"))
+	}
+	var isHTML bool
 	switch contentType {
-	case "image/gif", "image/jpeg", "image/png":
+	case "image/gif", "image/jpeg", "image/png": // Actual image, fetch
+	case "text/html": // Might have an opengraph image, try fetching
+		isHTML = true
 	default:
 		return nil, fmt.Errorf("unexpected content type: %v", contentType)
 	}
 	res, err = c.Get(link)
 	if err != nil {
 		return nil, err
+	}
+	if isHTML {
+		b, err := io.ReadAll(io.LimitReader(res.Body, 10*1024))
+		if err != nil {
+			return nil, fmt.Errorf("unexpected read error: %v", err)
+		}
+		m := patternOpenGraphImage.FindSubmatch(b)
+		if len(m) < 2 {
+			return nil, fmt.Errorf("image embed not found")
+		}
+		imageLink := html.UnescapeString(string(m[1]))
+		res, err = c.Get(imageLink)
+		if err != nil {
+			return nil, err
+		}
 	}
 	img, _, err := ui.DecodeImage(res.Body)
 	res.Body.Close()
@@ -931,30 +968,30 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 }
 
 func (app *App) handleLinkEvent(ev *events.EventClickLink) {
-	var open bool
-	if ev.Mouse {
-		open = true
-		if ev.Event.Modifiers != vaxis.ModCtrl {
-			if u, err := url.Parse(ev.Link); err == nil {
-				switch strings.ToLower(path.Ext(u.Path)) {
-				case ".jpg", ".jpeg", ".png", ".gif":
-					open = false
-				}
-			}
-		}
-	}
-	if open {
+	open := func() {
 		if strings.HasPrefix(ev.Link, "-") {
 			// Avoid injection of parameters.
 			// Sadly xdg-open does not support "--"...
 			return
 		}
-		go func() {
-			cmd := exec.Command("xdg-open", ev.Link)
-			cmd.Run()
-		}()
+		cmd := exec.Command("xdg-open", ev.Link)
+		cmd.Run()
+	}
+
+	if ev.Event.Modifiers == vaxis.ModCtrl {
+		if ev.Mouse {
+			// Only react to Ctrl+Click when mouse links are enabled.
+
+			// Explicit external link open requested with Ctrl+Click:
+			// just run xdg-open.
+			go open()
+		}
 		return
 	}
+
+	// Regular link open requested:
+	// Try fetching as an image and displaying a preview;
+	// fall back to xdg-open if mouse links are enabled.
 
 	app.imageLoading = true
 	go func() {
@@ -965,6 +1002,9 @@ func (app *App) handleLinkEvent(ev *events.EventClickLink) {
 				content: &events.EventImageLoaded{
 					Image: nil,
 				},
+			}
+			if ev.Mouse {
+				open()
 			}
 		} else {
 			app.events <- event{
