@@ -903,6 +903,7 @@ func (app *App) handleNickEvent(ev *events.EventClickNick) {
 }
 
 var patternOpenGraphImage = regexp.MustCompile(`<meta property="og:image" content="(.*?)"/>`)
+var patternOpenGraphVideo = regexp.MustCompile(`<meta property="og:video"`)
 
 func (app *App) fetchImage(link string) (image.Image, error) {
 	if u, err := url.Parse(link); err == nil {
@@ -948,6 +949,10 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 		b, err := io.ReadAll(io.LimitReader(res.Body, 10*1024))
 		if err != nil {
 			return nil, fmt.Errorf("unexpected read error: %v", err)
+		}
+		if patternOpenGraphVideo.Match(b) {
+			// Do not display image (previews) of video objects
+			return nil, fmt.Errorf("video embed found")
 		}
 		m := patternOpenGraphImage.FindSubmatch(b)
 		if len(m) < 2 {
