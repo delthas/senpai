@@ -1099,7 +1099,7 @@ func getSong() (string, error) {
 
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "\x02%s\x02", info.Title)
-	if len(info.Artists) > 0 {
+	if len(info.Artists) > 0 && info.Artists[0] != "" {
 		fmt.Fprintf(&sb, " by \x02%s\x02", info.Artists[0])
 	}
 	if info.Album != "" {
