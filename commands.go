@@ -19,7 +19,8 @@ import (
 )
 
 var (
-	errOffline = fmt.Errorf("you are disconnected from the server, retry later")
+	errOffline      = fmt.Errorf("you are disconnected from the server, retry later")
+	errNotSupported = fmt.Errorf("command not supported by the server; try using latest soju")
 )
 
 const maxArgsInfinite = -1
@@ -169,6 +170,22 @@ func init() {
 			Usage:   "[topic]",
 			Desc:    "show or set the topic of the current channel",
 			Handle:  commandDoTopic,
+		},
+		"MUTE": {
+			Desc:   "mute the current channel (preventing color on new non-highlight messages)",
+			Handle: commandDoMute,
+		},
+		"UNMUTE": {
+			Desc:   "unmute the current channel",
+			Handle: commandDoUnmute,
+		},
+		"PIN": {
+			Desc:   "pin the current channel (moving it to the top of the channel list)",
+			Handle: commandDoPin,
+		},
+		"UNPIN": {
+			Desc:   "unpin the current channel",
+			Handle: commandDoUnpin,
 		},
 		"BUFFER": {
 			AllowHome: true,
@@ -740,6 +757,54 @@ func commandDoTopic(app *App, args []string) (err error) {
 	}
 	if !ok {
 		return errOffline
+	}
+	return nil
+}
+
+func commandDoMute(app *App, args []string) (err error) {
+	netID, buffer := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	if !s.MutedSet(buffer, true) {
+		return errNotSupported
+	}
+	return nil
+}
+
+func commandDoUnmute(app *App, args []string) (err error) {
+	netID, buffer := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	if !s.MutedSet(buffer, false) {
+		return errNotSupported
+	}
+	return nil
+}
+
+func commandDoPin(app *App, args []string) (err error) {
+	netID, buffer := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	if !s.PinnedSet(buffer, true) {
+		return errNotSupported
+	}
+	return nil
+}
+
+func commandDoUnpin(app *App, args []string) (err error) {
+	netID, buffer := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	if !s.PinnedSet(buffer, false) {
+		return errNotSupported
 	}
 	return nil
 }

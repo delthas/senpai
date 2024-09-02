@@ -189,6 +189,24 @@ _name_ is matched case-insensitively.  It can be one of the following:
 
 	Otherwise, change the topic of the current channel to _topic_.
 
+*MUTE*
+	Mute the current channel. This prevents being distracted from new messages
+	on unimportant channels.
+
+	This moves the channel to the end of the server, and greys its name out so
+	that new messages do not change its color in the list. Highlights will still
+	send a notification.
+
+*UNMUTE*
+	Unmute the current channel. See *MUTE*.
+
+*PIN*
+	Pin the current channel. This moves the channel to the start of the buffer
+	list.
+
+*UNPIN*
+	Unpin the current channel. See *PIN*.
+
 *MSG* <target> <content>
 	Send _content_ to _target_.
 

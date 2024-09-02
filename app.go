@@ -578,6 +578,7 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 }
 
 func (app *App) handleMouseEvent(ev vaxis.Mouse) {
+	const memberItems = 3
 	x, y := ev.Col, ev.Row
 	w, h := app.win.Size()
 
@@ -601,7 +602,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 		if ev.Button == vaxis.MouseWheelUp {
 			if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
 				app.win.ScrollChannelUpBy(4)
-			} else if x > w-app.win.MemberWidth() {
+			} else if x > w-app.win.MemberWidth() && y < h-memberItems*2 {
 				app.win.ScrollMemberUpBy(4)
 			} else {
 				app.win.ScrollUpBy(4)
@@ -610,7 +611,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 		if ev.Button == vaxis.MouseWheelDown {
 			if x < app.win.ChannelWidth() || (app.win.ChannelWidth() == 0 && y == h-1) {
 				app.win.ScrollChannelDownBy(4)
-			} else if x > w-app.win.MemberWidth() {
+			} else if x > w-app.win.MemberWidth() && y < h-memberItems*2 {
 				app.win.ScrollMemberDownBy(4)
 			} else {
 				app.win.ScrollDownBy(4)
@@ -625,8 +626,43 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				app.win.ClickBuffer(app.win.HorizontalBufferOffset(x))
 			} else if x == w-app.win.MemberWidth() {
 				app.win.ClickMemberCol(true)
-			} else if x > w-app.win.MemberWidth() && y >= 2 {
+			} else if x > w-app.win.MemberWidth() && y >= 2 && y < h-memberItems*2 {
 				app.win.ClickMember(y - 2 + app.win.MemberOffset())
+			} else if x > w-app.win.MemberWidth() && y >= h-memberItems*2 && (y-(h-memberItems*2))%2 == 1 {
+				netID, target := app.win.CurrentBuffer()
+				var failed bool
+				switch (y - (h - memberItems*2)) / 2 {
+				case 0:
+					muted := app.win.GetMuted(netID, target)
+					if s := app.sessions[netID]; s != nil && target != "" {
+						if !s.MutedSet(target, !muted) {
+							failed = true
+						}
+					}
+				case 1:
+					pinned := app.win.GetPinned(netID, target)
+					if s := app.sessions[netID]; s != nil && target != "" {
+						if !s.PinnedSet(target, !pinned) {
+							failed = true
+						}
+					}
+				case 2:
+					s := app.sessions[netID]
+					if s != nil && s.IsChannel(target) {
+						s.Part(target, "")
+					} else {
+						app.win.RemoveBuffer(netID, target)
+					}
+				}
+				if failed {
+					netID, buffer := app.win.CurrentBuffer()
+					app.win.AddLine(netID, buffer, ui.Line{
+						At:        time.Now(),
+						Head:      "!!",
+						HeadColor: ui.ColorRed,
+						Body:      ui.PlainString(errNotSupported.Error()),
+					})
+				}
 			} else {
 				app.win.Click(x, y, ev)
 			}
@@ -663,7 +699,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				app.win.GoToBufferNo(i)
 				app.clearBufferCommand()
 			}
-		} else if x > w-app.win.MemberWidth() {
+		} else if x > w-app.win.MemberWidth() && y < h-memberItems*2 {
 			if i := y - 2 + app.win.MemberOffset(); i >= 0 && i == app.win.ClickedMember() {
 				netID, target := app.win.CurrentBuffer()
 				if target == "" {
@@ -704,19 +740,16 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 						})
 						app.win.InputSet("/query ")
 					}
-				} else {
-					s := app.sessions[netID]
-					if s != nil && target != "" {
-						members := s.Names(target)
-						if i < len(members) {
-							buffer := members[i].Name.Name
-							i, added := app.win.AddBuffer(netID, "", buffer)
-							app.win.JumpBufferIndex(i)
-							if added {
-								s.MonitorAdd(buffer)
-								s.ReadGet(buffer)
-								s.NewHistoryRequest(buffer).WithLimit(500).Latest()
-							}
+				} else if s := app.sessions[netID]; s != nil {
+					members := s.Names(target)
+					if i < len(members) {
+						buffer := members[i].Name.Name
+						i, added := app.win.AddBuffer(netID, "", buffer)
+						app.win.JumpBufferIndex(i)
+						if added {
+							s.MonitorAdd(buffer)
+							s.ReadGet(buffer)
+							s.NewHistoryRequest(buffer).WithLimit(500).Latest()
 						}
 					}
 				}
@@ -729,7 +762,7 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 	}
 	if x == app.win.ChannelWidth()-1 || x == w-app.win.MemberWidth() {
 		app.win.SetMouseShape(vaxis.MouseShapeResizeHorizontal)
-	} else if app.win.HasEvent(x, y) {
+	} else if x < app.win.ChannelWidth()-1 || x > w-app.win.MemberWidth() || app.win.HasEvent(x, y) {
 		app.win.SetMouseShape(vaxis.MouseShapeClickable)
 	} else {
 		app.win.SetMouseShape(vaxis.MouseShapeDefault)
@@ -1334,6 +1367,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			topic := ui.IRCString(ev.Topic).ParseURLs()
 			app.win.SetTopic(netID, ev.Channel, topic)
 		}
+		app.win.SetPinned(netID, ev.Channel, ev.Pinned)
+		app.win.SetMuted(netID, ev.Channel, ev.Muted)
 
 		// Restore last buffer
 		if netID == app.lastNetID && ev.Channel == app.lastBuffer {
@@ -1529,6 +1564,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.win.AddLines("", ui.Overlay, lines, nil)
 	case irc.ReadEvent:
 		app.win.SetRead(netID, ev.Target, ev.Timestamp)
+	case irc.MetadataChangeEvent:
+		app.win.SetPinned(netID, ev.Target, ev.Pinned)
+		app.win.SetMuted(netID, ev.Target, ev.Muted)
 	case irc.BouncerNetworkEvent:
 		if !ev.Delete {
 			_, added := app.win.AddBuffer(ev.ID, ev.Name, "")

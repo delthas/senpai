@@ -466,6 +466,22 @@ func (ui *UI) SetTopic(netID, buffer string, topic StyledString) {
 	ui.bs.SetTopic(netID, buffer, topic)
 }
 
+func (ui *UI) GetPinned(netID, buffer string) bool {
+	return ui.bs.GetPinned(netID, buffer)
+}
+
+func (ui *UI) SetPinned(netID, buffer string, pinned bool) {
+	ui.bs.SetPinned(netID, buffer, pinned)
+}
+
+func (ui *UI) GetMuted(netID, buffer string) bool {
+	return ui.bs.GetMuted(netID, buffer)
+}
+
+func (ui *UI) SetMuted(netID, buffer string, muted bool) {
+	ui.bs.SetMuted(netID, buffer, muted)
+}
+
 func (ui *UI) SetRead(netID, buffer string, timestamp time.Time) {
 	ui.bs.SetRead(netID, buffer, timestamp)
 }
@@ -657,7 +673,7 @@ func (ui *UI) Draw(members []irc.Member) {
 		ui.bs.DrawVerticalBufferList(ui.vx, 0, 0, ui.channelWidth, h, &ui.channelOffset)
 	}
 	if ui.memberWidth != 0 {
-		ui.drawVerticalMemberList(ui.vx, w-ui.memberWidth, 0, ui.memberWidth, h, members, &ui.memberOffset)
+		ui.drawVerticalMemberList(ui.vx, w-ui.memberWidth, 0, ui.memberWidth, h, ui.bs.cur(), members, &ui.memberOffset)
 	}
 	if ui.channelWidth == 0 {
 		ui.drawStatusBar(ui.channelWidth, h-3, w-ui.memberWidth)
@@ -745,14 +761,7 @@ func (ui *UI) drawStatusBar(x0, y, width int) {
 	printString(ui.vx, &x, y, s.StyledString())
 }
 
-func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, members []irc.Member, offset *int) {
-	if y0+len(members)-*offset < height {
-		*offset = y0 + len(members) - height
-		if *offset < 0 {
-			*offset = 0
-		}
-	}
-
+func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *buffer, members []irc.Member, offset *int) {
 	drawVerticalLine(vx, x0, y0, height)
 	x0++
 	width--
@@ -807,6 +816,25 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, membe
 	y0++
 	height--
 
+	var actions []string
+	if b.muted {
+		actions = append(actions, "→ Unmute")
+	} else {
+		actions = append(actions, "→ Mute")
+	}
+	if b.pinned {
+		actions = append(actions, "→ Unpin")
+	} else {
+		actions = append(actions, "→ Pin")
+	}
+	actions = append(actions, "→ Leave")
+	for i, action := range actions {
+		x := x0
+		drawHorizontalLine(vx, x0, y0+height-(len(actions)-i)*2, width)
+		printString(vx, &x, y0+height-(len(actions)-i)*2+1, Styled(action, vaxis.Style{}))
+	}
+	height -= 2 * len(actions)
+
 	padding := 1
 	for _, m := range members {
 		if m.Disconnected {
@@ -815,7 +843,17 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, membe
 		}
 	}
 
+	if y0+len(members)-*offset < height {
+		*offset = y0 + len(members) - height
+		if *offset < 0 {
+			*offset = 0
+		}
+	}
+
 	for i, m := range members[*offset:] {
+		if i >= height {
+			break
+		}
 		var attr vaxis.AttributeMask
 		if i+*offset == ui.memberClicked {
 			attr |= vaxis.AttrReverse

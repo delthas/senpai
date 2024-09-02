@@ -32,6 +32,8 @@ type SelfJoinEvent struct {
 	Requested bool // whether we recently requested to join that channel
 	Topic     string
 	Read      time.Time
+	Pinned    bool
+	Muted     bool
 }
 
 type UserJoinEvent struct {
@@ -116,6 +118,12 @@ type ReadEvent struct {
 
 type SearchEvent struct {
 	Messages []MessageEvent
+}
+
+type MetadataChangeEvent struct {
+	Target string
+	Pinned bool
+	Muted  bool
 }
 
 type BouncerNetworkEvent struct {

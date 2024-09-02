@@ -67,6 +67,7 @@ var SupportedCapabilities = map[string]struct{}{
 
 	"draft/chathistory":               {},
 	"draft/event-playback":            {},
+	"draft/metadata-2":                {},
 	"draft/read-marker":               {},
 	"soju.im/bouncer-networks-notify": {},
 	"soju.im/bouncer-networks":        {},
@@ -97,6 +98,8 @@ type Channel struct {
 	TopicWho  *Prefix          // the name of the last user who set the topic.
 	TopicTime time.Time        // the last time the topic has been changed.
 	Read      time.Time        // the time until which messages were read.
+	Pinned    bool
+	Muted     bool
 
 	complete bool // whether this structure is fully initialized.
 }
@@ -128,6 +131,7 @@ type Session struct {
 
 	availableCaps map[string]string
 	enabledCaps   map[string]struct{}
+	metadataSubs  map[string]struct{}
 
 	serverName    string
 	defaultPrefix *Prefix
@@ -174,6 +178,7 @@ func NewSession(out chan<- Message, params SessionParams) *Session {
 		auth:            params.Auth,
 		availableCaps:   map[string]string{},
 		enabledCaps:     map[string]struct{}{},
+		metadataSubs:    map[string]struct{}{},
 		casemap:         CasemapRFC1459,
 		chantypes:       "#&",
 		linelen:         512,
@@ -552,6 +557,34 @@ func (s *Session) ReadSet(target string, timestamp time.Time) {
 	if _, ok := s.enabledCaps["draft/read-marker"]; ok {
 		s.out <- NewMessage("MARKREAD", target, formatTimestamp(timestamp))
 	}
+}
+
+func (s *Session) MutedSet(target string, muted bool) (ok bool) {
+	var v string
+	if muted {
+		v = "1"
+	} else {
+		v = "0"
+	}
+	k := "soju.im/muted"
+	if _, ok = s.metadataSubs[k]; ok {
+		s.out <- NewMessage("METADATA", target, "SET", k, v)
+	}
+	return
+}
+
+func (s *Session) PinnedSet(target string, pinned bool) (ok bool) {
+	var v string
+	if pinned {
+		v = "1"
+	} else {
+		v = "0"
+	}
+	k := "soju.im/pinned"
+	if _, ok = s.metadataSubs[k]; ok {
+		s.out <- NewMessage("METADATA", target, "SET", "soju.im/pinned", v)
+	}
+	return
 }
 
 func (s *Session) MonitorAdd(target string) {
@@ -1123,6 +1156,8 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				Channel: c.Name,
 				Topic:   c.Topic,
 				Read:    c.Read,
+				Pinned:  c.Pinned,
+				Muted:   c.Muted,
 			}
 			if stamp, ok := s.pendingChannels[channelCf]; ok && time.Since(stamp) < 5*time.Second {
 				ev.Requested = true
@@ -1441,6 +1476,34 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Target:    target,
 			Timestamp: t,
 		}, nil
+	case "METADATA":
+		// METADATA <Target> <Key> <Visibility> <Value>
+		if len(msg.Params) < 4 {
+			break
+		}
+		var target, key, value string
+		if err := msg.ParseParams(&target, &key, nil, &value); err != nil {
+			return nil, err
+		}
+		channelCf := s.Casemap(target)
+		c, ok := s.channels[channelCf]
+		if !ok {
+			return nil, nil
+		}
+		switch key {
+		case "soju.im/pinned":
+			c.Pinned = value == "1"
+		case "soju.im/muted":
+			c.Muted = value == "1"
+		}
+		s.channels[channelCf] = c
+		if c.complete {
+			return MetadataChangeEvent{
+				Target: target,
+				Pinned: c.Pinned,
+				Muted:  c.Muted,
+			}, nil
+		}
 	case "BOUNCER":
 		if len(msg.Params) < 3 {
 			break
@@ -1473,6 +1536,11 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		var code string
 		if err := msg.ParseParams(nil, &code); err != nil {
 			return nil, err
+		}
+
+		switch code {
+		case "KEY_INVALID": // METADATA SUB failed: ignore
+			return nil, nil
 		}
 
 		switch msg.Command {
@@ -1521,6 +1589,8 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		// useless info delimiter
 	case rplEndofhelp:
 		// useless help delimiter
+	case rplWhoiskeyvalue, rplKeyvalue, rplKeynotset, rplMetadataunsubok, rplMetadatasubs, rplMetadatasynclater:
+		// useless metadata replies
 	case rplStatscommands:
 		var command, count string
 		if err := msg.ParseParams(nil, &command, &count); err != nil {
@@ -1939,6 +2009,14 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Prefix:  "User",
 			Message: fmt.Sprintf("%s %s", nick, text),
 		}, nil
+	case rplMetadatasubok:
+		if err := msg.ParseParams(nil); err != nil {
+			return nil, err
+		}
+		for _, key := range msg.Params[1:] {
+			s.metadataSubs[key] = struct{}{}
+		}
+		return nil, nil
 	case rplHelpstart, rplHelptxt:
 		var text string
 		if err := msg.ParseParams(nil, nil, &text); err != nil {
@@ -2108,6 +2186,10 @@ func (s *Session) updateFeatures(features []string) {
 func (s *Session) endRegistration() {
 	if s.registered {
 		return
+	}
+	if len(s.enabledCaps) == 0 || s.HasCapability("draft/metadata-2") {
+		// Best effort to avoid a round trip: subscribe to metadata if explicitly supported or if CAPs are not yet known
+		s.out <- NewMessage("METADATA", "*", "SUB", "soju.im/pinned", "soju.im/muted")
 	}
 	if s.netID != "" {
 		s.out <- NewMessage("BOUNCER", "BIND", s.netID)

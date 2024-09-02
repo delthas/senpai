@@ -123,6 +123,14 @@ const (
 	rplEndofmonlist  = "733" // <nick> :End of MONITOR list
 	errMonlistisfull = "734" // <nick> <limit> <targets> :Monitor list is full.
 
+	rplWhoiskeyvalue     = "760" // <Target> <Key> <Visibility> :<Value>
+	rplKeyvalue          = "761" // <Target> <Key> <Visibility> :<Value>
+	rplKeynotset         = "766" // <Target> <Key> :key not set
+	rplMetadatasubok     = "770" // <Key1> [<Key2> ...]
+	rplMetadataunsubok   = "771" // <Key1> [<Key2> ...]
+	rplMetadatasubs      = "772" // <Key1> [<Key2> ...]
+	rplMetadatasynclater = "774" // <Target> [<RetryAfter>]
+
 	rplLoggedin    = "900" // <nick> <nick>!<ident>@<host> <account> :You are now logged in as <user>
 	rplLoggedout   = "901" // <nick> <nick>!<ident>@<host> :You are now logged out
 	errNicklocked  = "902" // :You must use a nick assigned to you

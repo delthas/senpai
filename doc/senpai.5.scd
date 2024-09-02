@@ -57,6 +57,9 @@ Some settings are required, the others are optional.
 	at startup and server reconnect. This directive can be specified multiple
 	times.
 
+	This directive should not be used when using a bouncer, as the bouncer
+	already remembers and joins senpai to its saved channels automatically.
+
 *highlight*
 	A space separated list of keywords that will trigger a notification and a
 	display indicator when said by others. This directive can be specified

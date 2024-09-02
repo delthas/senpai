@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -204,6 +205,9 @@ type buffer struct {
 	read          time.Time
 	openedOnce    bool
 
+	pinned bool
+	muted  bool
+
 	// This is the "last read" timestamp when the buffer was last focused.
 	// If the "last read" timestamp changes while the buffer is focused,
 	// the ruler should not move.
@@ -319,7 +323,7 @@ func (bs *BufferList) Previous() {
 func (bs *BufferList) NextUnread() {
 	for i := 0; i < len(bs.list); i++ {
 		c := (bs.current + i) % len(bs.list)
-		if bs.list[c].unread {
+		if bs.list[c].unread && !bs.list[c].muted {
 			bs.To(c)
 			return
 		}
@@ -329,7 +333,7 @@ func (bs *BufferList) NextUnread() {
 func (bs *BufferList) PreviousUnread() {
 	for i := 0; i < len(bs.list); i++ {
 		c := (bs.current - i + len(bs.list)) % len(bs.list)
-		if bs.list[c].unread {
+		if bs.list[c].unread && !bs.list[c].muted {
 			bs.To(c)
 			return
 		}
@@ -337,26 +341,32 @@ func (bs *BufferList) PreviousUnread() {
 }
 
 func (bs *BufferList) Add(netID, netName, title string) (i int, added bool) {
+	for _, b := range bs.list {
+		if netName == "" && b.netID == netID {
+			netName = b.netName
+			break
+		}
+	}
+	if netName != "" {
+		if i, b := bs.at(netID, title); b != nil {
+			return i, false
+		}
+	}
+
 	i = 0
 	lTitle := strings.ToLower(title)
 	for bi, b := range bs.list {
-		if netName == "" && b.netID == netID {
-			netName = b.netName
-		}
-		if netName == "" || b.netName < netName {
+		if b.pinned || b.netName < netName {
 			i = bi + 1
 			continue
 		}
-		if b.netName > netName {
+		if b.muted || b.netName > netName {
 			break
 		}
 		lbTitle := strings.ToLower(b.title)
 		if lbTitle < lTitle {
 			i = bi + 1
 			continue
-		}
-		if lbTitle == lTitle {
-			return i, false
 		}
 		break
 	}
@@ -426,6 +436,48 @@ func (bs *BufferList) RemoveNetwork(netID string) {
 		c := bs.current
 		bs.current = -1
 		bs.To(c)
+	}
+}
+
+func (bs *BufferList) reorder() {
+	netID, title := bs.Current()
+	sort.Slice(bs.list, func(i, j int) bool {
+		bi := &bs.list[i]
+		bj := &bs.list[j]
+		if bi.netID == "" && bj.netID != "" {
+			return true
+		}
+		if bi.netID != "" && bj.netID == "" {
+			return false
+		}
+		if bi.pinned && !bj.pinned {
+			return true
+		}
+		if !bi.pinned && bj.pinned {
+			return false
+		}
+		if c := strings.Compare(bi.netName, bj.netName); c != 0 {
+			return c == -1
+		}
+		if bi.title == "" && bj.title != "" {
+			return true
+		}
+		if bi.title != "" && bj.title == "" {
+			return false
+		}
+		if bi.muted && !bj.muted {
+			return false
+		}
+		if !bi.muted && bj.muted {
+			return true
+		}
+		bti := strings.ToLower(bi.title)
+		btj := strings.ToLower(bj.title)
+		return strings.Compare(bti, btj) == -1
+	})
+	i, _ := bs.at(netID, title)
+	if i >= 0 {
+		bs.current = i
 	}
 }
 
@@ -544,6 +596,40 @@ func (bs *BufferList) SetTopic(netID, title string, topic StyledString) {
 		return
 	}
 	b.topic = topic
+}
+
+func (bs *BufferList) GetPinned(netID, title string) bool {
+	_, b := bs.at(netID, title)
+	if b == nil {
+		return false
+	}
+	return b.pinned
+}
+
+func (bs *BufferList) SetPinned(netID, title string, pinned bool) {
+	_, b := bs.at(netID, title)
+	if b == nil {
+		return
+	}
+	b.pinned = pinned
+	bs.reorder()
+}
+
+func (bs *BufferList) GetMuted(netID, title string) bool {
+	_, b := bs.at(netID, title)
+	if b == nil {
+		return false
+	}
+	return b.muted
+}
+
+func (bs *BufferList) SetMuted(netID, title string, muted bool) {
+	_, b := bs.at(netID, title)
+	if b == nil {
+		return
+	}
+	b.muted = muted
+	bs.reorder()
 }
 
 func (bs *BufferList) clearRead(i int) {
@@ -736,12 +822,14 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 		bi := off + i
 		x := x0
 		var st vaxis.Style
-		if b.unread {
+		if b.unread && !b.muted {
 			st.Attribute |= vaxis.AttrBold
 			st.Foreground = bs.ui.config.Colors.Unread
 		}
 		if bi == bs.current || bi == bs.clicked {
 			st.Attribute |= vaxis.AttrReverse
+		} else if b.muted {
+			st.Foreground = ColorGray
 		}
 
 		var title string
@@ -763,10 +851,15 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 		}
 
 		if b.title != "" {
+			var st vaxis.Style
 			if bi == bs.current || bi == bs.clicked {
-				st := vaxis.Style{
-					Attribute: vaxis.AttrReverse,
-				}
+				st.Attribute |= vaxis.AttrReverse
+			}
+			if b.pinned {
+				st.Attribute |= vaxis.AttrBold
+				setCell(vx, x, y, '⚲', st)
+				setCell(vx, x+1, y, ' ', st)
+			} else {
 				setCell(vx, x, y, ' ', st)
 				setCell(vx, x+1, y, ' ', st)
 			}
@@ -917,7 +1010,7 @@ func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, off
 			break
 		}
 		var st vaxis.Style
-		if b.unread {
+		if b.unread && !b.muted {
 			st.Attribute |= vaxis.AttrBold
 			st.Foreground = bs.ui.config.Colors.Unread
 		} else if i == bs.current {
@@ -925,6 +1018,8 @@ func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, off
 		}
 		if i == bs.clicked {
 			st.Attribute |= vaxis.AttrReverse
+		} else if b.muted {
+			st.Foreground = ColorGray
 		}
 
 		var title string
