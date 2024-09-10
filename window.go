@@ -9,13 +9,15 @@ import (
 	"git.sr.ht/~delthas/senpai/ui"
 )
 
-const welcomeMessage = "Welcome to senpai! To get started, use the Help buttons, or enter /help for a list of commands."
-
 func (app *App) initWindow() {
+	version, ok := BuildVersion()
+	if !ok {
+		version = "(unknown version)"
+	}
 	app.win.AddBuffer("", "(home)", "")
 	app.win.AddLine("", "", ui.Line{
 		Head: "--",
-		Body: ui.PlainString(welcomeMessage),
+		Body: ui.PlainString(fmt.Sprintf("Welcome to senpai %v! To get started, use the Help buttons, or enter /help for a list of commands.", version)),
 		At:   time.Now(),
 	})
 }

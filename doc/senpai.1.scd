@@ -20,6 +20,9 @@ senpai - your everyday IRC student
 *-debug*
 	Advanced. Show all IRC messages that are received from/sent to the server.
 
+*-version*
+	Display version info.
+
 # DESCRIPTION
 
 senpai is an IRC client made for bouncers.  It supports the newest IRC

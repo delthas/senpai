@@ -20,12 +20,23 @@ func main() {
 	var configPath string
 	var nickname string
 	var debug bool
+	var version bool
 	flag.StringVar(&configPath, "config", "", "path to the configuration file")
 	flag.StringVar(&nickname, "nickname", "", "nick name/display name to use")
 	flag.BoolVar(&debug, "debug", false, "show raw protocol data in the home buffer")
+	flag.BoolVar(&version, "version", false, "show version info")
 	flag.Parse()
 
 	rand.Seed(time.Now().UnixNano())
+
+	if version {
+		if v, ok := senpai.BuildVersion(); ok {
+			fmt.Printf("senpai version %v\n", v)
+		} else {
+			fmt.Printf("senpai (unknown version)\n")
+		}
+		return
+	}
 
 	if configPath == "" {
 		configDir, err := os.UserConfigDir()

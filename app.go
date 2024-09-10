@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -215,7 +216,7 @@ func NewApp(cfg Config) (app *App, err error) {
 }
 
 func (app *App) Close() {
-	app.win.Exit()       // tell all instances of app.ircLoop to stop when possible
+	app.win.Exit() // tell all instances of app.ircLoop to stop when possible
 	app.events <- event{ // tell app.eventLoop to stop
 		src:     "*",
 		content: nil,
@@ -2314,6 +2315,14 @@ func formatSize(v int64) string {
 		v /= 1024
 	}
 	panic("unreachable")
+}
+
+func BuildVersion() (string, bool) {
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		return bi.Main.Version, true
+	} else {
+		return "", false
+	}
 }
 
 type ReadProgress struct {
