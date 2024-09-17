@@ -511,10 +511,6 @@ func commandDoUpload(app *App, args []string) (err error) {
 	if err != nil {
 		return fmt.Errorf("opening file: %v", err)
 	}
-	if fi.Size() > 50*1024*1024 {
-		// Best-effort limit, taking from current soju
-		return fmt.Errorf("file too large: maximum 50MB per file")
-	}
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("opening file: %v", err)

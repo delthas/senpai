@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1048,12 +1049,31 @@ func (app *App) upload(url string, f *os.File, size int64) (string, error) {
 	if app.cfg.Password != nil {
 		req.SetBasicAuth(app.cfg.User, *app.cfg.Password)
 	}
+	req.ContentLength = size
 	req.Header.Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
 		"filename": filepath.Base(f.Name()),
 	}))
 	res, err := c.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("uploading: %v", err)
+	}
+	if res.StatusCode == http.StatusRequestEntityTooLarge {
+		var maxSize int64
+		for _, entry := range strings.Split(res.Header.Get("Upload-Limit"), ",") {
+			entry = strings.TrimSpace(entry)
+			key, value, ok := strings.Cut(entry, "=")
+			if !ok || key != "maxsize" {
+				continue
+			}
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil && v > 0 {
+				maxSize = v
+			}
+		}
+		if maxSize > 0 {
+			return "", fmt.Errorf("uploading: file too large: maximum %v per file (file was %v)", formatSize(maxSize), formatSize(size))
+		} else {
+			return "", fmt.Errorf("uploading: file too large")
+		}
 	}
 	if res.StatusCode != http.StatusCreated {
 		return "", fmt.Errorf("uploading: unexpected status code: %d", res.StatusCode)
@@ -2210,6 +2230,17 @@ func keyMatches(k vaxis.Key, r rune, mods vaxis.ModifierMask) bool {
 		}
 	}
 	return false
+}
+
+func formatSize(v int64) string {
+	suffixes := []string{"B", "kB", "MB", "GB"}
+	for i, suffix := range suffixes {
+		if v < 1024 || i == len(suffixes)-1 {
+			return fmt.Sprintf("%v%v", v, suffix)
+		}
+		v /= 1024
+	}
+	panic("unreachable")
 }
 
 type ReadProgress struct {
