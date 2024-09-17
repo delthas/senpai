@@ -294,7 +294,7 @@ func (msg Message) WithTag(key, value string) Message {
 	if msg.Tags == nil {
 		msg.Tags = map[string]string{}
 	}
-	msg.Tags[key] = escapeTagValue(value)
+	msg.Tags[key] = value
 	return msg
 }
 
