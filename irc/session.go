@@ -228,6 +228,16 @@ func (s *Session) HasCapability(capability string) bool {
 	return ok
 }
 
+func (s *Session) IsBouncer() bool {
+	if s.HasCapability("soju.im/bouncer-networks") { // soju-compatible
+		return true
+	}
+	if s.defaultPrefix != nil && s.defaultPrefix.Name == "irc.znc.in" { // ZNC
+		return true
+	}
+	return false
+}
+
 // BouncerService returns the optional nick of the bouncer service user.
 func (s *Session) BouncerService() string {
 	switch s.serverName {

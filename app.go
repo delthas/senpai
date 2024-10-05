@@ -138,6 +138,8 @@ type App struct {
 	imageOverlay bool
 
 	uploadingProgress *float64
+
+	shownBouncerNotice bool
 }
 
 func NewApp(cfg Config) (app *App, err error) {
@@ -1211,6 +1213,22 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			Head: "--",
 			Body: ui.PlainString(body),
 		})
+		if !app.shownBouncerNotice && !s.IsBouncer() {
+			app.shownBouncerNotice = true
+			for _, line := range []string{
+				"senpai appears to be directly connected to an IRC server, rather than to an \x02IRC bouncer\x02. This is supported, but provides a limited IRC experience.",
+				"In order to connect to multiple networks, keep message history, search through your messages, and upload files, use an \x02IRC bouncer\x02 and point senpai to the bouncer.",
+				"Most senpai users use senpai with the IRC bouncer software \x02soju\x02.",
+				"* You can self-host \x02soju\x02 yourself (it is free and open-source): https://soju.im/",
+				"* You can also use a commercial hosted bouncer (uses \x02soju\x02 underneath), endorsed by senpai: \x02https://irctoday.com/\x02",
+			} {
+				app.addStatusLine(netID, ui.Line{
+					At:   msg.TimeOrNow(),
+					Head: "Bouncer --",
+					Body: ui.IRCString(line),
+				})
+			}
+		}
 		for target := range app.monitor[s.NetID()] {
 			// TODO: batch MONITOR +
 			s.MonitorAdd(target)

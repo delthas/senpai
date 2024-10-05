@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"os/user"
 	"path"
 	"strings"
 	"syscall"
@@ -45,8 +46,15 @@ func main() {
 		tls := true
 		var nick, password string
 		fmt.Fprintf(os.Stderr, "The configuration file at %q was not found.\n", configPath)
-		fmt.Fprintf(os.Stderr, "Configuration assistant: senpai will create a configuration file for you.\n")
-		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your server host (examples: example.com, localhost, 1.2.3.4): ")
+		fmt.Fprintf(os.Stderr, "Configuration assistant: senpai will create a configuration file for you.\n\n")
+		fmt.Fprintf(os.Stderr, "Important senpai information:\n")
+		fmt.Fprintf(os.Stderr, "* senpai is able to connect to at most 1 server at a time.\n")
+		fmt.Fprintf(os.Stderr, "* In order to connect to multiple networks, keep message history, search through your messages, and upload files, use an \x1B[1mIRC bouncer\x1B[0m and point senpai to the bouncer.\n")
+		fmt.Fprintf(os.Stderr, "* Most senpai users use senpai with the IRC bouncer software \x1B[1msoju\x1B[0m.\n")
+		fmt.Fprintf(os.Stderr, "** You can self-host \x1B[1msoju\x1B[0m yourself (it is free and open-source): https://soju.im/\n")
+		fmt.Fprintf(os.Stderr, "** You can also use a commercial hosted bouncer (uses \x1B[1msoju\x1B[0m underneath), endorsed by senpai: \x1B[1;4mhttps://irctoday.com/\x1B[0m\n\n")
+		fmt.Fprintf(os.Stderr, "Feel free to connect to your server now and configure a bouncer later to enable additional features.\n\n")
+		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your server host (examples: irc.libera.chat, irctoday.com): ")
 		for host == "" {
 			fmt.Scanln(&host)
 		}
@@ -69,9 +77,22 @@ func main() {
 			}
 			break
 		}
-		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your nickname: ")
-		for nick == "" {
+		var defaultNick string
+		if u, err := user.Current(); err == nil {
+			defaultNick = u.Username
+			if _, name, ok := strings.Cut(defaultNick, "\\"); ok {
+				defaultNick = name
+			}
+			fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your nickname [optional, default: %v]: ", defaultNick)
+		} else {
+			fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your nickname: ")
+		}
+		fmt.Scanln(&nick)
+		for defaultNick == "" && nick == "" {
 			fmt.Scanln(&nick)
+		}
+		if nick == "" {
+			nick = defaultNick
 		}
 		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your password (only enter if you already have an account) [optional]: ")
 		fmt.Scanln(&password)
