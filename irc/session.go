@@ -129,7 +129,8 @@ type Session struct {
 	availableCaps map[string]string
 	enabledCaps   map[string]struct{}
 
-	serverName string
+	serverName    string
+	defaultPrefix *Prefix
 	// ISUPPORT features
 	casemap       func(string) string
 	chanmodes     [4]string
@@ -671,6 +672,15 @@ func (s *Session) Kick(nick, channel, comment string) {
 }
 
 func (s *Session) HandleMessage(msg Message) (Event, error) {
+	if msg.Prefix == nil {
+		if s.defaultPrefix != nil {
+			msg.Prefix = s.defaultPrefix
+		} else {
+			msg.Prefix = &Prefix{
+				Name: "*",
+			}
+		}
+	}
 	if s.registered {
 		return s.handleRegistered(msg)
 	} else {
@@ -772,6 +782,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Message:  fmt.Sprintf("Registration failed: %s", strings.Join(msg.Params[1:], " ")),
 		}, nil
 	case rplWelcome:
+		s.defaultPrefix = msg.Prefix
 		if err := msg.ParseParams(&s.nick); err != nil {
 			return nil, err
 		}
@@ -885,10 +896,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}
 		}
 	case "JOIN":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		var channel string
 		if err := msg.ParseParams(&channel); err != nil {
 			return nil, err
@@ -928,10 +935,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}, nil
 		}
 	case "PART":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		var channel string
 		if err := msg.ParseParams(&channel); err != nil {
 			return nil, err
@@ -1010,10 +1013,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}
 		}
 	case "QUIT":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		if playback {
 			return UserQuitEvent{
 				User: msg.Prefix.Name,
@@ -1171,10 +1170,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			s.channels[channelCf] = c
 		}
 	case "TOPIC":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		var channel, topic string
 		if err := msg.ParseParams(&channel, &topic); err != nil {
 			return nil, err
@@ -1258,10 +1253,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}, nil
 		}
 	case "INVITE":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		var nick, channel string
 		if err := msg.ParseParams(&nick, &channel); err != nil {
 			return nil, err
@@ -1284,20 +1275,12 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Channel: channel,
 		}, nil
 	case "AWAY":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		nickCf := s.Casemap(msg.Prefix.Name)
 
 		if u, ok := s.users[nickCf]; ok {
 			u.Away = len(msg.Params) == 1
 		}
 	case "PRIVMSG", "NOTICE":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		var target string
 		if err := msg.ParseParams(&target); err != nil {
 			return nil, err
@@ -1315,10 +1298,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 	case "TAGMSG":
 		if playback {
 			return nil, nil
-		}
-
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
 		}
 
 		var target string
@@ -1390,10 +1369,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}
 		}
 	case "NICK":
-		if msg.Prefix == nil {
-			return nil, errMissingPrefix
-		}
-
 		var nick string
 		if err := msg.ParseParams(&nick); err != nil {
 			return nil, err
@@ -1995,10 +1970,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 }
 
 func (s *Session) newMessageEvent(msg Message) (ev MessageEvent, err error) {
-	if msg.Prefix == nil {
-		return ev, errMissingPrefix
-	}
-
 	var target, content string
 	if err := msg.ParseParams(&target, &content); err != nil {
 		return ev, err

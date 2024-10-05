@@ -166,7 +166,6 @@ func formatTags(tags map[string]string) string {
 var (
 	errEmptyMessage      = errors.New("empty message")
 	errIncompleteMessage = errors.New("message is incomplete")
-	errMissingPrefix     = errors.New("missing message prefix")
 )
 
 type Prefix struct {
