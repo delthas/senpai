@@ -1281,6 +1281,10 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			u.Away = len(msg.Params) == 1
 		}
 	case "PRIVMSG", "NOTICE":
+		if !s.registered && msg.Command == "NOTICE" {
+			return nil, nil
+		}
+
 		var target string
 		if err := msg.ParseParams(&target); err != nil {
 			return nil, err
