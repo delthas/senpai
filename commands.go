@@ -165,6 +165,13 @@ func init() {
 			Desc:      "reply to the last query",
 			Handle:    commandDoR,
 		},
+		"CALL": {
+			AllowHome: true,
+			MaxArgs:   1,
+			Usage:     "[nick]",
+			Desc:      "request or accept an audio call from another user",
+			Handle:    commandDoCall,
+		},
 		"TOPIC": {
 			MaxArgs: 1,
 			Usage:   "[topic]",
@@ -739,6 +746,61 @@ func commandDoR(app *App, args []string) (err error) {
 			Time:            time.Now(),
 		})
 		app.win.AddLine(app.lastQueryNet, buffer, line)
+	}
+	return nil
+}
+
+func commandDoCall(app *App, args []string) (err error) {
+	netID, target := app.win.CurrentBuffer()
+	s := app.sessions[netID]
+	if s == nil {
+		return errOffline
+	}
+	if len(args) > 0 {
+		target = args[0]
+	}
+	if s.IsChannel(target) {
+		return fmt.Errorf("cannot call a channel, only 1-to-1 calls are supported")
+	}
+	if app.rtcIn != nil {
+		// TODO how to close rtc
+		return fmt.Errorf("cannot call multiple users at once; end your previous call before making a new one")
+	}
+	handleOut := func(out chan irc.Event) {
+		for ev := range out {
+			s := app.sessions[netID]
+			if s == nil {
+				return
+			}
+			switch ev := ev.(type) {
+			case irc.WebRTCSessionEvent:
+				s.WebRTCSession(target, ev.Data)
+			case irc.WebRTCICECandidateEvent:
+				s.WebRTCICECandidate(target, ev.Data)
+			}
+		}
+	}
+	if app.rtcNetID == netID && app.rtcUser == target {
+		// Responding to offer
+		in, out, err := RTC(false)
+		if err != nil {
+			return fmt.Errorf("failed accepting call: %v", err)
+		}
+		in <- irc.WebRTCSessionEvent{
+			Data: app.rtcOffer,
+		}
+		app.rtcIn = in
+		go handleOut(out)
+	} else {
+		// New session: send offer
+		in, out, err := RTC(true)
+		if err != nil {
+			return fmt.Errorf("failed requesting call: %v", err)
+		}
+		app.rtcNetID = netID
+		app.rtcUser = target
+		app.rtcIn = in
+		go handleOut(out)
 	}
 	return nil
 }

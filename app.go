@@ -141,6 +141,11 @@ type App struct {
 	uploadingProgress *float64
 
 	shownBouncerNotice bool
+
+	rtcNetID string
+	rtcUser  string
+	rtcOffer string
+	rtcIn    chan irc.Event
 }
 
 func NewApp(cfg Config) (app *App, err error) {
@@ -1588,6 +1593,26 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				delete(app.monitor, ev.ID)
 			}
 			app.win.RemoveNetworkBuffers(ev.ID)
+		}
+	case irc.WebRTCSessionEvent:
+		if app.rtcIn == nil {
+			// New session: store and ask user
+			app.rtcNetID = netID
+			app.rtcUser = ev.User
+			app.rtcOffer = ev.Data
+			// TODO
+			app.addStatusLine(netID, ui.Line{
+				At:   msg.TimeOrNow(),
+				Head: "--",
+				Body: ui.PlainString(fmt.Sprintf("%v is requesting a direct audio call. Enter the following command to accept the call: /call %v", ev.User, ev.User)),
+			})
+		} else if app.rtcIn != nil && app.rtcNetID == netID && app.rtcUser == ev.User {
+			// Ongoing session: pass through to session
+			app.rtcIn <- ev
+		}
+	case irc.WebRTCICECandidateEvent:
+		if app.rtcIn != nil && app.rtcNetID == netID && app.rtcUser == ev.User {
+			app.rtcIn <- ev
 		}
 	case irc.ListEvent:
 		for _, item := range ev {

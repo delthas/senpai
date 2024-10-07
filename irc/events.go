@@ -131,3 +131,13 @@ type BouncerNetworkEvent struct {
 	Name   string
 	Delete bool
 }
+
+type WebRTCSessionEvent struct {
+	User string
+	Data string
+}
+
+type WebRTCICECandidateEvent struct {
+	User string
+	Data string
+}

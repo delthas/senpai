@@ -547,6 +547,20 @@ func (s *Session) TypingStop(target string) {
 	s.out <- NewMessage("TAGMSG", target).WithTag("+typing", "done")
 }
 
+func (s *Session) WebRTCSession(target string, data string) {
+	if !s.HasCapability("message-tags") {
+		return
+	}
+	s.out <- NewMessage("TAGMSG", target).WithTag("+webrtc-session", data)
+}
+
+func (s *Session) WebRTCICECandidate(target string, data string) {
+	if !s.HasCapability("message-tags") {
+		return
+	}
+	s.out <- NewMessage("TAGMSG", target).WithTag("+webrtc-ice-candidate", data)
+}
+
 func (s *Session) ReadGet(target string) {
 	if _, ok := s.enabledCaps["draft/read-marker"]; ok {
 		s.out <- NewMessage("MARKREAD", target)
@@ -1359,6 +1373,18 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			case "paused", "done":
 				s.typings.Done(targetCf, nickCf)
 			}
+		}
+		if t, ok := msg.Tags["+webrtc-session"]; ok {
+			return WebRTCSessionEvent{
+				User: msg.Prefix.Name,
+				Data: t,
+			}, nil
+		}
+		if t, ok := msg.Tags["+webrtc-ice-candidate"]; ok {
+			return WebRTCICECandidateEvent{
+				User: msg.Prefix.Name,
+				Data: t,
+			}, nil
 		}
 	case "BATCH":
 		var id string
