@@ -12,6 +12,7 @@ const (
 	rplEndofstats    = "219" // <stats letter> :End of /STATS report
 	rplUmodeis       = "221" // <modes>
 	rplStatsuptime   = "242" // :Server Up <days> days <hours>:<minutes>:<seconds>
+	rplStatsconn     = "250" // :Highest connection count: <connections> (<clients> clients) (<total> connections received)
 	rplLuserclient   = "251" // :<int> users and <int> services on <int> servers
 	rplLuserop       = "252" // <int> :operator(s) online
 	rplLuserunknown  = "253" // <int> :unknown connection(s)

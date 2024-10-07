@@ -1544,7 +1544,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			Prefix:  "Stats",
 			Message: fmt.Sprintf("The server current uptime is: %s", msg.Params[len(msg.Params)-1]),
 		}, nil
-	case rplLuserclient:
+	case rplStatsconn, rplLuserclient:
 		return InfoEvent{
 			Prefix:  "Stats",
 			Message: msg.Params[len(msg.Params)-1],
