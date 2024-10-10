@@ -4,11 +4,29 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"git.sr.ht/~delthas/senpai/irc"
 	"git.sr.ht/~delthas/senpai/ui"
 )
+
+type members []irc.Member
+
+func (m members) Len() int {
+	return len(m)
+}
+
+func (m members) Less(i, j int) bool {
+	if c := m[i].LastActive.Compare(m[j].LastActive); c != 0 {
+		return c > 0
+	}
+	return strings.ToLower(m[i].Name.Name) < strings.ToLower(m[j].Name.Name)
+}
+
+func (m members) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
 
 type completionAsync func(e irc.Event) []ui.Completion
 
@@ -27,7 +45,9 @@ func (app *App) completionsChannelMembers(cs []ui.Completion, cursorIdx int, tex
 	netID, buffer := app.win.CurrentBuffer()
 	s := app.sessions[netID] // is not nil
 	wordCf := s.Casemap(string(word))
-	for _, name := range s.Names(buffer) {
+	names := members(s.Names(buffer))
+	sort.Sort(names)
+	for _, name := range names {
 		if strings.HasPrefix(s.Casemap(name.Name.Name), wordCf) {
 			nickComp := []rune(name.Name.Name)
 			if start == 0 {

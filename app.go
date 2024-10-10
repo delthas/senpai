@@ -216,7 +216,7 @@ func NewApp(cfg Config) (app *App, err error) {
 }
 
 func (app *App) Close() {
-	app.win.Exit() // tell all instances of app.ircLoop to stop when possible
+	app.win.Exit()       // tell all instances of app.ircLoop to stop when possible
 	app.events <- event{ // tell app.eventLoop to stop
 		src:     "*",
 		content: nil,

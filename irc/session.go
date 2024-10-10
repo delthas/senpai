@@ -90,14 +90,19 @@ type User struct {
 	Disconnected bool    // can only be true for monitored users.
 }
 
+type ChannelMember struct {
+	Membership string
+	LastActive time.Time
+}
+
 // Channel is a joined channel.
 type Channel struct {
-	Name      string           // the name of the channel.
-	Members   map[*User]string // the set of members associated with their membership.
-	Topic     string           // the topic of the channel, or "" if absent.
-	TopicWho  *Prefix          // the name of the last user who set the topic.
-	TopicTime time.Time        // the last time the topic has been changed.
-	Read      time.Time        // the time until which messages were read.
+	Name      string                  // the name of the channel.
+	Members   map[*User]ChannelMember // the set of members associated with their membership.
+	Topic     string                  // the topic of the channel, or "" if absent.
+	TopicWho  *Prefix                 // the name of the last user who set the topic.
+	TopicTime time.Time               // the last time the topic has been changed.
+	Read      time.Time               // the time until which messages were read.
 	Pinned    bool
 	Muted     bool
 
@@ -304,13 +309,14 @@ func (s *Session) Names(target string) []Member {
 	if s.IsChannel(target) {
 		if c, ok := s.channels[s.Casemap(target)]; ok {
 			names = make([]Member, 0, len(c.Members))
-			for u, pl := range c.Members {
+			for u, m := range c.Members {
 				names = append(names, Member{
-					PowerLevel:   pl,
+					PowerLevel:   m.Membership,
 					Name:         u.Name.Copy(),
 					Away:         u.Away,
 					Disconnected: u.Disconnected,
 					Self:         s.nickCf == s.casemap(u.Name.Name),
+					LastActive:   m.LastActive,
 				})
 			}
 		}
@@ -948,7 +954,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		if s.IsMe(nickCf) {
 			s.channels[channelCf] = Channel{
 				Name:    msg.Params[0],
-				Members: map[*User]string{},
+				Members: map[*User]ChannelMember{},
 			}
 			if _, ok := s.enabledCaps["away-notify"]; ok {
 				// Only try to know who is away if the list is
@@ -960,7 +966,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			if _, ok := s.users[nickCf]; !ok {
 				s.users[nickCf] = &User{Name: msg.Prefix.Copy()}
 			}
-			c.Members[s.users[nickCf]] = ""
+			c.Members[s.users[nickCf]] = ChannelMember{}
 			return UserJoinEvent{
 				User:    msg.Prefix.Name,
 				Channel: c.Name,
@@ -1136,7 +1142,9 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				if _, ok := s.users[nickCf]; !ok {
 					s.users[nickCf] = &User{Name: name.Name.Copy()}
 				}
-				c.Members[s.users[nickCf]] = name.PowerLevel
+				m := c.Members[s.users[nickCf]]
+				m.Membership = name.PowerLevel
+				c.Members[s.users[nickCf]] = m
 			}
 
 			s.channels[channelCf] = c
@@ -1262,23 +1270,24 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				}
 				nickCf := s.Casemap(change.Param)
 				user := s.users[nickCf]
-				membership, ok := c.Members[user]
+				m, ok := c.Members[user]
 				if !ok {
 					continue
 				}
 				var newMembership []byte
 				if change.Enable {
-					newMembership = append([]byte(membership), s.prefixSymbols[i])
+					newMembership = append([]byte(m.Membership), s.prefixSymbols[i])
 					sort.Slice(newMembership, func(i, j int) bool {
 						i = strings.IndexByte(s.prefixSymbols, newMembership[i])
 						j = strings.IndexByte(s.prefixSymbols, newMembership[j])
 						return i < j
 					})
-				} else if j := strings.IndexByte(membership, s.prefixSymbols[i]); j >= 0 {
-					newMembership = []byte(membership)
+				} else if j := strings.IndexByte(m.Membership, s.prefixSymbols[i]); j >= 0 {
+					newMembership = []byte(m.Membership)
 					newMembership = append(newMembership[:j], newMembership[j+1:]...)
 				}
-				c.Members[user] = string(newMembership)
+				m.Membership = string(newMembership)
+				c.Members[user] = m
 			}
 			s.channels[channelCf] = c
 			return ModeChangeEvent{
@@ -1325,15 +1334,26 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			return nil, err
 		}
 
-		if playback {
-			return s.newMessageEvent(msg)
-		}
-
 		targetCf := s.casemap(target)
 		nickCf := s.casemap(msg.Prefix.Name)
-		s.typings.Done(targetCf, nickCf)
-
-		return s.newMessageEvent(msg)
+		if !playback {
+			s.typings.Done(targetCf, nickCf)
+		}
+		ev, err := s.newMessageEvent(msg)
+		if err != nil {
+			return nil, err
+		}
+		if c, ok := s.channels[targetCf]; ok {
+			if u, ok := s.users[nickCf]; ok {
+				if m, ok := c.Members[u]; ok {
+					if ev.Time.After(m.LastActive) {
+						m.LastActive = ev.Time
+						c.Members[u] = m
+					}
+				}
+			}
+		}
+		return ev, nil
 	case "TAGMSG":
 		if playback {
 			return nil, nil

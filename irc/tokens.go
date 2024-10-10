@@ -467,6 +467,7 @@ type Member struct {
 	Away         bool
 	Disconnected bool
 	Self         bool // Added by senpai
+	LastActive   time.Time
 }
 
 type members struct {
