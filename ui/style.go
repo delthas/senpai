@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"git.sr.ht/~rockorager/vaxis"
@@ -87,11 +89,17 @@ func (s StyledString) String() string {
 	return s.string
 }
 
-var urlRegex, _ = xurls.StrictMatchingScheme(xurls.AnyScheme)
+var urlRegex *regexp.Regexp
+
+func init() {
+	urlRegex, _ = xurls.StrictMatchingScheme(xurls.AnyScheme)
+	urlRegex = regexp.MustCompile(urlRegex.String() + `|#[\p{L}0-9#.-]*[\p{L}0-9]`)
+	urlRegex.Longest()
+}
 
 func (s StyledString) ParseURLs() StyledString {
-	if !strings.ContainsRune(s.string, '.') {
-		// fast path: no dot means no URL
+	if !strings.ContainsAny(s.string, ".#") {
+		// fast path: no URL
 		return s
 	}
 
@@ -106,10 +114,22 @@ func (s StyledString) ParseURLs() StyledString {
 		u := urls[i]
 		ub, ue := u[0], u[1]
 		link := s.string[u[0]:u[1]]
-		if u, err := url.Parse(link); err != nil || u.Scheme == "" {
-			link = "https://" + link
+		var params string
+		if link[0] == '#' {
+			if prev := lastRuneBefore(s.string, u[0]); !(prev == 0 || unicode.IsSpace(prev) || prev == '(' || prev == '[') {
+				// channel link preceded by a non-space character: eg a#a: drop
+				continue
+			}
+			// store channel in hyperlink params, but create no link.
+			// this allows us to save the link data without actually creating a link in the terminal
+			params = fmt.Sprintf("channel=%v", link)
+			link = ""
+		} else {
+			if u, err := url.Parse(link); err != nil || u.Scheme == "" {
+				link = "https://" + link
+			}
+			params = fmt.Sprintf("id=_%010d", rand.Int31())
 		}
-		id := fmt.Sprintf("_%010d", rand.Int31())
 		// find last style starting before or at url begin
 		for ; j < len(s.styles); j++ {
 			st := s.styles[j]
@@ -119,7 +139,7 @@ func (s StyledString) ParseURLs() StyledString {
 			if st.Start == ub {
 				// a style already starts at this position, edit it
 				st.Style.Hyperlink = link
-				st.Style.HyperlinkParams = fmt.Sprintf("id=%v", id)
+				st.Style.HyperlinkParams = params
 			}
 			lastStyle = st
 			styles = append(styles, st)
@@ -128,7 +148,7 @@ func (s StyledString) ParseURLs() StyledString {
 			// no style existed at this position, add one from the last style
 			st := lastStyle.Style
 			st.Hyperlink = link
-			st.HyperlinkParams = fmt.Sprintf("id=%v", id)
+			st.HyperlinkParams = params
 			styles = append(styles, rangedStyle{
 				Start: ub,
 				Style: st,
@@ -142,7 +162,7 @@ func (s StyledString) ParseURLs() StyledString {
 			}
 			if st.Start < ue {
 				st.Style.Hyperlink = link
-				st.Style.HyperlinkParams = fmt.Sprintf("id=%v", id)
+				st.Style.HyperlinkParams = params
 			}
 			lastStyle = st
 			styles = append(styles, st)
@@ -240,6 +260,17 @@ func parseHexColor(raw string) (fg, bg vaxis.Color, n int) {
 	}
 
 	return fg, bg, n
+}
+
+func lastRuneBefore(s string, i int) rune {
+	var r rune
+	for ri, rr := range s {
+		if ri >= i {
+			break
+		}
+		r = rr
+	}
+	return r
 }
 
 func IRCString(raw string) StyledString {

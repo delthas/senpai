@@ -974,7 +974,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 				st = nextStyles[0].Style
 				nextStyles = nextStyles[1:]
 
-				if bs.ui.mouseLinks && st.Hyperlink != "" && st.UnderlineStyle == 0 {
+				if (bs.ui.mouseLinks || st.Hyperlink == "") && st.HyperlinkParams != "" && st.UnderlineStyle == 0 {
 					st.UnderlineStyle = vaxis.UnderlineDotted
 				}
 			}
@@ -995,6 +995,19 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 						},
 						Link:  st.Hyperlink,
 						Mouse: ui.mouseLinks,
+					},
+				})
+			} else if _, channel, ok := strings.Cut(st.HyperlinkParams, "="); ok {
+				ui.clickEvents = append(ui.clickEvents, clickEvent{
+					xb: xTopic - dx,
+					xe: xTopic,
+					y:  y0,
+					event: &events.EventClickChannel{
+						EventClick: events.EventClick{
+							NetID:  b.netID,
+							Buffer: b.title,
+						},
+						Channel: channel,
 					},
 				})
 			}
@@ -1100,7 +1113,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 				style = nextStyles[0].Style
 				nextStyles = nextStyles[1:]
 
-				if bs.ui.mouseLinks && style.Hyperlink != "" && style.UnderlineStyle == 0 {
+				if (bs.ui.mouseLinks || style.Hyperlink == "") && style.HyperlinkParams != "" && style.UnderlineStyle == 0 {
 					style.UnderlineStyle = vaxis.UnderlineDotted
 				}
 			}
@@ -1144,6 +1157,19 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 						},
 						Link:  style.Hyperlink,
 						Mouse: ui.mouseLinks,
+					},
+				})
+			} else if _, channel, ok := strings.Cut(style.HyperlinkParams, "="); ok {
+				ui.clickEvents = append(ui.clickEvents, clickEvent{
+					xb: xb,
+					xe: x,
+					y:  y,
+					event: &events.EventClickChannel{
+						EventClick: events.EventClick{
+							NetID:  b.netID,
+							Buffer: b.title,
+						},
+						Channel: channel,
 					},
 				})
 			}

@@ -31,6 +31,11 @@ type EventClickLink struct {
 	Mouse bool
 }
 
+type EventClickChannel struct {
+	EventClick
+	Channel string
+}
+
 type EventImageLoaded struct {
 	Image image.Image // nil if error
 }

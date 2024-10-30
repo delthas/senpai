@@ -539,6 +539,8 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.handleNickEvent(ev)
 	case *events.EventClickLink:
 		app.handleLinkEvent(ev)
+	case *events.EventClickChannel:
+		app.handleChannelEvent(ev)
 	case *events.EventImageLoaded:
 		app.win.ShowImage(ev.Image)
 		if ev.Image == nil {
@@ -902,6 +904,16 @@ func (app *App) handleNickEvent(ev *events.EventClickNick) {
 		s.MonitorAdd(ev.Nick)
 		s.ReadGet(ev.Nick)
 		s.NewHistoryRequest(ev.Nick).WithLimit(500).Latest()
+	}
+}
+
+func (app *App) handleChannelEvent(ev *events.EventClickChannel) {
+	s := app.sessions[ev.NetID]
+	if s == nil {
+		return
+	}
+	if !app.win.JumpBufferNetwork(ev.NetID, ev.Channel) {
+		s.Join(ev.Channel, "")
 	}
 }
 
