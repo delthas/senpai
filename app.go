@@ -1749,6 +1749,7 @@ func (app *App) completions(cursorIdx int, text []rune) []ui.Completion {
 type mergedEvent struct {
 	oldNick        string
 	nick           string
+	nickCf         string
 	firstConnected int // -1: offline; 1: online
 	lastConnected  int // -1: offline; 1: online
 	modeSet        string
@@ -2025,7 +2026,7 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 	flowNick := func(nick string) *mergedEvent {
 		nickCf := strings.ToLower(nick)
 		for _, f := range flows {
-			if strings.ToLower(f.nick) == nickCf {
+			if f.nickCf == nickCf {
 				return f
 			}
 		}
@@ -2049,10 +2050,12 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 			f := flowNick(ev.FormerNick)
 			if f != nil {
 				f.nick = ev.User
+				f.nickCf = strings.ToLower(ev.User)
 			} else {
 				flows = append(flows, &mergedEvent{
 					oldNick: ev.FormerNick,
 					nick:    ev.User,
+					nickCf:  strings.ToLower(ev.User),
 				})
 			}
 		case irc.UserJoinEvent:
@@ -2067,6 +2070,7 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 			} else {
 				flows = append(flows, &mergedEvent{
 					nick:           ev.User,
+					nickCf:         strings.ToLower(ev.User),
 					firstConnected: 1,
 					lastConnected:  1,
 				})
@@ -2083,6 +2087,7 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 			} else {
 				flows = append(flows, &mergedEvent{
 					nick:           ev.User,
+					nickCf:         strings.ToLower(ev.User),
 					firstConnected: -1,
 					lastConnected:  -1,
 				})
@@ -2099,6 +2104,7 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 			} else {
 				flows = append(flows, &mergedEvent{
 					nick:           ev.User,
+					nickCf:         strings.ToLower(ev.User),
 					firstConnected: -1,
 					lastConnected:  -1,
 				})
@@ -2116,7 +2122,8 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 					f := flowNick(nick)
 					if f == nil {
 						f = &mergedEvent{
-							nick: nick,
+							nick:   nick,
+							nickCf: strings.ToLower(nick),
 						}
 						flows = append(flows, f)
 					}
