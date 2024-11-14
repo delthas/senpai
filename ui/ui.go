@@ -75,6 +75,8 @@ type UI struct {
 	image vaxis.Image
 
 	mouseLinks bool
+
+	colorThemeMode vaxis.ColorThemeMode
 }
 
 func New(config Config) (ui *UI, err error) {
@@ -100,6 +102,16 @@ func New(config Config) (ui *UI, err error) {
 	ui.vx = &Vaxis{
 		Vaxis:  vx,
 		window: vx.Window(),
+	}
+
+	if bg := ui.vx.QueryBackground().Params(); len(bg) == 3 {
+		if (int(bg[0])+int(bg[1])+int(bg[2]))/3 > 127 {
+			ui.colorThemeMode = vaxis.LightMode
+		} else {
+			ui.colorThemeMode = vaxis.DarkMode
+		}
+	} else {
+		ui.colorThemeMode = vaxis.DarkMode
 	}
 
 	ui.vx.SetTitle("senpai")
@@ -518,6 +530,10 @@ func (ui *UI) SetMouseShape(shape vaxis.MouseShape) {
 	ui.vx.SetMouseShape(shape)
 }
 
+func (ui *UI) SetColorTheme(mode vaxis.ColorThemeMode) {
+	ui.colorThemeMode = mode
+}
+
 // InputContent result must not be modified.
 func (ui *UI) InputContent() []rune {
 	return ui.e.Content()
@@ -894,7 +910,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 				Attribute:  attr,
 			})
 		} else {
-			color := IdentColor(ui.config.Colors.Nicks, m.Name.Name, m.Self)
+			color := ui.IdentColor(ui.config.Colors.Nicks, m.Name.Name, m.Self)
 			name = Styled(nameText, vaxis.Style{
 				Foreground: color,
 				Attribute:  attr,

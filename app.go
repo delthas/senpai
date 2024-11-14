@@ -532,6 +532,8 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.win.SetFocused(true)
 	case vaxis.FocusOut:
 		app.win.SetFocused(false)
+	case vaxis.ColorThemeUpdate:
+		app.win.SetColorTheme(ev.Mode)
 	case *ui.NotifyEvent:
 		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
 	case statusLine:
@@ -2049,12 +2051,12 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	if isAction || isNotice {
 		head = "*"
 	} else {
-		headColor = ui.IdentColor(app.cfg.Colors.Nicks, head, isFromSelf)
+		headColor = app.win.IdentColor(app.cfg.Colors.Nicks, head, isFromSelf)
 	}
 
 	var body ui.StyledStringBuilder
 	if isNotice {
-		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
+		color := app.win.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
 		body.SetStyle(vaxis.Style{
 			Foreground: color,
 		})
@@ -2063,7 +2065,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		body.WriteString(": ")
 		body.WriteStyledString(ui.IRCString(content))
 	} else if isAction {
-		color := ui.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
+		color := app.win.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
 		body.SetStyle(vaxis.Style{
 			Foreground: color,
 		})
@@ -2250,15 +2252,13 @@ func (app *App) updatePrompt() {
 	if buffer == "" || command {
 		prompt = ui.Styled(">", vaxis.Style{
 			Foreground: app.cfg.Colors.Prompt,
-		},
-		)
+		})
 	} else if s == nil {
 		prompt = ui.Styled("<offline>", vaxis.Style{
 			Foreground: ui.ColorRed,
-		},
-		)
+		})
 	} else {
-		prompt = ui.IdentString(app.cfg.Colors.Nicks, s.Nick(), true)
+		prompt = app.win.IdentString(app.cfg.Colors.Nicks, s.Nick(), true)
 	}
 	app.win.SetPrompt(prompt)
 }
