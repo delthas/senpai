@@ -588,17 +588,16 @@ func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 
 func (bs *BufferList) UpdateRead() (netID, title string, timestamp time.Time) {
 	b := bs.cur()
-	var line *Line
-	y := 0
-	for i := len(b.lines) - 1; 0 <= i; i-- {
-		line = &b.lines[i]
+	var l *Line
+	bs.forEachLine(b, func(line *Line, y int) bool {
+		l = line
 		if y >= b.scrollAmt && line.Readable {
-			break
+			return true
 		}
-		y += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
-	}
-	if line != nil && line.At.After(b.read) {
-		b.read = line.At
+		return false
+	})
+	if l != nil && l.At.After(b.read) {
+		b.read = l.At
 		return b.netID, b.title, b.read
 	}
 	return "", "", time.Time{}
@@ -637,29 +636,27 @@ func (bs *BufferList) ScrollDown(n int) {
 func (bs *BufferList) ScrollUpHighlight() bool {
 	b := bs.cur()
 	ymin := b.scrollAmt + bs.tlHeight
-	y := 0
-	for i := len(b.lines) - 1; 0 <= i; i-- {
-		line := &b.lines[i]
+	return bs.forEachLine(b, func(line *Line, y int) bool {
 		if ymin <= y && line.Highlight {
 			b.scrollAmt = y - bs.tlHeight + 1
 			return true
 		}
-		y += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
-	}
-	return false
+		return false
+	})
 }
 
 func (bs *BufferList) ScrollDownHighlight() bool {
 	b := bs.cur()
 	yLastHighlight := 0
-	y := 0
-	for i := len(b.lines) - 1; 0 <= i && y < b.scrollAmt; i-- {
-		line := &b.lines[i]
+	bs.forEachLine(b, func(line *Line, y int) bool {
+		if y >= b.scrollAmt {
+			return true
+		}
 		if line.Highlight {
 			yLastHighlight = y
 		}
-		y += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
-	}
+		return false
+	})
 	b.scrollAmt = yLastHighlight
 	return b.scrollAmt != 0
 }
@@ -698,6 +695,23 @@ func (bs *BufferList) cur() *buffer {
 		return bs.overlay
 	}
 	return &bs.list[bs.current]
+}
+
+func (bs *BufferList) forEachLine(b *buffer, f func(line *Line, y int) bool) bool {
+	rulerDrawn := b.unreadSkip != optionalFalse || b.unreadRuler.IsZero() || b.title == ""
+	y := 0
+	for i := len(b.lines) - 1; 0 <= i; i-- {
+		line := &b.lines[i]
+		if !rulerDrawn && !line.At.After(b.unreadRuler) {
+			rulerDrawn = true
+			y++
+		}
+		if f(line, y) {
+			return true
+		}
+		y += len(line.NewLines(bs.ui.vx, bs.textWidth)) + 1
+	}
+	return false
 }
 
 func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height int, offset *int) {
