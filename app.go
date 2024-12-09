@@ -917,7 +917,7 @@ func (app *App) handleChannelEvent(ev *events.EventClickChannel) {
 	}
 }
 
-var patternOpenGraphImage = regexp.MustCompile(`<meta property="og:image" content="(.*?)"/>`)
+var patternOpenGraphImage = regexp.MustCompile(`<meta property="og:image" content="(.*?)"/?>`)
 var patternOpenGraphVideo = regexp.MustCompile(`<meta property="og:video"`)
 
 func (app *App) fetchImage(link string) (image.Image, error) {
@@ -934,10 +934,10 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 		}
 	}
 
-	c := http.Client{
-		Timeout: 6 * time.Second,
+	cHead := http.Client{
+		Timeout: 1500 * time.Millisecond,
 	}
-	res, err := c.Head(link)
+	res, err := cHead.Head(link)
 	if err != nil {
 		return nil, err
 	}
@@ -956,12 +956,21 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 	default:
 		return nil, fmt.Errorf("unexpected content type: %v", contentType)
 	}
-	res, err = c.Get(link)
-	if err != nil {
-		return nil, err
-	}
 	if isHTML {
-		b, err := io.ReadAll(io.LimitReader(res.Body, 10*1024))
+		req, err := http.NewRequest("GET", link, nil)
+		if err != nil {
+			return nil, err
+		}
+		var previewSize int64 = 10 * 1024
+		if res.Header.Get("Accept-Ranges") == "bytes" {
+			req.Header.Set("Range", fmt.Sprintf("bytes=0-%v", previewSize))
+		}
+		res, err = cHead.Get(link)
+		if err != nil {
+			return nil, err
+		}
+		b, err := io.ReadAll(io.LimitReader(res.Body, previewSize))
+		res.Body.Close()
 		if err != nil {
 			return nil, fmt.Errorf("unexpected read error: %v", err)
 		}
@@ -973,11 +982,14 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 		if len(m) < 2 {
 			return nil, fmt.Errorf("image embed not found")
 		}
-		imageLink := html.UnescapeString(string(m[1]))
-		res, err = c.Get(imageLink)
-		if err != nil {
-			return nil, err
-		}
+		link = html.UnescapeString(string(m[1]))
+	}
+	cGet := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	res, err = cGet.Get(link)
+	if err != nil {
+		return nil, err
 	}
 	img, _, err := ui.DecodeImage(res.Body)
 	res.Body.Close()
