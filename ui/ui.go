@@ -227,6 +227,7 @@ func (ui *UI) ResizeMemberCol(x int) {
 func (ui *UI) GoToBufferNo(i int) {
 	if ui.bs.To(i) {
 		ui.memberOffset = 0
+		ui.ScrollToBuffer()
 	}
 }
 
