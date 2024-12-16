@@ -350,6 +350,14 @@ func (ui *UI) ScrollMemberDownBy(n int) {
 	ui.memberOffset += n
 }
 
+func (ui *UI) ScrollTopicLeftBy(n int) {
+	ui.bs.ScrollTopicLeft(n)
+}
+
+func (ui *UI) ScrollTopicRightBy(n int) {
+	ui.bs.ScrollTopicRight(n)
+}
+
 func (ui *UI) LinesAboveOffset() int {
 	return ui.bs.LinesAboveOffset()
 }

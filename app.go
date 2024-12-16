@@ -604,6 +604,8 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				app.win.ScrollChannelUpBy(4)
 			} else if x > w-app.win.MemberWidth() && y < h-memberItems*2 {
 				app.win.ScrollMemberUpBy(4)
+			} else if y == 0 {
+				app.win.ScrollTopicLeftBy(12)
 			} else {
 				app.win.ScrollUpBy(4)
 			}
@@ -613,6 +615,8 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				app.win.ScrollChannelDownBy(4)
 			} else if x > w-app.win.MemberWidth() && y < h-memberItems*2 {
 				app.win.ScrollMemberDownBy(4)
+			} else if y == 0 {
+				app.win.ScrollTopicRightBy(12)
 			} else {
 				app.win.ScrollDownBy(4)
 			}

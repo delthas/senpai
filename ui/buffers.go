@@ -222,8 +222,9 @@ type buffer struct {
 	lines []Line
 	topic StyledString
 
-	scrollAmt int // offset in lines from the bottom
-	isAtTop   bool
+	scrollAmt   int // offset in lines from the bottom
+	topicOffset int // offset in clusters that are skipped when rendering topic text
+	isAtTop     bool
 }
 
 type BufferList struct {
@@ -747,6 +748,20 @@ func (bs *BufferList) ScrollDownHighlight() bool {
 	return b.scrollAmt != 0
 }
 
+func (bs *BufferList) ScrollTopicLeft(n int) {
+	b := bs.cur()
+	b.topicOffset -= n
+
+	if b.topicOffset < 0 {
+		b.topicOffset = 0
+	}
+}
+
+func (bs *BufferList) ScrollTopicRight(n int) {
+	b := bs.cur()
+	b.topicOffset += n
+}
+
 // LinesAboveOffset returns a rough approximate of the number of lines
 // above the offset (that is, starting from the bottom of the screen,
 // up to the first line).
@@ -1069,6 +1084,24 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 		}
 	}
 
+	for b.topicOffset > 0 {
+		sr := []rune(b.topic.string)
+		ri := 0
+		for i := 0; i < b.topicOffset; i++ {
+			s, _ := firstCluster(bs.ui.vx, sr[ri:])
+			ri += len([]rune(s))
+		}
+		w := stringWidth(bs.ui.vx, string(sr[ri:]))
+		if w <= bs.tlInnerWidth+nickColWidth+9-16 {
+			b.topicOffset -= 12
+			if b.topicOffset < 0 {
+				b.topicOffset = 0
+			}
+		} else {
+			break
+		}
+	}
+
 	xTopic := x0
 	{
 		// TODO: factorize this (same code for drawing timeline)
@@ -1076,8 +1109,14 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 		var st vaxis.Style
 		nextStyles := b.topic.styles
 
-		i := 0
 		sr := []rune(b.topic.string)
+		ri := 0
+		for i := 0; i < b.topicOffset; i++ {
+			s, _ := firstCluster(bs.ui.vx, sr[ri:])
+			ri += len([]rune(s))
+		}
+		i := len(string(sr[:ri]))
+		sr = sr[ri:]
 		for len(sr) > 0 {
 			if 0 < len(nextStyles) && nextStyles[0].Start == i {
 				st = nextStyles[0].Style
