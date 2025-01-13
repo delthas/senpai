@@ -2037,9 +2037,15 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				return nil, nil
 
 			}
-			if msg.Command == errUnknowncommand && msg.Params[1] == "BOUNCER" {
-				// ignore any error in response to unconditional BOUNCER LISTNETWORKS
-				return nil, nil
+			if msg.Command == errUnknowncommand {
+				switch msg.Params[1] {
+				case "BOUNCER":
+					// ignore any error in response to unconditional BOUNCER LISTNETWORKS
+					return nil, nil
+				case "METADATA":
+					// ignore any error in response to unconditional METADATA SUB
+					return nil, nil
+				}
 			}
 			return ErrorEvent{
 				Severity: ReplySeverity(msg.Command),
