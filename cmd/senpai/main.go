@@ -4,11 +4,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"os/signal"
 	"os/user"
 	"path"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -38,15 +40,49 @@ func main() {
 		return
 	}
 
+	var previousConfigPath string
 	if configPath == "" {
 		configDir, err := os.UserConfigDir()
 		if err != nil {
 			panic(err)
 		}
+		if runtime.GOOS == "darwin" {
+			if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" && dir != configDir {
+				previousConfigPath = configDir
+				configDir = dir
+			}
+		}
 		configPath = path.Join(configDir, "senpai", "senpai.scfg")
+		if previousConfigPath != "" {
+			previousConfigPath = path.Join(previousConfigPath, "senpai", "senpai.scfg")
+		}
 	}
 
 	cfg, err := senpai.LoadConfigFile(configPath)
+	if err != nil && errors.Is(err, os.ErrNotExist) && previousConfigPath != "" {
+		var ee error
+		cfg, ee = senpai.LoadConfigFile(previousConfigPath)
+		if ee == nil {
+			err = nil
+			fmt.Fprintf(os.Stderr, "Configuration assistant: Previous configuration file found at %q; the new default configuration location is now %q\n", previousConfigPath, configPath)
+			fmt.Fprintf(os.Stderr, "Configuration assistant: You can run senpai with an explicit -config path argument, or move the file to its new location.\n")
+			fmt.Fprintf(os.Stderr, "Configuration assistant: Would you like senpai to move the configuration file to the new location? (examples: yes, no) [optional, default: yes]: ")
+			move := true
+			scanBool(&move)
+			if move {
+				if err := copyContents(configPath, previousConfigPath); err != nil {
+					fmt.Fprintf(os.Stderr, "failed to move the configuration file: %v\n", err)
+					os.Exit(1)
+					return
+				}
+				if err := os.Remove(previousConfigPath); err != nil {
+					fmt.Fprintf(os.Stderr, "failed to delete the previous configuration file at %q: %v\n", previousConfigPath, err)
+					os.Exit(1)
+					return
+				}
+			}
+		}
+	}
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			fmt.Fprintf(os.Stderr, "failed to load the required configuration file at %q: %s\n", configPath, err)
@@ -72,22 +108,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter your server port (examples: 6667, 6697) [optional]: ")
 		fmt.Scanln(&port)
 		fmt.Fprintf(os.Stderr, "Configuration assistant: Enter whether your server uses TLS (examples: yes, no) [optional, default: yes]: ")
-		for {
-			var tlsStr string
-			fmt.Scanln(&tlsStr)
-			if tlsStr == "" {
-				break
-			}
-			switch strings.ToLower(tlsStr) {
-			case "y", "yes":
-				tls = true
-			case "n", "no":
-				tls = false
-			default:
-				continue
-			}
-			break
-		}
+		scanBool(&tls)
 		var defaultNick string
 		if u, err := user.Current(); err == nil {
 			defaultNick = u.Username
@@ -147,6 +168,7 @@ func main() {
 			time.Sleep(500 * time.Millisecond)
 			fmt.Fprintf(os.Stderr, ".")
 		}
+		fmt.Fprintf(os.Stderr, "\n")
 	}
 
 	cfg.Debug = cfg.Debug || debug
@@ -181,6 +203,41 @@ func main() {
 		writeLastBuffer(app)
 		writeLastStamp(app)
 	}
+}
+
+func scanBool(v *bool) {
+	for {
+		var s string
+		fmt.Scanln(&s)
+		if s == "" {
+			return
+		}
+		switch strings.ToLower(s) {
+		case "y", "yes":
+			*v = true
+			return
+		case "n", "no":
+			*v = false
+			return
+		}
+	}
+}
+
+func copyContents(dstPath string, srcPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("open %q: %v", srcPath, err)
+	}
+	defer src.Close()
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return fmt.Errorf("create %q: %v", dstPath, err)
+	}
+	defer dst.Close()
+	if _, err := io.Copy(dst, src); err != nil {
+		return fmt.Errorf("copy %q to %q: %v", srcPath, dstPath, err)
+	}
+	return nil
 }
 
 func cachePath() string {

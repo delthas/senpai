@@ -39,7 +39,7 @@ senpai searches for it in the following location:
 
 	$XDG_CONFIG_HOME/senpai/senpai.scfg
 
-If unset, $XDG_CONFIG_HOME defaults to *~/.config*.
+If unset, $XDG_CONFIG_HOME defaults to *~/.config* or the platform's equivalent
 
 For information about the configuration format, see *senpai*(5).
 
