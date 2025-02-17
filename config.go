@@ -13,7 +13,7 @@ import (
 
 	"git.sr.ht/~delthas/senpai/ui"
 
-	"git.sr.ht/~emersion/go-scfg"
+	"codeberg.org/emersion/go-scfg"
 )
 
 func parseColor(s string, c *vaxis.Color) error {
