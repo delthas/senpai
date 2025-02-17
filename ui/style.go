@@ -120,6 +120,12 @@ func (s StyledString) ParseURLs() StyledString {
 				// channel link preceded by a non-space character: eg a#a: drop
 				continue
 			}
+			if !strings.ContainsFunc(link[1:], func(r rune) bool {
+				return r < '0' || r > '9'
+			}) {
+				// channel link with only numbers: eg #1234: drop, because this is likely a reference to a ticket
+				continue
+			}
 			// store channel in hyperlink params, but create no link.
 			// this allows us to save the link data without actually creating a link in the terminal
 			params = fmt.Sprintf("channel=%v", link)
