@@ -224,11 +224,9 @@ address irc.libera.chat
 nickname Guest123456
 ```
 
-A more advanced configuration file that enables SASL authentication, fetches the
-password from an external program instead of storing in plaintext, sends
-notifications on highlight and decreases the width of the nick column to 12
-(note: _swaymsg_ is specific to sway, a wayland compositor. Use whatever you
-need to know if the terminal emulator that runs senpai has focus):
+A more advanced configuration file that fetches a password from an external
+program, changes the width of some panes, and enables more colors for user
+nicks:
 
 ```
 address irc.libera.chat
@@ -237,24 +235,14 @@ username senpai
 realname "Guest von Lenon"
 password-cmd gopass show irc/guest # use your favorite CLI password solution here
 channel "#rahxephon"
-highlight guest senpai
-highlight lenon # don't know why you'd split it into multiple lines, but you can if you want
 pane-widths {
-	nicknames 12
+	nicknames 10
+	channels 16
+	members 16
 }
-```
-
-And the highlight file (*~/.config/senpai/highlight*):
-```
-#!/bin/sh
-
-escape() {
-	printf "%s" "$1" | sed 's#\\#\\\\#g'
+colors {
+	nicks extended
 }
-FOCUS=$(swaymsg -t get_tree | jq '..|objects|select(.focused==true)|.name' | grep senpai | wc -l)
-if [ "$HERE" -eq 0 ] || [ $FOCUS -eq 0 ]; then
-	notify-send "[$BUFFER] $SENDER" "$(escape "$MESSAGE")"
-fi
 ```
 
 # SEE ALSO
