@@ -999,6 +999,15 @@ func (bs *BufferList) bufferWidth(b *buffer) int {
 	return width
 }
 
+func (bs *BufferList) shouldShowDate(b *buffer, i int, yi int, y0 int) bool {
+	if i == 0 || yi <= y0 {
+		return true
+	}
+	yb, mb, dd := b.lines[i-1].At.Local().Date()
+	ya, ma, da := b.lines[i].At.Local().Date()
+	return yb != ya || mb != ma || dd != da
+}
+
 func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, offset *int) {
 	x := width
 	for i := len(bs.list) - 1; i >= 0; i-- {
@@ -1199,14 +1208,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 			continue
 		}
 
-		var showDate bool
-		if i == 0 || yi <= y0 {
-			showDate = true
-		} else {
-			yb, mb, dd := b.lines[i-1].At.Local().Date()
-			ya, ma, da := b.lines[i].At.Local().Date()
-			showDate = yb != ya || mb != ma || dd != da
-		}
+		showDate := bs.shouldShowDate(b, i, yi, y0)
 		if showDate {
 			st := vaxis.Style{
 				Attribute: vaxis.AttrBold,
@@ -1217,11 +1219,19 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 				yd = y0
 			}
 			printDate(vx, x0, yd, st, line.At.Local())
-		} else if b.lines[i-1].At.Truncate(time.Minute) != line.At.Truncate(time.Minute) && yi >= y0 {
-			st := vaxis.Style{
-				Foreground: ColorGray,
+		} else {
+			showTime := b.lines[i-1].At.Truncate(time.Minute) != line.At.Truncate(time.Minute) && yi >= y0
+			if !showTime {
+				// also try to show the time if we previously drew the date
+				yp := yi - (len(b.lines[i-1].NewLines(bs.ui.vx, bs.textWidth)) + 1)
+				showTime = i == 0 || bs.shouldShowDate(b, i-1, yp, y0)
 			}
-			printTime(vx, x0, yi, st, line.At.Local())
+			if showTime {
+				st := vaxis.Style{
+					Foreground: ColorGray,
+				}
+				printTime(vx, x0, yi, st, line.At.Local())
+			}
 		}
 
 		if yi >= y0 {
