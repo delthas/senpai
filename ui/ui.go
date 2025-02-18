@@ -81,8 +81,9 @@ type UI struct {
 
 func New(config Config) (ui *UI, err error) {
 	ui = &UI{
-		config:      config,
-		clickEvents: make([]clickEvent, 0, 128),
+		config:        config,
+		clickEvents:   make([]clickEvent, 0, 128),
+		memberClicked: -1,
 	}
 	if config.ChanColEnabled {
 		ui.channelWidth = config.ChanColWidth
