@@ -482,10 +482,23 @@ func (app *App) debugOutputMessages(netID string, out chan<- irc.Message) chan<-
 	debugOut := make(chan irc.Message, cap(out))
 	go func() {
 		for msg := range debugOut {
+			const placeholder = "<removed>"
+			d := msg
+			if msg.Command == "PASS" && len(d.Params) >= 1 {
+				d.Params = append([]string{placeholder}, d.Params[1:]...)
+			} else if msg.Command == "OPER" && len(d.Params) >= 2 {
+				d.Params = append([]string{d.Params[0], placeholder}, d.Params[2:]...)
+			} else if msg.Command == "AUTHENTICATE" && len(d.Params) >= 1 {
+				switch d.Params[0] {
+				case "*", "PLAIN":
+				default:
+					d.Params = append([]string{placeholder}, d.Params[1:]...)
+				}
+			}
 			app.queueStatusLine(netID, ui.Line{
 				At:   time.Now(),
 				Head: "OUT --",
-				Body: ui.PlainString(msg.String()),
+				Body: ui.PlainString(d.String()),
 			})
 			out <- msg
 		}
