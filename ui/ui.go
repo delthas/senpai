@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -29,6 +30,7 @@ type Config struct {
 }
 
 type ConfigColors struct {
+	Gray   vaxis.Color
 	Status vaxis.Color
 	Prompt vaxis.Color
 	Unread vaxis.Color
@@ -79,7 +81,7 @@ type UI struct {
 	colorThemeMode vaxis.ColorThemeMode
 }
 
-func New(config Config) (ui *UI, err error) {
+func New(config Config) (ui *UI, colors ConfigColors, err error) {
 	ui = &UI{
 		config:        config,
 		clickEvents:   make([]clickEvent, 0, 128),
@@ -105,7 +107,8 @@ func New(config Config) (ui *UI, err error) {
 		window: vx.Window(),
 	}
 
-	if bg := ui.vx.QueryBackground().Params(); len(bg) == 3 {
+	bg := ui.vx.QueryBackground().Params()
+	if len(bg) == 3 {
 		if (int(bg[0])+int(bg[1])+int(bg[2]))/3 > 127 {
 			ui.colorThemeMode = vaxis.LightMode
 		} else {
@@ -113,6 +116,32 @@ func New(config Config) (ui *UI, err error) {
 		}
 	} else {
 		ui.colorThemeMode = vaxis.DarkMode
+	}
+
+	ui.config.Colors.Gray = vaxis.IndexColor(8)
+	black := ui.vx.QueryColor(vaxis.IndexColor(uint8(0))).Params()
+	gray := ui.vx.QueryColor(vaxis.IndexColor(uint8(8))).Params()
+	white := ui.vx.QueryColor(vaxis.IndexColor(uint8(15))).Params()
+	if len(bg) == 3 && len(gray) == 3 && reflect.DeepEqual(bg, gray) {
+		// Color theme with background set to gray: gray would be invisible.
+		if len(black) == 3 && !reflect.DeepEqual(bg, black) {
+			// Black is distinct from background: use that as gray.
+			ui.config.Colors.Gray = vaxis.IndexColor(0)
+		} else if len(white) == 3 && !reflect.DeepEqual(bg, white) {
+			// Black == gray == background color. (Can happen in 8-color themes.)
+			// Use an RGB color as the gray color, interpolated from black and white.
+			p := make([]uint8, 3)
+			for i := range p {
+				p[i] = uint8((int(black[i]) + int(white[i])) / 2)
+			}
+			ui.config.Colors.Gray = vaxis.RGBColor(p[0], p[1], p[2])
+		} else {
+			// Black == gray == background == white. Give up.
+			ui.config.Colors.Gray = ColorDefault
+		}
+	}
+	if ui.config.Colors.Status == ColorDefault {
+		ui.config.Colors.Status = ui.config.Colors.Gray
 	}
 
 	ui.vx.SetTitle("senpai")
@@ -143,7 +172,7 @@ func New(config Config) (ui *UI, err error) {
 	ui.e = NewEditor(ui)
 	ui.Resize()
 
-	return
+	return ui, ui.config.Colors, nil
 }
 
 func (ui *UI) ShouldExit() bool {
@@ -760,6 +789,20 @@ func (ui *UI) ScrollToBuffer() {
 	}
 }
 
+func (ui *UI) drawHorizontalLine(vx *Vaxis, x0, y, width int) {
+	for x := x0; x < x0+width; x++ {
+		setCell(vx, x, y, '─', vaxis.Style{
+			Foreground: ui.config.Colors.Gray,
+		})
+	}
+}
+
+func (ui *UI) drawVerticalLine(vx *Vaxis, x, y0, height int) {
+	for y := y0; y < y0+height; y++ {
+		setCell(vx, x, y, '│', vaxis.Style{})
+	}
+}
+
 func (ui *UI) drawStatusBar(x0, y, width int) {
 	clearArea(ui.vx, x0, y, width, 1)
 
@@ -769,7 +812,7 @@ func (ui *UI) drawStatusBar(x0, y, width int) {
 
 	var s StyledStringBuilder
 	s.SetStyle(vaxis.Style{
-		Foreground: ColorGray,
+		Foreground: ui.config.Colors.Gray,
 	})
 	s.WriteString("--")
 
@@ -779,7 +822,7 @@ func (ui *UI) drawStatusBar(x0, y, width int) {
 
 	s.Reset()
 	s.SetStyle(vaxis.Style{
-		Foreground: ColorGray,
+		Foreground: ui.config.Colors.Gray,
 	})
 	s.WriteString(ui.status)
 
@@ -787,7 +830,7 @@ func (ui *UI) drawStatusBar(x0, y, width int) {
 }
 
 func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *buffer, members []irc.Member, offset *int) {
-	drawVerticalLine(vx, x0, y0, height)
+	ui.drawVerticalLine(vx, x0, y0, height)
 	x0++
 	width--
 	clearArea(vx, x0, y0, width, height)
@@ -797,7 +840,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 		printString(vx, &x, y0, Styled("Help", vaxis.Style{
 			Foreground: ui.config.Colors.Status,
 		}))
-		drawHorizontalLine(vx, x0, y0+1, width)
+		ui.drawHorizontalLine(vx, x0, y0+1, width)
 		y0 += 2
 
 		lines := []string{
@@ -812,7 +855,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 			}
 			x := x0
 			printString(vx, &x, y0, Styled(line, st))
-			drawHorizontalLine(vx, x0, y0+1, width)
+			ui.drawHorizontalLine(vx, x0, y0+1, width)
 			y0 += 2
 		}
 		return
@@ -837,7 +880,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 	}
 	y0++
 	height--
-	drawHorizontalLine(vx, x0, y0, width)
+	ui.drawHorizontalLine(vx, x0, y0, width)
 	y0++
 	height--
 
@@ -855,7 +898,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 	actions = append(actions, "→ Leave")
 	for i, action := range actions {
 		x := x0
-		drawHorizontalLine(vx, x0, y0+height-(len(actions)-i)*2, width)
+		ui.drawHorizontalLine(vx, x0, y0+height-(len(actions)-i)*2, width)
 		printString(vx, &x, y0+height-(len(actions)-i)*2+1, Styled(action, vaxis.Style{}))
 	}
 	height -= 2 * len(actions)
@@ -895,7 +938,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 			x += padding - 1
 			powerLevelText := m.PowerLevel[:1]
 			powerLevelSt := vaxis.Style{
-				Foreground: vaxis.IndexColor(2),
+				Foreground: ColorGreen,
 				Attribute:  attr,
 			}
 			printString(vx, &x, y, Styled(powerLevelText, powerLevelSt))
@@ -907,7 +950,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 		nameText := truncate(vx, m.Name.Name, width-1, "\u2026")
 		if m.Away {
 			name = Styled(nameText, vaxis.Style{
-				Foreground: ColorGray,
+				Foreground: ui.config.Colors.Gray,
 				Attribute:  attr,
 			})
 		} else {

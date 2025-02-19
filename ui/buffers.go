@@ -828,7 +828,7 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 	}
 
 	width--
-	drawVerticalLine(vx, x0+width, y0, height)
+	bs.ui.drawVerticalLine(vx, x0+width, y0, height)
 	clearArea(vx, x0, y0, width, height)
 
 	indexPadding := 1 + int(math.Ceil(math.Log10(float64(len(bs.list)))))
@@ -844,7 +844,7 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 		if bi == bs.current || bi == bs.clicked {
 			st.Attribute |= vaxis.AttrReverse
 		} else if b.muted {
-			st.Foreground = ColorGray
+			st.Foreground = bs.ui.config.Colors.Gray
 		}
 
 		var title string
@@ -859,7 +859,7 @@ func (bs *BufferList) DrawVerticalBufferList(vx *Vaxis, x0, y0, width, height in
 				continue
 			}
 			indexSt := st
-			indexSt.Foreground = ColorGray
+			indexSt.Foreground = bs.ui.config.Colors.Gray
 			indexText := fmt.Sprintf("%d:", bi+1)
 			printString(vx, &x, y, Styled(indexText, indexSt))
 			x = x0 + indexPadding
@@ -1043,7 +1043,7 @@ func (bs *BufferList) DrawHorizontalBufferList(vx *Vaxis, x0, y0, width int, off
 		if i == bs.clicked {
 			st.Attribute |= vaxis.AttrReverse
 		} else if b.muted {
-			st.Foreground = ColorGray
+			st.Foreground = bs.ui.config.Colors.Gray
 		}
 
 		var title string
@@ -1171,7 +1171,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 		}
 	}
 	y0++
-	drawHorizontalLine(vx, x0, y0, bs.tlInnerWidth+nickColWidth+9)
+	bs.ui.drawHorizontalLine(vx, x0, y0, bs.tlInnerWidth+nickColWidth+9)
 	y0++
 
 	if bs.textWidth < bs.tlInnerWidth {
@@ -1195,10 +1195,10 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 			if isRead && yi > y0 {
 				yi--
 				st := vaxis.Style{
-					Foreground: ColorGray,
+					Foreground: bs.ui.config.Colors.Gray,
 				}
 				printIdent(vx, x0+7, yi, nickColWidth, Styled("--", st))
-				drawHorizontalLine(vx, x0, yi, 9+nickColWidth+bs.tlInnerWidth)
+				bs.ui.drawHorizontalLine(vx, x0, yi, 9+nickColWidth+bs.tlInnerWidth)
 				rulerDrawn = true
 			}
 		}
@@ -1228,7 +1228,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 			}
 			if showTime {
 				st := vaxis.Style{
-					Foreground: ColorGray,
+					Foreground: bs.ui.config.Colors.Gray,
 				}
 				printTime(vx, x0, yi, st, line.At.Local())
 			}

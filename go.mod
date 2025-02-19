@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	codeberg.org/emersion/go-scfg v0.1.0
-	git.sr.ht/~rockorager/vaxis v0.12.0
+	git.sr.ht/~rockorager/vaxis v0.12.1-0.20250218200016-0e88f197413a
 	github.com/delthas/go-libnp v0.0.0-20250105150050-96674b98150e
 	github.com/delthas/go-localeinfo v0.0.0-20240813094314-e5413e186769
 	github.com/disintegration/imaging v1.6.2

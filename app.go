@@ -179,7 +179,7 @@ func NewApp(cfg Config) (app *App, err error) {
 
 	mouse := cfg.Mouse
 
-	app.win, err = ui.New(ui.Config{
+	app.win, app.cfg.Colors, err = ui.New(ui.Config{
 		NickColWidth:     cfg.NickColWidth,
 		ChanColWidth:     cfg.ChanColWidth,
 		ChanColEnabled:   cfg.ChanColEnabled,
@@ -199,6 +199,7 @@ func NewApp(cfg Config) (app *App, err error) {
 	if err != nil {
 		return
 	}
+
 	ui.NotifyStart(func(ev *ui.NotifyEvent) {
 		app.events <- event{
 			src:     "*",
@@ -1865,7 +1866,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		var body ui.StyledStringBuilder
 		body.Grow(len(ev.User) + 1)
 		body.SetStyle(vaxis.Style{
-			Foreground: vaxis.IndexColor(2),
+			Foreground: ui.ColorGreen,
 		})
 		body.WriteByte('+')
 		body.SetStyle(vaxis.Style{
@@ -1959,7 +1960,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 					body.WriteByte('-')
 				} else {
 					body.SetStyle(vaxis.Style{
-						Foreground: vaxis.IndexColor(2),
+						Foreground: ui.ColorGreen,
 					})
 					body.WriteByte('+')
 				}
@@ -2060,7 +2061,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	}
 
 	head := ev.User
-	headColor := vaxis.IndexColor(15)
+	var headColor vaxis.Color
 	if isAction || isNotice {
 		head = "*"
 	} else {

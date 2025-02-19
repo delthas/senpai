@@ -624,8 +624,7 @@ func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 		i := 0
 		for i < len(display) {
 			s := vaxis.Style{
-				Background: vaxis.IndexColor(0),
-				Attribute:  vaxis.AttrReverse,
+				Attribute: vaxis.AttrReverse,
 			}
 			if ci+autoOff == e.autoCacheIdx {
 				s.Attribute |= vaxis.AttrBold

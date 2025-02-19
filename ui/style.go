@@ -47,7 +47,7 @@ var hexCodes = []uint32{
 
 func colorFromCode(code int) (color vaxis.Color) {
 	if code < 0 || 99 <= code {
-		color = vaxis.Color(0)
+		color = ColorDefault
 	} else if code < 16 {
 		color = baseCodes[code]
 	} else {
@@ -219,16 +219,16 @@ func parseColor(raw string) (fg, bg vaxis.Color, n int) {
 	raw = raw[n:]
 
 	if len(raw) == 0 || raw[0] != ',' {
-		return fg, vaxis.Color(0), n
+		return fg, ColorDefault, n
 	}
 
 	n++
 	bg, p := parseColorNumber(raw[1:])
 	n += p
 
-	if bg == vaxis.Color(0) {
+	if bg == ColorDefault {
 		// Lone comma, do not parse as part of a color code.
-		return fg, vaxis.Color(0), n - 1
+		return fg, ColorDefault, n - 1
 	}
 
 	return fg, bg, n
@@ -253,16 +253,16 @@ func parseHexColor(raw string) (fg, bg vaxis.Color, n int) {
 	raw = raw[n:]
 
 	if len(raw) == 0 || raw[0] != ',' {
-		return fg, vaxis.Color(0), n
+		return fg, ColorDefault, n
 	}
 
 	n++
 	bg, p := parseHexColorNumber(raw[1:])
 	n += p
 
-	if bg == vaxis.Color(0) {
+	if bg == ColorDefault {
 		// Lone comma, do not parse as part of a color code.
-		return fg, vaxis.Color(0), n - 1
+		return fg, ColorDefault, n - 1
 	}
 
 	return fg, bg, n
@@ -302,11 +302,9 @@ func IRCString(raw string) StyledString {
 			}
 			raw = raw[n:]
 			if n == 0 {
-				// Both `fg` and `bg` are equal to
-				// tcell.ColorDefault.
-				current.Foreground = vaxis.Color(0)
-				current.Background = vaxis.Color(0)
-			} else if bg == vaxis.Color(0) {
+				current.Foreground = ColorDefault
+				current.Background = ColorDefault
+			} else if bg == ColorDefault {
 				current.Foreground = fg
 			} else {
 				current.Foreground = fg

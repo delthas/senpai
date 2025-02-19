@@ -261,17 +261,3 @@ func printTime(vx *Vaxis, x int, y int, st vaxis.Style, t time.Time) {
 func clearArea(vx *Vaxis, x0, y0, width, height int) {
 	vx.window.New(x0, y0, width, height).Clear()
 }
-
-func drawHorizontalLine(vx *Vaxis, x0, y, width int) {
-	for x := x0; x < x0+width; x++ {
-		setCell(vx, x, y, '─', vaxis.Style{
-			Foreground: ColorGray,
-		})
-	}
-}
-
-func drawVerticalLine(vx *Vaxis, x, y0, height int) {
-	for y := y0; y < y0+height; y++ {
-		setCell(vx, x, y, '│', vaxis.Style{})
-	}
-}

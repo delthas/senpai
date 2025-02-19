@@ -560,7 +560,7 @@ func commandDoNames(app *App, args []string) (err error) {
 	for _, name := range s.Names(buffer) {
 		if name.PowerLevel != "" {
 			sb.SetStyle(vaxis.Style{
-				Foreground: vaxis.IndexColor(2),
+				Foreground: ui.ColorGreen,
 			})
 			sb.WriteString(name.PowerLevel)
 			sb.SetStyle(vaxis.Style{

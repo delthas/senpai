@@ -7,8 +7,9 @@ import (
 	"git.sr.ht/~rockorager/vaxis"
 )
 
+var ColorDefault = vaxis.Color(0)
+var ColorGreen = vaxis.IndexColor(2)
 var ColorRed = vaxis.IndexColor(9)
-var ColorGray = vaxis.IndexColor(8)
 
 type ColorSchemeType int
 

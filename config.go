@@ -73,7 +73,7 @@ func parseColor(s string, c *vaxis.Color) error {
 	}
 
 	if code == -1 {
-		*c = vaxis.Color(0)
+		*c = ui.ColorDefault
 		return nil
 	}
 
@@ -149,13 +149,13 @@ func Defaults() Config {
 		TextMaxWidth:     0,
 		StatusEnabled:    true,
 		Colors: ui.ConfigColors{
-			Status: ui.ColorGray,
-			Prompt: vaxis.Color(0),
-			Unread: vaxis.Color(0),
+			Status: ui.ColorDefault, // Overriden by UI later.
+			Prompt: ui.ColorDefault,
+			Unread: ui.ColorDefault,
 			Nicks: ui.ColorScheme{
 				Type:   ui.ColorSchemeBase,
-				Others: vaxis.Color(0),
-				Self:   vaxis.Color(9),
+				Others: ui.ColorDefault,
+				Self:   ui.ColorRed,
 			},
 		},
 		Debug:             false,
