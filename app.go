@@ -195,6 +195,8 @@ func NewApp(cfg Config) (app *App, err error) {
 		},
 		Colors:            cfg.Colors,
 		LocalIntegrations: cfg.LocalIntegrations,
+		WithTTY:           cfg.WithTTY,
+		WithConsole:       cfg.WithConsole,
 	})
 	if err != nil {
 		return

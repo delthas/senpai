@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"git.sr.ht/~rockorager/vaxis"
+	"github.com/containerd/console"
 
 	"git.sr.ht/~delthas/senpai/ui"
 
@@ -116,6 +117,9 @@ type Config struct {
 	Debug             bool
 	Transient         bool
 	LocalIntegrations bool
+
+	WithTTY     string
+	WithConsole console.Console
 }
 
 func DefaultHighlightPath() (string, error) {
