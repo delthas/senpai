@@ -102,6 +102,17 @@ func New(config Config) (ui *UI, colors ConfigColors, err error) {
 	if err != nil {
 		return
 	}
+	if strings.HasPrefix(vx.TerminalID(), "iTerm2") {
+		// see: https://gitlab.com/gnachman/iterm2/-/issues/12177
+		vx.Close()
+		vx, err = vaxis.New(vaxis.Options{
+			DisableMouse: !config.Mouse,
+			CSIuBitMask:  vaxis.CSIuDisambiguate | vaxis.CSIuReportEvents | vaxis.CSIuAlternateKeys,
+		})
+		if err != nil {
+			return
+		}
+	}
 	ui.vx = &Vaxis{
 		Vaxis:  vx,
 		window: vx.Window(),
