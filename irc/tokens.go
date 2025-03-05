@@ -153,12 +153,14 @@ func parseTags(s string) (tags map[string]string) {
 func formatTags(tags map[string]string) string {
 	var sb strings.Builder
 	for k, v := range tags {
+		if sb.Len() > 0 {
+			sb.WriteRune(';')
+		}
 		sb.WriteString(k)
 		if v != "" {
 			sb.WriteRune('=')
 			sb.WriteString(escapeTagValue(v))
 		}
-		sb.WriteRune(';')
 	}
 	return sb.String()
 }
