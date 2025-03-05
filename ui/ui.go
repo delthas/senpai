@@ -3,7 +3,9 @@ package ui
 import (
 	"fmt"
 	"image"
+	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -94,6 +96,16 @@ func New(config Config) (ui *UI, colors ConfigColors, err error) {
 		ui.memberWidth = config.MemberColWidth
 	}
 
+	if runtime.GOOS == "windows" {
+		// Work around broken RGB colors on Windows Terminal.
+		// Sadly the Windows Terminal does not support TerminalID, so we rely on GOOS here.
+		if os.Getenv("COLORTERM") == "" {
+			os.Setenv("COLORTERM", "truecolor")
+		}
+		if os.Getenv("VAXIS_FORCE_LEGACY_SGR") == "" {
+			os.Setenv("VAXIS_FORCE_LEGACY_SGR", "true")
+		}
+	}
 	var vx *vaxis.Vaxis
 	vx, err = vaxis.New(vaxis.Options{
 		DisableMouse: !config.Mouse,
