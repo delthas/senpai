@@ -155,7 +155,6 @@ func Defaults() Config {
 			Nicks: ui.ColorScheme{
 				Type:   ui.ColorSchemeBase,
 				Others: ui.ColorDefault,
-				Self:   ui.ColorRed,
 			},
 		},
 		Debug:             false,
@@ -398,6 +397,14 @@ func unmarshal(filename string, cfg *Config) (err error) {
 							if err = parseColor(child.Params[2], &cfg.Colors.Nicks.Self); err != nil {
 								return err
 							}
+						}
+					case "self":
+						var selfStr string
+						if err := child.ParseParams(nil, &selfStr); err != nil {
+							return err
+						}
+						if err = parseColor(selfStr, &cfg.Colors.Nicks.Self); err != nil {
+							return err
 						}
 					default:
 						return fmt.Errorf("unknown nick color scheme %q", colorStr)

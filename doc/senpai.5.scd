@@ -195,8 +195,10 @@ colors {
 :  show nicks with 16 different colors (default)
 |  nicks extended
 :  show nicks with 256 different colors
-|  nicks fixed [<others> [self]]
-:  show nicks with a fixed color, optionally specifying the colors for other nicks, and self
+|  nicks fixed [<others>]
+:  show nicks with a fixed color, optionally specifying the colors for other nicks
+|  nicks self <self>
+:  show self nick with a fixed specified color
 
 *debug*
 	Advanced.

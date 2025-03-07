@@ -68,12 +68,15 @@ func hslToRGB(hue, sat, light float64) (r, g, b uint8) {
 }
 
 func (ui *UI) IdentColor(scheme ColorScheme, ident string, self bool) vaxis.Color {
+	if self && scheme.Self != 0 {
+		return scheme.Self
+	}
 	h := fnv.New32()
 	_, _ = h.Write([]byte(ident))
 	switch scheme.Type {
 	case ColorSchemeFixed:
 		if self {
-			return scheme.Self
+			return ColorRed
 		} else {
 			return scheme.Others
 		}
