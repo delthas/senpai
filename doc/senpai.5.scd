@@ -71,47 +71,6 @@ Some settings are required, the others are optional.
 	Enable sending the bell character (BEL) when you are highlighted.
 	Defaults to disabled.
 
-*on-highlight-path*
-	Alternative path to a shell script to be executed when you are highlighted.
-	By default, senpai looks for a highlight shell script at
-	$XDG_CONFIG_HOME/senpai/highlight. If no file is found at that path, and an
-	alternate path is not provided, highlight command execution is disabled.
-
-	If unset, $XDG_CONFIG_HOME defaults to *~/.config/*.
-
-	Before the highlight script is executed, the following environment
-	variables are populated:
-
-	Shell scripts MUST ENSURE VARIABLES appear QUOTED in the script file,
-	OR YOU WILL BE OPEN TO SHELL INJECTION ATTACKS. Shell scripts must also
-	ensure characters like '\*' and '?' are not expanded.
-
-[[ *Environment variable*
-:< *Description*
-|  BUFFER
-:  buffer where the message appeared
-|  HERE
-:  equals 1 if _BUFFER_ is the current buffer, 0 otherwise
-|  MESSAGE
-:  content of the message
-|  SENDER
-:  nickname of the sender
-
-	Note: when passing those to *notify-send*(1), some notification daemons use
-	*\\* for escape sequences in the body, which causes *\\* to disappear from the
-	message or triggers unintended side-effects (like newlines).
-
-	To get around this, you can double the backslash with the following snippet:
-
-```
-#!/bin/sh
-escape() {
-	printf "%s" "$1" | sed 's#\\#\\\\#g'
-}
-
-notify-send "[$BUFFER] $SENDER" "$(escape "$MESSAGE")"
-```
-
 *pane-widths* { ... }
 	Configure the width of various UI panes.
 
@@ -198,7 +157,7 @@ colors {
 |  nicks fixed [<others>]
 :  show nicks with a fixed color, optionally specifying the colors for other nicks
 |  nicks self <self>
-:  show self nick with a fixed specified color
+:  show self nick with a fixed specified color (can be added along other directives)
 
 *debug*
 	Advanced.
@@ -216,6 +175,49 @@ colors {
 	Enables integrations with the local system (e.g. notifications through
 	DBus). Can be useful to disable on systems planned to be used through SSH.
 	Defaults to true.
+
+*on-highlight-path*
+	Advanced. senpai will notify you by default without the need for a custom
+	highlight script.
+	Alternative path to a shell script to be executed when you are highlighted.
+	By default, senpai looks for a highlight shell script at
+	$XDG_CONFIG_HOME/senpai/highlight. If no file is found at that path, and an
+	alternate path is not provided, highlight command execution is disabled.
+
+	If unset, $XDG_CONFIG_HOME defaults to *~/.config/*.
+
+	Before the highlight script is executed, the following environment
+	variables are populated:
+
+	Shell scripts MUST ENSURE VARIABLES appear QUOTED in the script file,
+	OR YOU WILL BE OPEN TO SHELL INJECTION ATTACKS. Shell scripts must also
+	ensure characters like '\*' and '?' are not expanded.
+
+[[ *Environment variable*
+:< *Description*
+|  BUFFER
+:  buffer where the message appeared
+|  HERE
+:  equals 1 if _BUFFER_ is the current buffer, 0 otherwise
+|  MESSAGE
+:  content of the message
+|  SENDER
+:  nickname of the sender
+
+	Note: when passing those to *notify-send*(1), some notification daemons use
+	*\\* for escape sequences in the body, which causes *\\* to disappear from the
+	message or triggers unintended side-effects (like newlines).
+
+	To get around this, you can double the backslash with the following snippet:
+
+```
+#!/bin/sh
+escape() {
+	printf "%s" "$1" | sed 's#\\#\\\\#g'
+}
+
+notify-send "[$BUFFER] $SENDER" "$(escape "$MESSAGE")"
+```
 
 # EXAMPLES
 

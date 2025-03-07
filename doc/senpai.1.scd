@@ -31,6 +31,8 @@ extensions, such as:
 - _CHATHISTORY_, senpai fetches history from the server instead of keeping logs,
 - _@+typing_, senpai shows when others are typing a message,
 - _BOUNCER_, senpai connects to all your networks at once automatically,
+- _SEARCH_, senpai can search messages quickly server-side,
+- _FILEHOST_, senpai can upload files to the bouncer,
 - and more to come!
 
 # CONFIGURATION
@@ -48,30 +50,27 @@ you.
 
 # USER INTERFACE
 
-The user interface of senpai consists of 4 parts.  Starting from the bottom:
+The user interface of senpai consists of several parts.
 
-The *buffer list*, shows joined channels.  The special buffer *home* is where
-server notices are shown.  This list can be put on the left of the screen with
-the _chan-column-width_ configuration option. Buffers can be closed with the
-mouse middle click, or the _part_ command.
+On the left, the *buffer list*, shows joined channels. The special buffer *home*
+is where server notices are shown. The list can be put on the bottom of the
+screen with a configuration option. Buffers can be closed with the mouse middle
+click, or the _part_ command.
 
-On the row above, the *input field* is where you type in messages or commands
+On the right, the *member list*, shows members joined to the current channel.
+
+On the bottom, the *input field* is where you type in messages or commands
 (see *COMMANDS*).  By default, when you type a message, senpai will inform
 others in the channel that you are typing.
 
 On the row above, the *status line* (or... just a line if nothing is
 happening...) is where typing indicators are shown (e.g. "dan- is typing...").
 
-Finally, the *timeline* is displayed on the rest of the screen.  Several types
-of messages are in the timeline:
+Finally, the message *timeline* is displayed on the rest of the screen.
 
-- User messages are shown with their nicknames,
-- User actions (*/me*) are shown with an asterisk (*\**) followed by the user's
-  nickname,
-- Status messages, such as joins, parts, topics and name lists, are shown with
-  two dashes (*--*),
-- Notices are shown with an asterisk (*\**) followed by the user nickname and a
-  colon
+senpai supports the mouse almost everywhere (clicking on nicks, buffers,
+members, links; resizing panels; and features "buttons"). On supported
+terminals, the cursor will turn into a hand when over a clickable element.
 
 # SELECTING TEXT
 
@@ -85,8 +84,9 @@ In order to open links, refer to your terminal manual. On most terminals,
 opening links is done by holding CTRL, or SHIFT, while clicking the link.
 On the *foot* terminal, links can be opened by pressing CTRL+SHIFT+O.
 
-Additionally, by simply clicking an image link with the mouse, a small preview
-will be shown, which can be closed by clicking again anywhere in the interface.
+A simple left click with no modifiers will make senpai try to preview the link,
+or open it. In order to skip the preview, open the link with a modifier, as
+specified above, instead of an unmodified left click.
 
 # KEYBOARD SHORTCUTS
 
@@ -97,7 +97,7 @@ will be shown, which can be closed by clicking again anywhere in the interface.
 	Move the cursor to the end of the input field.
 
 *CTRL-C*
-	Clear input line.
+	Clear input line, or prepare for exit by adding /exit to input line.
 
 *CTRL-F*
 	Prepare for search: add /search to input line.
