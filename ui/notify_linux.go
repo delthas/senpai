@@ -11,6 +11,7 @@ import (
 
 var notificationsLock sync.Mutex
 var notifications = make(map[int]*NotifyEvent)
+var dbusConn *dbus.Conn
 
 func notifyDBus(title, content string) int {
 	conn, err := dbus.SessionBus()
@@ -71,6 +72,9 @@ func NotifyStart(opened func(*NotifyEvent)) {
 	}
 	c := make(chan *dbus.Signal, 64)
 	conn.Signal(c)
+	notificationsLock.Lock()
+	dbusConn = conn
+	notificationsLock.Unlock()
 	go func() {
 		for v := range c {
 			switch v.Name {
@@ -90,4 +94,14 @@ func NotifyStart(opened func(*NotifyEvent)) {
 			}
 		}
 	}()
+}
+
+func NotifyStop() {
+	notificationsLock.Lock()
+	c := dbusConn
+	dbusConn = nil
+	notificationsLock.Unlock()
+	if c != nil {
+		c.Close()
+	}
 }

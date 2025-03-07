@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -112,7 +113,9 @@ type App struct {
 	sessions         map[string]*irc.Session // map of network IDs to their current session
 	pasting          bool
 	pastingInputOnly bool // true is pasting started when the editor input was empty
-	events           chan event
+
+	// events MUST NOT be posted to directly; instead, use App.postEvent.
+	events chan event
 
 	cfg        Config
 	highlights []string
@@ -142,6 +145,8 @@ type App struct {
 	uploadingProgress *float64
 
 	shownBouncerNotice bool
+
+	closing atomic.Bool
 }
 
 func NewApp(cfg Config) (app *App, err error) {
@@ -203,10 +208,10 @@ func NewApp(cfg Config) (app *App, err error) {
 	}
 
 	ui.NotifyStart(func(ev *ui.NotifyEvent) {
-		app.events <- event{
+		app.postEvent(event{
 			src:     "*",
 			content: ev,
-		}
+		})
 	})
 	app.win.SetPrompt(ui.Styled(">", vaxis.Style{
 		Foreground: app.cfg.Colors.Prompt,
@@ -220,13 +225,25 @@ func NewApp(cfg Config) (app *App, err error) {
 
 func (app *App) Close() {
 	app.win.Exit()       // tell all instances of app.ircLoop to stop when possible
-	app.events <- event{ // tell app.eventLoop to stop
+	app.postEvent(event{ // tell app.eventLoop to stop
 		src:     "*",
 		content: nil,
-	}
+	})
 	for _, session := range app.sessions {
 		session.Close()
 	}
+	ui.NotifyStop()
+	app.closing.Store(true)
+	go func() {
+		// drain remaining events
+		for {
+			select {
+			case <-app.events:
+			default:
+				return
+			}
+		}
+	}()
 }
 
 func (app *App) SwitchToBuffer(netID, buffer string) {
@@ -319,11 +336,13 @@ func (app *App) eventLoop() {
 			app.win.SetTitle(title.String())
 		}
 	}
-	go func() {
-		// drain events until we close
-		for range app.events {
-		}
-	}()
+}
+
+func (app *App) postEvent(ev event) {
+	if app.closing.Load() {
+		return
+	}
+	app.events <- ev
 }
 
 func (app *App) handleEvent(ev event) bool {
@@ -386,16 +405,16 @@ func (app *App) ircLoop(netID string) {
 			out = app.debugOutputMessages(netID, out)
 		}
 		session := irc.NewSession(out, params)
-		app.events <- event{
+		app.postEvent(event{
 			src:     netID,
 			content: session,
-		}
+		})
 		go func() {
 			for stop := range session.TypingStops() {
-				app.events <- event{
+				app.postEvent(event{
 					src:     netID,
 					content: stop,
-				}
+				})
 			}
 		}()
 		for msg := range in {
@@ -406,15 +425,15 @@ func (app *App) ircLoop(netID string) {
 					Body: ui.PlainString(msg.String()),
 				})
 			}
-			app.events <- event{
+			app.postEvent(event{
 				src:     netID,
 				content: msg,
-			}
+			})
 		}
-		app.events <- event{
+		app.postEvent(event{
 			src:     netID,
 			content: nil,
-		}
+		})
 		app.queueStatusLine(netID, ui.Line{
 			Head:      "!!",
 			HeadColor: ui.ColorRed,
@@ -514,10 +533,10 @@ func (app *App) debugOutputMessages(netID string, out chan<- irc.Message) chan<-
 // handling in app.eventLoop().
 func (app *App) uiLoop() {
 	for ev := range app.win.Events {
-		app.events <- event{
+		app.postEvent(event{
 			src:     "*",
 			content: ev,
-		}
+		})
 	}
 }
 
@@ -1085,22 +1104,22 @@ func (app *App) handleLinkEvent(ev *events.EventClickLink) {
 	go func() {
 		img, err := app.fetchImage(ev.Link)
 		if err != nil {
-			app.events <- event{
+			app.postEvent(event{
 				src: "*",
 				content: &events.EventImageLoaded{
 					Image: nil,
 				},
-			}
+			})
 			if ev.Mouse {
 				open()
 			}
 		} else {
-			app.events <- event{
+			app.postEvent(event{
 				src: "*",
 				content: &events.EventImageLoaded{
 					Image: img,
 				},
-			}
+			})
 		}
 	}()
 }
@@ -1114,12 +1133,12 @@ func (app *App) upload(url string, f *os.File, size int64) (string, error) {
 		Reader: f,
 		period: 250 * time.Millisecond,
 		f: func(n int64) {
-			app.events <- event{
+			app.postEvent(event{
 				src: "*",
 				content: &events.EventFileUpload{
 					Progress: float64(n) / float64(size),
 				},
-			}
+			})
 		},
 	}
 	req, err := http.NewRequest("POST", url, &r)
@@ -1171,19 +1190,19 @@ func (app *App) handleUpload(url string, f *os.File, size int64) {
 	go func() {
 		location, err := app.upload(url, f, size)
 		if err != nil {
-			app.events <- event{
+			app.postEvent(event{
 				src: "*",
 				content: &events.EventFileUpload{
 					Error: err.Error(),
 				},
-			}
+			})
 		} else {
-			app.events <- event{
+			app.postEvent(event{
 				src: "*",
 				content: &events.EventFileUpload{
 					Location: location,
 				},
-			}
+			})
 		}
 	}()
 }

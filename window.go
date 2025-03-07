@@ -31,13 +31,13 @@ func (app *App) queueStatusLine(netID string, line ui.Line) {
 	if line.At.IsZero() {
 		line.At = time.Now()
 	}
-	app.events <- event{
+	app.postEvent(event{
 		src: "*",
 		content: statusLine{
 			netID: netID,
 			line:  line,
 		},
-	}
+	})
 }
 
 func (app *App) addStatusLine(netID string, line ui.Line) {

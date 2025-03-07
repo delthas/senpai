@@ -11,3 +11,5 @@ func (ui *UI) notify(target NotifyEvent, title, content string) int {
 func notifyClose(id int) {}
 
 func NotifyStart(f func(event *NotifyEvent)) {}
+
+func NotifyStop() {}
