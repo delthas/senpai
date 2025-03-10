@@ -52,6 +52,13 @@ Some settings are required, the others are optional.
 	will be ignored and the first line of the output of *password-cmd* will be
 	used for login.
 
+	The command and arguments are already quoted by scfg, so there is no need to
+	additionally quote the whole command string. For example:
+
+```
+password-cmd pass "Messaging/irc"
+```
+
 *channel*
 	A space separated list of channel names that senpai will automatically join
 	at startup and server reconnect. This directive can be specified multiple
