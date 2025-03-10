@@ -152,19 +152,23 @@ func New(config Config) (ui *UI, colors ConfigColors, err error) {
 	black := ui.vx.QueryColor(vaxis.IndexColor(uint8(0))).Params()
 	gray := ui.vx.QueryColor(vaxis.IndexColor(uint8(8))).Params()
 	white := ui.vx.QueryColor(vaxis.IndexColor(uint8(15))).Params()
-	if len(bg) == 3 && len(gray) == 3 && reflect.DeepEqual(bg, gray) {
+	fg := ui.vx.QueryForeground().Params()
+	if len(bg) == 3 && len(fg) == 3 && ui.vx.CanRGB() {
+		// Interpolate gray from fg and bg to make it slightly more readable against the background than default gray.
+		p := make([]uint8, 3)
+		for i := range p {
+			p[i] = uint8((int(bg[i])*3 + int(fg[i])*2) / 5)
+		}
+		ui.config.Colors.Gray = vaxis.RGBColor(p[0], p[1], p[2])
+	} else if len(bg) == 3 && len(gray) == 3 && reflect.DeepEqual(bg, gray) {
+		// RGB is not supported.
 		// Color theme with background set to gray: gray would be invisible.
 		if len(black) == 3 && !reflect.DeepEqual(bg, black) {
 			// Black is distinct from background: use that as gray.
 			ui.config.Colors.Gray = vaxis.IndexColor(0)
 		} else if len(white) == 3 && !reflect.DeepEqual(bg, white) {
-			// Black == gray == background color. (Can happen in 8-color themes.)
-			// Use an RGB color as the gray color, interpolated from black and white.
-			p := make([]uint8, 3)
-			for i := range p {
-				p[i] = uint8((int(black[i]) + int(white[i])) / 2)
-			}
-			ui.config.Colors.Gray = vaxis.RGBColor(p[0], p[1], p[2])
+			// White is distinct from background: use that as white.
+			ui.config.Colors.Gray = vaxis.IndexColor(15)
 		} else {
 			// Black == gray == background == white. Give up.
 			ui.config.Colors.Gray = ColorDefault
