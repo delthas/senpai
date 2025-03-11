@@ -1519,7 +1519,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			app.lastQuery = msg.Prefix.Name
 			app.lastQueryNet = netID
 		}
-		bounds := app.messageBounds[boundKey{netID, ev.Target}]
+		bounds := app.messageBounds[boundKey{netID, buffer}]
 		bounds.Update(&line)
 		app.messageBounds[boundKey{netID, buffer}] = bounds
 	case irc.HistoryTargetsEvent:
