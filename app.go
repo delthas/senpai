@@ -1221,16 +1221,17 @@ func (app *App) maybeRequestHistory() {
 		return
 	}
 	netID, buffer := app.win.CurrentBuffer()
-	if app.messageBounds[boundKey{netID, buffer}].complete {
-		return
-	}
 	s := app.sessions[netID]
 	if s == nil {
 		return
 	}
+	bk := boundKey{netID, s.Casemap(buffer)}
+	if app.messageBounds[bk].complete {
+		return
+	}
 	_, h := app.win.Size()
 	if l := app.win.LinesAboveOffset(); l < h*2 && buffer != "" {
-		if bound, ok := app.messageBounds[boundKey{netID, buffer}]; ok {
+		if bound, ok := app.messageBounds[bk]; ok {
 			s.NewHistoryRequest(buffer).
 				WithLimit(200).
 				Before(bound.first)
@@ -1393,7 +1394,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		if !ev.Read.IsZero() {
 			app.win.SetRead(netID, ev.Channel, ev.Read)
 		}
-		bounds, ok := app.messageBounds[boundKey{netID, ev.Channel}]
+		bk := boundKey{netID, s.Casemap(ev.Channel)}
+		bounds, ok := app.messageBounds[bk]
 		if added || !ok {
 			if t, ok := msg.Time(); ok {
 				s.NewHistoryRequest(ev.Channel).
@@ -1434,7 +1436,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.win.AddLine(netID, ev.Channel, line)
 	case irc.SelfPartEvent:
 		app.win.RemoveBuffer(netID, ev.Channel)
-		delete(app.messageBounds, boundKey{netID, ev.Channel})
+		delete(app.messageBounds, boundKey{netID, s.Casemap(ev.Channel)})
 	case irc.UserPartEvent:
 		if !app.cfg.StatusEnabled {
 			break
@@ -1519,9 +1521,10 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			app.lastQuery = msg.Prefix.Name
 			app.lastQueryNet = netID
 		}
-		bounds := app.messageBounds[boundKey{netID, buffer}]
+		bk := boundKey{netID, s.Casemap(buffer)}
+		bounds := app.messageBounds[bk]
 		bounds.Update(&line)
-		app.messageBounds[boundKey{netID, buffer}] = bounds
+		app.messageBounds[bk] = bounds
 	case irc.HistoryTargetsEvent:
 		type target struct {
 			name string
@@ -1555,7 +1558,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	case irc.HistoryEvent:
 		var linesBefore []ui.Line
 		var linesAfter []ui.Line
-		bounds, hasBounds := app.messageBounds[boundKey{netID, ev.Target}]
+		bk := boundKey{netID, s.Casemap(ev.Target)}
+		bounds, hasBounds := app.messageBounds[bk]
 		boundsNew := bounds
 		for _, m := range ev.Messages {
 			var line ui.Line
@@ -1586,7 +1590,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.win.AddLines(netID, ev.Target, linesBefore, linesAfter)
 
 		if !boundsNew.IsZero() {
-			app.messageBounds[boundKey{netID, ev.Target}] = boundsNew
+			app.messageBounds[bk] = boundsNew
 		}
 		if len(ev.Messages) < 10 {
 			// We're getting a non-full page: mark as complete to avoid indefinitely fetching the history.
@@ -1596,9 +1600,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			// the second of the message (because some bouncers have a second-level resolution).
 			// Be safe and pick 10 messages: less messages means that this was not a full page and we are done
 			// with fetching the backlog.
-			b := app.messageBounds[boundKey{netID, ev.Target}]
+			b := app.messageBounds[bk]
 			b.complete = true
-			app.messageBounds[boundKey{netID, ev.Target}] = b
+			app.messageBounds[bk] = b
 		}
 	case irc.SearchEvent:
 		app.win.OpenOverlay("Press Escape to close the search results")
