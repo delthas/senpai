@@ -391,12 +391,19 @@ func (app *App) ircLoop(netID string) {
 	var delay time.Duration = 0
 	for app.wantsNetwork(netID) {
 		time.Sleep(delay)
+		if !app.wantsNetwork(netID) {
+			break
+		}
 		if delay < throttleMax {
 			delay += throttleInterval
 		}
 		conn := app.connect(netID)
 		if conn == nil {
 			continue
+		}
+		if !app.wantsNetwork(netID) {
+			conn.Close()
+			break
 		}
 		delay = throttleInterval
 
