@@ -186,6 +186,26 @@ func (s StyledString) ParseURLs() StyledString {
 	}
 	styles = append(styles, s.styles[j:]...)
 
+	// TODO: if KDE
+	ss := make([]rangedStyle, 0, len(styles))
+	for i, s := range styles {
+		if s.Style.Hyperlink == "" {
+			ss = append(ss, s)
+			continue
+		}
+		if i == len(styles)-1 {
+			continue
+		}
+		next := styles[i+1]
+		for j := s.Start; j < next.Start; j++ {
+			sss := s
+			sss.Style.HyperlinkParams += fmt.Sprintf(":stamp=%010d", rand.Int31())
+			sss.Start = j
+			ss = append(ss, sss)
+		}
+	}
+	styles = ss
+
 	return StyledString{
 		string: s.string,
 		styles: styles,
