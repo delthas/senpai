@@ -27,21 +27,14 @@ Your nick will be set to your SSH username.
 
 ## Installing
 
-From source (requires Go):
+- From your system package repositories: [`senpai`](https://repology.org/project/senpai-irc/versions)
+- From source (requires Go):
 ```shell
 git clone https://git.sr.ht/~delthas/senpai
 cd senpai
 make
 sudo make install
 ```
-
-For a simple Go local installation:
-```shell
-git clone https://git.sr.ht/~delthas/senpai
-cd senpai
-go install ./cmd/senpai
-```
-
 
 ## Running
 
