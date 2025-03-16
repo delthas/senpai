@@ -4,10 +4,10 @@ go 1.18
 
 require (
 	codeberg.org/emersion/go-scfg v0.1.0
-	git.sr.ht/~rockorager/vaxis v0.12.1-0.20250312161844-81636f76af83
+	git.sr.ht/~rockorager/vaxis v0.13.0
 	github.com/containerd/console v1.0.4
-	github.com/delthas/go-libnp v0.0.0-20250105150050-96674b98150e
-	github.com/delthas/go-localeinfo v0.0.0-20240813094314-e5413e186769
+	github.com/delthas/go-libnp v0.1.0
+	github.com/delthas/go-localeinfo v0.1.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/rivo/uniseg v0.4.7
