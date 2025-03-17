@@ -50,28 +50,29 @@ func (auth *SASLPlain) Respond(challenge string) (res string, err error) {
 }
 
 // SupportedCapabilities is the set of capabilities supported by this library.
-var SupportedCapabilities = map[string]struct{}{
-	"away-notify":      {},
-	"batch":            {},
-	"cap-notify":       {},
-	"echo-message":     {},
-	"extended-monitor": {},
-	"invite-notify":    {},
-	"labeled-response": {},
-	"message-tags":     {},
-	"multi-prefix":     {},
-	"server-time":      {},
-	"sasl":             {},
-	"setname":          {},
-	"standard-replies": {},
+// Value is false if the cap is deferred (to work around some daemons agfressive rate pre-conn-reg backlog limiting)
+var SupportedCapabilities = map[string]bool{
+	"away-notify":      false,
+	"batch":            true,
+	"cap-notify":       true,
+	"echo-message":     true,
+	"extended-monitor": false,
+	"invite-notify":    false,
+	"labeled-response": true,
+	"message-tags":     true,
+	"multi-prefix":     true,
+	"sasl":             true,
+	"server-time":      true,
+	"setname":          false,
+	"standard-replies": true,
 
-	"draft/chathistory":               {},
-	"draft/event-playback":            {},
-	"draft/metadata-2":                {},
-	"draft/read-marker":               {},
-	"soju.im/bouncer-networks-notify": {},
-	"soju.im/bouncer-networks":        {},
-	"soju.im/search":                  {},
+	"draft/chathistory":               true,
+	"draft/event-playback":            true,
+	"draft/metadata-2":                true,
+	"draft/read-marker":               true,
+	"soju.im/bouncer-networks-notify": true,
+	"soju.im/bouncer-networks":        true,
+	"soju.im/search":                  false,
 }
 
 // Values taken by the "@+typing=" client tag.  TypingUnspec means the value or
@@ -199,8 +200,10 @@ func NewSession(out chan<- Message, params SessionParams) *Session {
 	}
 
 	s.out <- NewMessage("CAP", "LS", "302")
-	for capability := range SupportedCapabilities {
-		s.out <- NewMessage("CAP", "REQ", capability)
+	for capability, immediate := range SupportedCapabilities {
+		if immediate || s.netID != "" {
+			s.out <- NewMessage("CAP", "REQ", capability)
+		}
 	}
 	s.out <- NewMessage("NICK", s.nick)
 	s.out <- NewMessage("USER", s.user, "0", "*", s.real)
@@ -877,8 +880,17 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		// do nothing
 	case "CAP":
 		var subcommand, caps string
-		if err := msg.ParseParams(nil, &subcommand, &caps); err != nil {
+		if err := msg.ParseParams(nil, &subcommand); err != nil {
 			return nil, err
+		}
+		if len(msg.Params) > 3 && msg.Params[2] == "*" {
+			if err := msg.ParseParams(nil, nil, nil, &caps); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := msg.ParseParams(nil, nil, &caps); err != nil {
+				return nil, err
+			}
 		}
 
 		switch subcommand {
@@ -912,16 +924,25 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			}
 		case "NAK":
 			// do nothing
-		case "NEW":
+		case "LS", "NEW":
+			var reqs []string
 			for _, c := range ParseCaps(caps) {
 				s.availableCaps[c.Name] = c.Value
-				if _, ok := SupportedCapabilities[c.Name]; !ok {
+				immediate, ok := SupportedCapabilities[c.Name]
+				if !ok {
+					continue
+				}
+				if subcommand == "LS" && (immediate || s.netID != "") {
+					// Already sent CAP, ignore
 					continue
 				}
 				if _, ok := s.enabledCaps[c.Name]; ok {
 					continue
 				}
-				s.out <- NewMessage("CAP", "REQ", c.Name)
+				reqs = append(reqs, c.Name)
+			}
+			if len(reqs) > 0 {
+				s.out <- NewMessage("CAP", "REQ", strings.Join(reqs, " "))
 			}
 		case "DEL":
 			for _, c := range ParseCaps(caps) {
