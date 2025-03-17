@@ -647,7 +647,7 @@ func (bs *BufferList) clearRead(i int) {
 
 func (bs *BufferList) SetRead(netID, title string, timestamp time.Time) {
 	i, b := bs.at(netID, title)
-	if b == nil {
+	if b == nil || i < 0 {
 		return
 	}
 	clearRead := true
