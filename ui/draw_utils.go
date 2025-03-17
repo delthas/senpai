@@ -48,6 +48,9 @@ func stringWidth(vx *Vaxis, s string) int {
 		return len(s)
 	}
 	if len(s) == 1 { // Single-character ASCII fast path
+		if s[0] == '\n' { // Replaced with ↲
+			return 1
+		}
 		if s[0] <= 0x1F {
 			return 0
 		}
