@@ -793,13 +793,8 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 					members := s.Names(target)
 					if i < len(members) {
 						buffer := members[i].Name.Name
-						i, added := app.win.AddBuffer(netID, "", buffer)
+						i, _ := app.addUserBuffer(netID, buffer, time.Time{})
 						app.win.JumpBufferIndex(i)
-						if added {
-							s.MonitorAdd(buffer)
-							s.ReadGet(buffer)
-							s.NewHistoryRequest(buffer).WithLimit(500).Latest()
-						}
 					}
 				}
 			}
@@ -980,13 +975,8 @@ func (app *App) handleNickEvent(ev *events.EventClickNick) {
 	if s == nil {
 		return
 	}
-	i, added := app.win.AddBuffer(ev.NetID, "", ev.Nick)
+	i, _ := app.addUserBuffer(ev.NetID, ev.Nick, time.Time{})
 	app.win.JumpBufferIndex(i)
-	if added {
-		s.MonitorAdd(ev.Nick)
-		s.ReadGet(ev.Nick)
-		s.NewHistoryRequest(ev.Nick).WithLimit(500).Latest()
-	}
 }
 
 func (app *App) handleChannelEvent(ev *events.EventClickChannel) {
@@ -1391,6 +1381,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 	case irc.SelfJoinEvent:
 		i, added := app.win.AddBuffer(netID, "", ev.Channel)
+		i = app.win.SetMuted(netID, ev.Channel, s.MutedGet(ev.Channel))
+		i = app.win.SetPinned(netID, ev.Channel, s.PinnedGet(ev.Channel))
 		if !ev.Read.IsZero() {
 			app.win.SetRead(netID, ev.Channel, ev.Read)
 		}
@@ -1418,8 +1410,6 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			topic := ui.IRCString(ev.Topic).ParseURLs()
 			app.win.SetTopic(netID, ev.Channel, topic)
 		}
-		app.win.SetPinned(netID, ev.Channel, ev.Pinned)
-		app.win.SetMuted(netID, ev.Channel, ev.Muted)
 
 		// Restore last buffer
 		if netID == app.lastNetID && ev.Channel == app.lastBuffer {
@@ -1496,20 +1486,11 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			break
 		}
 		if buffer != "" && !s.IsChannel(buffer) {
-			if _, added := app.win.AddBuffer(netID, "", buffer); added {
-				app.monitor[netID][buffer] = struct{}{}
-				s.MonitorAdd(buffer)
-				s.ReadGet(buffer)
-				if t, ok := msg.Time(); ok {
-					s.NewHistoryRequest(buffer).
-						WithLimit(500).
-						Before(t)
-				} else {
-					s.NewHistoryRequest(buffer).
-						WithLimit(500).
-						Latest()
-				}
+			t, ok := msg.Time()
+			if !ok {
+				t = time.Time{}
 			}
+			app.addUserBuffer(netID, buffer, t)
 		}
 		app.win.AddLine(netID, buffer, line)
 		if line.Notify == ui.NotifyHighlight {
@@ -1545,15 +1526,10 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			if s.IsChannel(target.name) {
 				continue
 			}
-			s.MonitorAdd(target.name)
-			s.ReadGet(target.name)
-			app.win.AddBuffer(netID, "", target.name)
 			// CHATHISTORY BEFORE excludes its bound, so add 1ms
 			// (precision of the time tag) to include that last message.
 			target.last = target.last.Add(1 * time.Millisecond)
-			s.NewHistoryRequest(target.name).
-				WithLimit(500).
-				Before(target.last)
+			app.addUserBuffer(netID, target.name, target.last)
 		}
 	case irc.HistoryEvent:
 		var linesBefore []ui.Line
@@ -1620,6 +1596,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	case irc.MetadataChangeEvent:
 		app.win.SetPinned(netID, ev.Target, ev.Pinned)
 		app.win.SetMuted(netID, ev.Target, ev.Muted)
+		if ev.Pinned && !s.IsChannel(ev.Target) {
+			app.addUserBuffer(netID, ev.Target, time.Time{})
+		}
 	case irc.BouncerNetworkEvent:
 		if !ev.Delete {
 			_, added := app.win.AddBuffer(ev.ID, ev.Name, "")
@@ -2331,6 +2310,32 @@ func (app *App) printTopic(netID, buffer string) (ok bool) {
 		}),
 	})
 	return true
+}
+
+func (app *App) addUserBuffer(netID, buffer string, t time.Time) (i int, added bool) {
+	i, added = app.win.AddBuffer(netID, "", buffer)
+	if !added {
+		return
+	}
+	s := app.sessions[netID]
+	if s == nil {
+		return
+	}
+	i = app.win.SetMuted(netID, buffer, s.MutedGet(buffer))
+	i = app.win.SetPinned(netID, buffer, s.PinnedGet(buffer))
+	app.monitor[netID][buffer] = struct{}{}
+	s.MonitorAdd(buffer)
+	s.ReadGet(buffer)
+	if !t.IsZero() {
+		s.NewHistoryRequest(buffer).
+			WithLimit(500).
+			Before(t)
+	} else {
+		s.NewHistoryRequest(buffer).
+			WithLimit(500).
+			Latest()
+	}
+	return
 }
 
 func keyMatches(k vaxis.Key, r rune, mods vaxis.ModifierMask) bool {

@@ -554,16 +554,16 @@ func (ui *UI) GetPinned(netID, buffer string) bool {
 	return ui.bs.GetPinned(netID, buffer)
 }
 
-func (ui *UI) SetPinned(netID, buffer string, pinned bool) {
-	ui.bs.SetPinned(netID, buffer, pinned)
+func (ui *UI) SetPinned(netID, buffer string, pinned bool) int {
+	return ui.bs.SetPinned(netID, buffer, pinned)
 }
 
 func (ui *UI) GetMuted(netID, buffer string) bool {
 	return ui.bs.GetMuted(netID, buffer)
 }
 
-func (ui *UI) SetMuted(netID, buffer string, muted bool) {
-	ui.bs.SetMuted(netID, buffer, muted)
+func (ui *UI) SetMuted(netID, buffer string, muted bool) int {
+	return ui.bs.SetMuted(netID, buffer, muted)
 }
 
 func (ui *UI) SetRead(netID, buffer string, timestamp time.Time) {

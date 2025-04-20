@@ -104,10 +104,13 @@ type Channel struct {
 	TopicWho  *Prefix                 // the name of the last user who set the topic.
 	TopicTime time.Time               // the last time the topic has been changed.
 	Read      time.Time               // the time until which messages were read.
-	Pinned    bool
-	Muted     bool
 
 	complete bool // whether this structure is fully initialized.
+}
+
+type Metadata struct {
+	Pinned bool
+	Muted  bool
 }
 
 // SessionParams defines how to connect to an IRC server.
@@ -156,6 +159,7 @@ type Session struct {
 
 	users          map[string]*User        // known users.
 	channels       map[string]Channel      // joined channels.
+	metadata       map[string]Metadata     // known target metadata.
 	chBatches      map[string]HistoryEvent // channel history batches being processed.
 	chReqs         map[string]struct{}     // set of targets for which history is currently requested.
 	targetsBatchID string                  // ID of the channel history targets batch being processed.
@@ -193,6 +197,7 @@ func NewSession(out chan<- Message, params SessionParams) *Session {
 		prefixModes:     "ov",
 		users:           map[string]*User{},
 		channels:        map[string]Channel{},
+		metadata:        map[string]Metadata{},
 		chBatches:       map[string]HistoryEvent{},
 		chReqs:          map[string]struct{}{},
 		monitors:        map[string]struct{}{},
@@ -568,6 +573,10 @@ func (s *Session) ReadSet(target string, timestamp time.Time) {
 	}
 }
 
+func (s *Session) MutedGet(target string) bool {
+	return s.metadata[s.Casemap(target)].Muted
+}
+
 func (s *Session) MutedSet(target string, muted bool) (ok bool) {
 	var v string
 	if muted {
@@ -580,6 +589,10 @@ func (s *Session) MutedSet(target string, muted bool) (ok bool) {
 		s.out <- NewMessage("METADATA", target, "SET", k, v)
 	}
 	return
+}
+
+func (s *Session) PinnedGet(target string) bool {
+	return s.metadata[s.Casemap(target)].Pinned
 }
 
 func (s *Session) PinnedSet(target string, pinned bool) (ok bool) {
@@ -1185,8 +1198,6 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 				Channel: c.Name,
 				Topic:   c.Topic,
 				Read:    c.Read,
-				Pinned:  c.Pinned,
-				Muted:   c.Muted,
 			}
 			if stamp, ok := s.pendingChannels[channelCf]; ok && time.Since(stamp) < 5*time.Second {
 				ev.Requested = true
@@ -1526,25 +1537,21 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		if err := msg.ParseParams(&target, &key, nil, &value); err != nil {
 			return nil, err
 		}
-		channelCf := s.Casemap(target)
-		c, ok := s.channels[channelCf]
-		if !ok {
-			return nil, nil
-		}
+		targetCf := s.Casemap(target)
+		m := s.metadata[targetCf]
 		switch key {
 		case "soju.im/pinned":
-			c.Pinned = value == "1"
+			m.Pinned = value == "1"
 		case "soju.im/muted":
-			c.Muted = value == "1"
+			m.Muted = value == "1"
 		}
-		s.channels[channelCf] = c
-		if c.complete {
-			return MetadataChangeEvent{
-				Target: target,
-				Pinned: c.Pinned,
-				Muted:  c.Muted,
-			}, nil
+		s.metadata[targetCf] = m
+		ev := MetadataChangeEvent{
+			Target: target,
+			Pinned: m.Pinned,
+			Muted:  m.Muted,
 		}
+		return ev, nil
 	case "BOUNCER":
 		if len(msg.Params) < 3 {
 			break

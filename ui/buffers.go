@@ -607,13 +607,15 @@ func (bs *BufferList) GetPinned(netID, title string) bool {
 	return b.pinned
 }
 
-func (bs *BufferList) SetPinned(netID, title string, pinned bool) {
+func (bs *BufferList) SetPinned(netID, title string, pinned bool) int {
 	_, b := bs.at(netID, title)
 	if b == nil {
-		return
+		return -1
 	}
 	b.pinned = pinned
 	bs.reorder()
+	i, _ := bs.at(netID, title)
+	return i
 }
 
 func (bs *BufferList) GetMuted(netID, title string) bool {
@@ -624,13 +626,15 @@ func (bs *BufferList) GetMuted(netID, title string) bool {
 	return b.muted
 }
 
-func (bs *BufferList) SetMuted(netID, title string, muted bool) {
+func (bs *BufferList) SetMuted(netID, title string, muted bool) int {
 	_, b := bs.at(netID, title)
 	if b == nil {
-		return
+		return -1
 	}
 	b.muted = muted
 	bs.reorder()
+	i, _ := bs.at(netID, title)
+	return i
 }
 
 func (bs *BufferList) clearRead(i int) {
