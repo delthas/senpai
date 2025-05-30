@@ -132,7 +132,7 @@ func (l *Line) NewLines(vx *Vaxis, width int) []int {
 			// Some word occupies the width of the terminal, lets place a
 			// newline at the PREVIOUS split point (i-2, which is whitespace)
 			// ONLY if there isn't already one.
-			if 1 < i && 0 < len(l.newLines) && l.newLines[len(l.newLines)-1] != l.splitPoints[i-2].I {
+			if 1 < i && (0 == len(l.newLines) || (l.newLines[len(l.newLines)-1] != l.splitPoints[i-2].I && l.newLines[len(l.newLines)-1] != l.splitPoints[i-1].I)) {
 				l.newLines = append(l.newLines, l.splitPoints[i-2].I)
 			}
 			// and also place a newline after the word.

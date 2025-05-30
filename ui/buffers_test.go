@@ -141,4 +141,7 @@ func TestRenderedHeight(t *testing.T) {
 	assertNewLines(t, "have a good day!", 17, 1) // |have a good day! |
 
 	assertNewLines(t, "cc en direct du word wrapping des familles le tests ça v a va va v a va", 46, 2)
+
+	assertNewLines(t, "take cares", 5, 2) // |take |cares|
+	assertNewLines(t, "tak cares", 5, 2)  // |tak  |cares|
 }
