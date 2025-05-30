@@ -2036,8 +2036,8 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 	content = strings.TrimRightFunc(content, unicode.IsSpace)
 
 	isAction := false
-	if strings.HasPrefix(ev.Content, "\x01") {
-		parts := strings.SplitN(ev.Content[1:], " ", 2)
+	if strings.HasPrefix(content, "\x01") {
+		parts := strings.SplitN(content[1:], " ", 2)
 		if len(parts) < 2 {
 			return
 		}
