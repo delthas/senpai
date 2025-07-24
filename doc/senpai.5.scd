@@ -171,13 +171,13 @@ colors {
 	Dump all sent and received data to the home buffer, useful for debugging.
 	Defaults to false.
 
-*-transient*
+*transient*
 	Advanced.
 	Run an ephemeral instance without disk reads/writes (except for the initial
 	configuration). Can be useful for public instances.
 	Defaults to false.
 
-*-local-integrations*
+*local-integrations*
 	Advanced.
 	Enables integrations with the local system (e.g. notifications through
 	DBus). Can be useful to disable on systems planned to be used through SSH.
