@@ -193,10 +193,15 @@ func (app *App) completionsUpload(cs []ui.Completion, cursorIdx int, text []rune
 	dirPath := ""
 	dirPrefix := ""
 	if path == "" {
-		if filepath.Separator != '/' {
-			return cs
+		home, err := os.UserHomeDir()
+		if err != nil {
+			if filepath.Separator != '/' {
+				return cs
+			}
+			dirPath = "/"
+		} else {
+			dirPath = home
 		}
-		dirPath = "/"
 	} else if strings.HasSuffix(path, string(filepath.Separator)) {
 		dirPath = path
 	} else {
@@ -224,7 +229,7 @@ func (app *App) completionsUpload(cs []ui.Completion, cursorIdx int, text []rune
 		if isDir {
 			name += string(filepath.Separator)
 		}
-		if path == "" {
+		if dirPrefix == "/" {
 			name = "/" + name
 		}
 		if name == dirPrefix {

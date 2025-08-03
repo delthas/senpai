@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -523,6 +524,9 @@ func commandDoUpload(app *App, args []string) (err error) {
 		return fmt.Errorf("file upload is not supported on this server; try using soju and enabling file upload")
 	}
 	path := args[0]
+	if home, err := os.UserHomeDir(); err == nil && !filepath.IsAbs(path) {
+		path = filepath.Join(home, path)
+	}
 
 	fi, err := os.Stat(path)
 	if err != nil {
