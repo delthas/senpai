@@ -1498,8 +1498,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			current := app.win.Focused() && curNetID == netID && curBuffer == buffer
 			app.notifyHighlight(buffer, ev.User, line.Body.String(), current)
 		}
-		if !s.IsChannel(msg.Params[0]) && !s.IsMe(ev.User) {
-			app.lastQuery = msg.Prefix.Name
+		if !ev.TargetIsChannel && !s.IsMe(ev.User) {
+			app.lastQuery = ev.User
 			app.lastQueryNet = netID
 		}
 		bk := boundKey{netID, s.Casemap(buffer)}
