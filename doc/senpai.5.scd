@@ -220,7 +220,7 @@ colors {
 ```
 #!/bin/sh
 escape() {
-	printf "%s" "$1" | sed 's#\\#\\\\#g'
+	printf "%s" "$1" | sed 's#\\\\#\\\\\\\\#g'
 }
 
 notify-send "[$BUFFER] $SENDER" "$(escape "$MESSAGE")"
