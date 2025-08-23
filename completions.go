@@ -190,23 +190,31 @@ func (app *App) completionsUpload(cs []ui.Completion, cursorIdx int, text []rune
 		return cs
 	}
 
+	var home string
+	if h, err := os.UserHomeDir(); err == nil {
+		home = h
+	}
 	dirPath := ""
 	dirPrefix := ""
 	if path == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
+		if home != "" {
+			dirPath = home
+		} else {
 			if filepath.Separator != '/' {
 				return cs
 			}
 			dirPath = "/"
-		} else {
-			dirPath = home
 		}
-	} else if strings.HasSuffix(path, string(filepath.Separator)) {
-		dirPath = path
 	} else {
-		dirPath = filepath.Dir(path)
-		dirPrefix = filepath.Base(path)
+		if home != "" && !filepath.IsAbs(path) {
+			path = filepath.Join(home, path)
+		}
+		if strings.HasSuffix(path, string(filepath.Separator)) {
+			dirPath = path
+		} else {
+			dirPath = filepath.Dir(path)
+			dirPrefix = filepath.Base(path)
+		}
 	}
 	dir, err := os.ReadDir(dirPath)
 	if err != nil {
