@@ -175,6 +175,12 @@ func ParseAddr(addr string, cfg *Config) error {
 		addr = "irc://" + addr
 	}
 	u, err := url.Parse(addr)
+	if err != nil && strings.Contains(addr, "%") && !strings.Contains(addr, "%25") {
+		// Escape any unescaped IPv6 zone identifiers, since it is not intuitive that they should be escaped,
+		// especially when no scheme is provided.
+		addr = strings.ReplaceAll(addr, "%", "%25")
+		u, err = url.Parse(addr)
+	}
 	if err != nil {
 		return err
 	}
