@@ -321,6 +321,20 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *WALLOPS* [text]
 	Broadcast a message to all users (advanced).
 
+# ENVIRONMENT VARIABLES
+
+The following standard environment variables are supported.
+
+*ALL_PROXY*
+	URL of a SOCKS proxy to use when connecting to the server.
+
+*SSL_CERT_DIR*
+	Colon-separated list of directories containing TLS certificates to trust, in
+	OpenSSL c_rehash format.
+
+*SSL_CERT_FILE*
+	Path to a file, PEM-encoded, containing a list of TLS certificates to trust.
+
 # SEE ALSO
 
 *senpai*(5)
