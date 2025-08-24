@@ -869,7 +869,7 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 	width--
 	clearArea(vx, x0, y0, width, height)
 
-	if _, channel := ui.bs.Current(); channel == "" {
+	if _, channel := ui.bs.Current(); channel == "" && ui.config.Mouse {
 		x := x0 + 1
 		printString(vx, &x, y0, Styled("Help", vaxis.Style{
 			Foreground: ui.config.Colors.Status,
@@ -918,24 +918,26 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 	y0++
 	height--
 
-	var actions []string
-	if b.muted {
-		actions = append(actions, "→ Unmute")
-	} else {
-		actions = append(actions, "→ Mute")
+	if ui.config.Mouse {
+		var actions []string
+		if b.muted {
+			actions = append(actions, "→ Unmute")
+		} else {
+			actions = append(actions, "→ Mute")
+		}
+		if b.pinned {
+			actions = append(actions, "→ Unpin")
+		} else {
+			actions = append(actions, "→ Pin")
+		}
+		actions = append(actions, "→ Leave")
+		for i, action := range actions {
+			x := x0
+			ui.drawHorizontalLine(vx, x0, y0+height-(len(actions)-i)*2, width)
+			printString(vx, &x, y0+height-(len(actions)-i)*2+1, Styled(action, vaxis.Style{}))
+		}
+		height -= 2 * len(actions)
 	}
-	if b.pinned {
-		actions = append(actions, "→ Unpin")
-	} else {
-		actions = append(actions, "→ Pin")
-	}
-	actions = append(actions, "→ Leave")
-	for i, action := range actions {
-		x := x0
-		ui.drawHorizontalLine(vx, x0, y0+height-(len(actions)-i)*2, width)
-		printString(vx, &x, y0+height-(len(actions)-i)*2+1, Styled(action, vaxis.Style{}))
-	}
-	height -= 2 * len(actions)
 
 	padding := 1
 	for _, m := range members {
