@@ -11,7 +11,8 @@ senpai - your everyday IRC student
 # OPTIONS
 
 *-config* <path>
-	Use a different path for the configuration file.
+	Use a different path for the configuration file.  Its format is documented
+	in *senpai*(5).
 
 *-nickname* <nickname>
 	Advanced. Nick name to connect as. Overrides the configuration item of the
