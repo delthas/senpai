@@ -111,6 +111,7 @@ type Config struct {
 	MemberColEnabled bool
 	TextMaxWidth     int
 	StatusEnabled    bool
+	Shortcuts        map[string][]string
 
 	Colors ui.ConfigColors
 
@@ -161,6 +162,7 @@ func Defaults() Config {
 				Others: ui.ColorDefault,
 			},
 		},
+		Shortcuts:         make(map[string][]string),
 		Debug:             false,
 		Transient:         false,
 		LocalIntegrations: true,
@@ -441,6 +443,13 @@ func unmarshal(filename string, cfg *Config) (err error) {
 				default:
 					return fmt.Errorf("unknown colors directive %q", child.Name)
 				}
+			}
+		case "shortcuts":
+			for _, child := range d.Children {
+				if err := child.ParseParams(nil); err != nil {
+					return err
+				}
+				cfg.Shortcuts[child.Name] = child.Params
 			}
 		case "debug":
 			var debug string

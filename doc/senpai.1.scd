@@ -91,6 +91,8 @@ specified above, instead of an unmodified left click.
 
 # KEYBOARD SHORTCUTS
 
+These shortcuts can be customized in the configuration, see senpai(5).
+
 *CTRL-A*
 	Move the cursor to the beginning of the input field.
 
@@ -98,7 +100,7 @@ specified above, instead of an unmodified left click.
 	Move the cursor to the end of the input field.
 
 *CTRL-C*
-	Clear input line, or prepare for exit by adding /exit to input line.
+	Clear input line, or prepare for exit by adding /quit to input line.
 
 *CTRL-F*
 	Prepare for search: add /search to input line.

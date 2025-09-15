@@ -108,6 +108,11 @@ type pendingCompletion struct {
 	deadline time.Time
 }
 
+type keyMatch struct {
+	keycode rune
+	mods    vaxis.ModifierMask
+}
+
 type App struct {
 	win              *ui.UI
 	sessions         map[string]*irc.Session // map of network IDs to their current session
@@ -119,6 +124,7 @@ type App struct {
 
 	cfg        Config
 	highlights []string
+	shortcuts  map[keyMatch][]string
 
 	lastQuery     string
 	lastQueryNet  string
@@ -171,8 +177,18 @@ func NewApp(cfg Config) (app *App, err error) {
 		sessions:           map[string]*irc.Session{},
 		events:             make(chan event, eventChanSize),
 		cfg:                cfg,
+		shortcuts:          make(map[keyMatch][]string),
 		messageBounds:      map[boundKey]bound{},
 		monitor:            make(map[string]map[string]struct{}),
+	}
+	for _, m := range []map[string][]string{defaultCommands, app.cfg.Shortcuts} {
+		for name, actions := range m {
+			k := keyNameMatch(name)
+			if k == nil {
+				return nil, fmt.Errorf("unknown key name: %v", name)
+			}
+			app.shortcuts[*k] = actions
+		}
 	}
 
 	if cfg.Highlights != nil {
@@ -813,119 +829,86 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 	}
 }
 
-func (app *App) handleKeyEvent(ev vaxis.Key) {
-	switch ev.EventType {
-	case vaxis.EventPress, vaxis.EventRepeat, vaxis.EventPaste:
-	default:
-		return
-	}
-	if ev.Text != "" {
-		for _, r := range ev.Text {
-			app.win.InputRune(r)
-		}
-		app.typing()
-		return
-	}
-
-	if keyMatches(ev, 'c', vaxis.ModCtrl) {
+func (app *App) handleAction(action string, args ...string) {
+	switch action {
+	case "quit":
 		if app.win.InputClear() {
 			app.typing()
 		} else {
 			app.win.InputSet("/quit")
 		}
-	} else if keyMatches(ev, 'f', vaxis.ModCtrl) {
+	case "set-editor":
 		if len(app.win.InputContent()) == 0 {
-			app.win.InputSet("/search ")
+			app.win.InputSet(strings.Join(args, " "))
 		}
-	} else if keyMatches(ev, 'k', vaxis.ModCtrl) {
-		if len(app.win.InputContent()) == 0 {
-			app.win.InputSet("/buffer ")
-		}
-	} else if keyMatches(ev, 'a', vaxis.ModCtrl) {
+	case "cursor-start":
 		app.win.InputHome()
-	} else if keyMatches(ev, 'e', vaxis.ModCtrl) {
+	case "cursor-end":
 		app.win.InputEnd()
-	} else if keyMatches(ev, 'l', vaxis.ModCtrl) {
+	case "redraw":
 		app.win.Resize()
-	} else if keyMatches(ev, 'u', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyPgUp, 0) {
+	case "scroll-up":
 		app.win.ScrollUp()
-	} else if keyMatches(ev, 'd', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyPgDown, 0) {
+	case "scroll-down":
 		app.win.ScrollDown()
-	} else if keyMatches(ev, 'n', vaxis.ModCtrl) {
+	case "buffer-next":
 		app.win.NextBuffer()
 		app.win.ScrollToBuffer()
-	} else if keyMatches(ev, 'p', vaxis.ModCtrl) {
+	case "buffer-previous":
 		app.win.PreviousBuffer()
 		app.win.ScrollToBuffer()
-	} else if keyMatches(ev, vaxis.KeyRight, vaxis.ModAlt) {
-		app.win.NextBuffer()
-		app.win.ScrollToBuffer()
-	} else if keyMatches(ev, vaxis.KeyRight, vaxis.ModShift) {
+	case "buffer-next-unread":
 		app.win.NextUnreadBuffer()
 		app.win.ScrollToBuffer()
-	} else if keyMatches(ev, vaxis.KeyRight, vaxis.ModCtrl) {
-		app.win.InputRightWord()
-	} else if keyMatches(ev, vaxis.KeyRight, 0) {
-		app.win.InputRight()
-	} else if keyMatches(ev, vaxis.KeyLeft, vaxis.ModAlt) {
-		app.win.PreviousBuffer()
-		app.win.ScrollToBuffer()
-	} else if keyMatches(ev, vaxis.KeyLeft, vaxis.ModShift) {
+	case "buffer-previous-unread":
 		app.win.PreviousUnreadBuffer()
 		app.win.ScrollToBuffer()
-	} else if keyMatches(ev, vaxis.KeyLeft, vaxis.ModCtrl) {
+	case "cursor-right-word":
+		app.win.InputRightWord()
+	case "cursor-left-word":
 		app.win.InputLeftWord()
-	} else if keyMatches(ev, vaxis.KeyLeft, 0) {
+	case "cursor-right":
+		app.win.InputRight()
+	case "cursor-left":
 		app.win.InputLeft()
-	} else if keyMatches(ev, vaxis.KeyUp, vaxis.ModAlt) {
-		app.win.PreviousBuffer()
-	} else if keyMatches(ev, vaxis.KeyUp, 0) {
+	case "cursor-up":
 		app.win.InputUp()
-	} else if keyMatches(ev, vaxis.KeyDown, vaxis.ModAlt) {
-		app.win.NextBuffer()
-	} else if keyMatches(ev, vaxis.KeyDown, 0) {
+	case "cursor-down":
 		app.win.InputDown()
-	} else if keyMatches(ev, vaxis.KeyHome, vaxis.ModAlt) {
-		app.win.GoToBufferNo(0)
-	} else if keyMatches(ev, vaxis.KeyHome, 0) {
-		app.win.InputHome()
-	} else if keyMatches(ev, vaxis.KeyEnd, vaxis.ModAlt) {
-		maxInt := int(^uint(0) >> 1)
-		app.win.GoToBufferNo(maxInt)
-	} else if keyMatches(ev, vaxis.KeyEnd, 0) {
-		app.win.InputEnd()
-	} else if keyMatches(ev, vaxis.KeyBackspace, vaxis.ModAlt) {
+	case "cursor-delete-previous-word":
 		if app.win.InputDeleteWord() {
 			app.typing()
 		}
-	} else if keyMatches(ev, vaxis.KeyBackspace, 0) || keyMatches(ev, vaxis.KeyBackspace, vaxis.ModShift) {
+	case "cursor-delete-previous":
 		if app.win.InputBackspace() {
 			app.typing()
 		}
-	} else if keyMatches(ev, vaxis.KeyDelete, 0) {
+	case "cursor-delete-next":
 		if app.win.InputDelete() {
 			app.typing()
 		}
-	} else if keyMatches(ev, 'w', vaxis.ModCtrl) {
-		if app.win.InputDeleteWord() {
+	case "cursor-delete-before":
+		if app.win.InputDeleteBefore() {
 			app.typing()
 		}
-	} else if keyMatches(ev, 'r', vaxis.ModCtrl) {
+	case "cursor-delete-after":
+		if app.win.InputDeleteAfter() {
+			app.typing()
+		}
+	case "search-editor":
 		app.win.InputBackSearch()
-	} else if keyMatches(ev, vaxis.KeyTab, 0) {
+	case "auto-complete":
 		if app.win.InputAutoComplete() {
 			app.typing()
 		}
-	} else if keyMatches(ev, vaxis.KeyEsc, 0) {
+	case "close-overlay":
 		app.win.CloseOverlay()
-	} else if keyMatches(ev, vaxis.KeyF07, 0) {
+	case "toggle-channel-list":
 		app.win.ToggleChannelList()
-	} else if keyMatches(ev, vaxis.KeyF08, 0) {
+	case "toggle-member-list":
 		app.win.ToggleMemberList()
-	} else if keyMatches(ev, '\n', 0) || keyMatches(ev, '\r', 0) || keyMatches(ev, 'j', vaxis.ModCtrl) || keyMatches(ev, vaxis.KeyKeyPadEnter, 0) {
-		if ev.EventType == vaxis.EventPaste {
-			app.win.InputRune('\n')
-		} else if !app.win.InputEnter() {
+	case "send":
+		if !app.win.InputEnter() {
 			netID, buffer := app.win.CurrentBuffer()
 			input := string(app.win.InputContent())
 			var err error
@@ -945,28 +928,130 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 				app.win.InputFlush()
 			}
 		}
-	} else if keyMatches(ev, 'n', vaxis.ModAlt) {
+	case "scroll-next-highlight":
 		app.win.ScrollDownHighlight()
-	} else if keyMatches(ev, 'p', vaxis.ModAlt) {
+	case "scroll-previous-highlight":
 		app.win.ScrollUpHighlight()
-	} else if keyMatches(ev, '1', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad1, vaxis.ModAlt) {
-		app.win.GoToBufferNo(0)
-	} else if keyMatches(ev, '2', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad2, vaxis.ModAlt) {
-		app.win.GoToBufferNo(1)
-	} else if keyMatches(ev, '3', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad3, vaxis.ModAlt) {
-		app.win.GoToBufferNo(2)
-	} else if keyMatches(ev, '4', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad4, vaxis.ModAlt) {
-		app.win.GoToBufferNo(3)
-	} else if keyMatches(ev, '5', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad5, vaxis.ModAlt) {
-		app.win.GoToBufferNo(4)
-	} else if keyMatches(ev, '6', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad6, vaxis.ModAlt) {
-		app.win.GoToBufferNo(5)
-	} else if keyMatches(ev, '7', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad7, vaxis.ModAlt) {
-		app.win.GoToBufferNo(6)
-	} else if keyMatches(ev, '8', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad8, vaxis.ModAlt) {
-		app.win.GoToBufferNo(7)
-	} else if keyMatches(ev, '9', vaxis.ModAlt) || keyMatches(ev, vaxis.KeyKeyPad9, vaxis.ModAlt) {
-		app.win.GoToBufferNo(8)
+	case "buffer":
+		if len(args) > 0 {
+			if n, err := strconv.Atoi(args[0]); err == nil && n >= 0 {
+				app.win.GoToBufferNo(n)
+			} else if args[0] == "last" {
+				maxInt := int(^uint(0) >> 1)
+				app.win.GoToBufferNo(maxInt)
+			}
+		}
+	case "none":
+	default:
+		netID, buffer := app.win.CurrentBuffer()
+		app.win.AddLine(netID, buffer, ui.Line{
+			At:        time.Now(),
+			Head:      "!!",
+			HeadColor: ui.ColorRed,
+			Notify:    ui.NotifyUnread,
+			Body:      ui.PlainSprintf("shortcut: action %q does not exist", action),
+		})
+	}
+}
+
+var defaultCommands = map[string][]string{
+	"Control+c":       {"quit"},
+	"Control+f":       {"set-editor", "/search "},
+	"Control+k":       {"set-editor", "/buffer "},
+	"Control+a":       {"cursor-start"},
+	"Control+e":       {"cursor-end"},
+	"Control+l":       {"redraw"},
+	"Control+u":       {"scroll-up"},
+	"Page_Up":         {"scroll-up"},
+	"Control+d":       {"scroll-down"},
+	"Page_Down":       {"scroll-down"},
+	"Control+n":       {"buffer-next"},
+	"Control+p":       {"buffer-previous"},
+	"Alt+Right":       {"buffer-next"},
+	"Shift+Right":     {"buffer-next-unread"},
+	"Control+Right":   {"cursor-right-word"},
+	"Right":           {"cursor-right"},
+	"Alt+Left":        {"buffer-previous"},
+	"Shift+Left":      {"buffer-previous-unread"},
+	"Control+Left":    {"cursor-left-word"},
+	"Left":            {"cursor-left"},
+	"Alt+Up":          {"buffer-previous"},
+	"Up":              {"cursor-up"},
+	"Alt+Down":        {"buffer-next"},
+	"Down":            {"cursor-down"},
+	"Alt+Home":        {"buffer", "0"},
+	"Home":            {"cursor-start"},
+	"Alt+End":         {"buffer", "last"},
+	"End":             {"cursor-end"},
+	"Alt+BackSpace":   {"cursor-delete-previous-word"},
+	"BackSpace":       {"cursor-delete-previous"},
+	"Shift+BackSpace": {"cursor-delete-previous"},
+	"Delete":          {"cursor-delete-next"},
+	"Control+w":       {"cursor-delete-previous-word"},
+	"Control+r":       {"search-editor"},
+	"Tab":             {"auto-complete"},
+	"Escape":          {"close-overlay"},
+	"F7":              {"toggle-channel-list"},
+	"F8":              {"toggle-member-list"},
+	"\n":              {"send"},
+	"\r":              {"send"},
+	"Control+j":       {"send"},
+	"KP_Enter":        {"send"},
+	"Alt+n":           {"scroll-next-highlight"},
+	"Alt+p":           {"scroll-previous-highlight"},
+	"Alt+1":           {"buffer", "0"},
+	"Alt+KP_1":        {"buffer", "0"},
+	"Alt+2":           {"buffer", "1"},
+	"Alt+KP_2":        {"buffer", "1"},
+	"Alt+3":           {"buffer", "2"},
+	"Alt+KP_3":        {"buffer", "2"},
+	"Alt+4":           {"buffer", "3"},
+	"Alt+KP_4":        {"buffer", "3"},
+	"Alt+5":           {"buffer", "4"},
+	"Alt+KP_5":        {"buffer", "4"},
+	"Alt+6":           {"buffer", "5"},
+	"Alt+KP_6":        {"buffer", "5"},
+	"Alt+7":           {"buffer", "6"},
+	"Alt+KP_7":        {"buffer", "6"},
+	"Alt+8":           {"buffer", "7"},
+	"Alt+KP_8":        {"buffer", "7"},
+	"Alt+9":           {"buffer", "8"},
+	"Alt+KP_9":        {"buffer", "8"},
+}
+
+func (app *App) handleKeyEvent(ev vaxis.Key) {
+	switch ev.EventType {
+	case vaxis.EventPress, vaxis.EventRepeat, vaxis.EventPaste:
+	default:
+		return
+	}
+	if ev.Text != "" {
+		for _, r := range ev.Text {
+			app.win.InputRune(r)
+		}
+		app.typing()
+		return
+	}
+
+	if ev.EventType == vaxis.EventPaste {
+		for _, keycode := range []rune{'\n', '\r', vaxis.KeyKeyPadEnter} {
+			k := keyMatch{
+				keycode: keycode,
+			}
+			for _, km := range keyMatches(ev) {
+				if km == k {
+					app.win.InputRune('\n')
+					return
+				}
+			}
+		}
+	}
+
+	for _, km := range keyMatches(ev) {
+		if d := app.shortcuts[km]; len(d) != 0 {
+			app.handleAction(d[0], d[1:]...)
+			return
+		}
 	}
 }
 
@@ -2338,23 +2423,61 @@ func (app *App) addUserBuffer(netID, buffer string, t time.Time) (i int, added b
 	return
 }
 
-func keyMatches(k vaxis.Key, r rune, mods vaxis.ModifierMask) bool {
+func keyNameMatch(name string) *keyMatch {
+	parts := strings.Split(name, "+")
+	mods := parts[:len(parts)-1]
+	key := parts[len(parts)-1]
+
+	var m vaxis.ModifierMask
+	for _, mod := range mods {
+		switch mod {
+		case "Control":
+			m |= vaxis.ModCtrl
+		case "Shift":
+			m |= vaxis.ModShift
+		case "Alt":
+			m |= vaxis.ModAlt
+		case "Super":
+			m |= vaxis.ModSuper
+		default:
+			return nil
+		}
+	}
+	if r, n := utf8.DecodeRuneInString(key); n == len(key) {
+		return &keyMatch{
+			keycode: r,
+			mods:    m,
+		}
+	}
+	if r := ui.KeyNames[key]; r > 0 {
+		return &keyMatch{
+			keycode: r,
+			mods:    m,
+		}
+	}
+	return nil
+}
+
+func keyMatches(k vaxis.Key) []keyMatch {
 	m := k.Modifiers
 	m &^= vaxis.ModCapsLock
 	m &^= vaxis.ModNumLock
-	if k.Keycode == r && mods == m {
-		// ctrl+a and user pressed ctrl+a
-		// ctrl+. and user pressed ctrl+. on a US keyboard
-		return true
+
+	keys := []keyMatch{
+		{
+			keycode: k.Keycode,
+			mods:    m,
+		},
 	}
-	if m&vaxis.ModShift != 0 {
+	if m&vaxis.ModShift != 0 && k.ShiftedCode != 0 {
+		// ctrl+. and user pressed ctrl+shift+; on a French keyboard
 		m &^= vaxis.ModShift
-		if k.ShiftedCode == r && mods == m {
-			// ctrl+. and user pressed ctrl+shift+; on a French keyboard
-			return true
-		}
+		keys = append(keys, keyMatch{
+			keycode: k.ShiftedCode,
+			mods:    m &^ vaxis.ModShift,
+		})
 	}
-	return false
+	return keys
 }
 
 func formatSize(v int64) string {

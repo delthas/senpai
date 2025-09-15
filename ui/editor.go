@@ -211,6 +211,36 @@ func (e *Editor) RemClusterForward() (ok bool) {
 	return
 }
 
+func (e *Editor) RemBefore() (ok bool) {
+	ok = e.cursorIdx > 0
+	if !ok {
+		return
+	}
+	e.text[e.lineIdx].runes = e.text[e.lineIdx].runes[e.text[e.lineIdx].clusters[e.cursorIdx]:]
+	e.cursorIdx = 0
+	e.offsetIdx = 0
+
+	e.recompute()
+	e.bumpOldestChange()
+	e.autoCache = nil
+	e.backsearchEnd()
+	return
+}
+
+func (e *Editor) RemAfter() (ok bool) {
+	ok = e.cursorIdx < len(e.text[e.lineIdx].clusters)-1
+	if !ok {
+		return
+	}
+	e.text[e.lineIdx].runes = e.text[e.lineIdx].runes[:e.text[e.lineIdx].clusters[e.cursorIdx]]
+
+	e.recompute()
+	e.bumpOldestChange()
+	e.autoCache = nil
+	e.backsearchEnd()
+	return
+}
+
 func (e *Editor) remClusterAt(idx int) {
 	rs := e.text[e.lineIdx].clusters[idx]
 	re := e.text[e.lineIdx].clusters[idx+1]

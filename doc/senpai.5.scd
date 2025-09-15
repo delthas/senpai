@@ -166,6 +166,94 @@ colors {
 |  nicks self <self>
 :  show self nick with a fixed specified color (can be added along other directives)
 
+*shortcuts* { ... }
+	Settings for custom keyboard shortcuts.
+
+	Shortcuts are defined by `*<key> <action> [<params>...]*` subdirectives:
+
+```
+shortcuts {
+    Alt+k cursor-delete-after
+    Shift+Alt+Page_Up set-editor "/me slaps OP with a large trout"
+}
+```
+
+	Keys are optional modifiers (*Control*/*Shift*/*Alt*/*Super*) and a key name,
+	which can either be a literal character (e.g. *k*) or a name for that key,
+	taken from the XKB key names (on Linux, see *wev* for finding key names,
+	e.g. *Page_Up*, *XF86AudioPlay*).
+
+	A custom shortcut will override any default shortcut for that key.
+
+[[ *action*
+:< *Description*
+|  none
+:  *clears the shortcut, no action*
+|  quit
+:  clear the editor, or type `/quit`
+|  set-editor <text>
+:  set the editor to the passed text, if empty
+|  cursor-start
+:  move the cursor to the beginning of the editor
+|  cursor-end
+:  move the cursor to the end of the editor
+|  redraw
+:  refresh the window
+|  scroll-up
+:  go up in the timeline
+|  scroll-down
+:  go down in the timeline
+|  scroll-next-highlight
+:  go down to the next highlight
+|  scroll-previous-highlight
+:  go up to the next highlight
+|  buffer-next
+:  go to the next buffer
+|  buffer-previous
+:  go to the previous buffer
+|  buffer-next-unread
+:  go to the next unread buffer
+|  buffer-previous-unread
+:  go to the previous unread buffer
+|  cursor-right-word
+:  move the cursor to the next word
+|  cursor-left-word
+:  move the cursor to the previous word
+|  cursor-right
+:  move the cursor to the next character
+|  cursor-left
+:  move the cursor to the previous character
+|  cursor-up
+:  move the cursor to the previous character
+|  cursor-up
+:  scroll back one line in the editor
+|  cursor-down
+:  scroll forward one line in the editor
+|  cursor-delete-previous-word
+:  delete the previous word in the editor
+|  cursor-delete-previous
+:  delete the previous character in the editor
+|  cursor-delete-next
+:  delete the next character in the editor
+|  cursor-delete-before
+:  delete from the cursor to the beginning of the line
+|  cursor-delete-after
+:  delete from the cursor to the end of the line
+|  search-editor
+:  reverse-search in the editor history
+|  auto-complete
+:  open/select the auto-completion dialog/item
+|  close-overlay
+:  close any open overlay buffer (e.g. search results)
+|  toggle-channel-list
+:  show/hide the vertical channel list
+|  toggle-member-list
+:  show/hide the vertical member list
+|  send
+:  send the contents of the editor
+|  buffer <number>|_last_
+:  go the 0-indexed numbered buffer, or the last one
+
 *debug*
 	Advanced.
 	Dump all sent and received data to the home buffer, useful for debugging.
@@ -253,6 +341,9 @@ pane-widths {
 }
 colors {
 	nicks extended
+}
+shortcuts {
+    Alt+k cursor-delete-after
 }
 ```
 

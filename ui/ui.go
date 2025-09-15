@@ -652,6 +652,14 @@ func (ui *UI) InputDelete() (ok bool) {
 	return ui.e.RemClusterForward()
 }
 
+func (ui *UI) InputDeleteBefore() (ok bool) {
+	return ui.e.RemBefore()
+}
+
+func (ui *UI) InputDeleteAfter() (ok bool) {
+	return ui.e.RemAfter()
+}
+
 func (ui *UI) InputDeleteWord() (ok bool) {
 	return ui.e.RemWord()
 }
