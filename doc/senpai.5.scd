@@ -224,8 +224,6 @@ shortcuts {
 |  cursor-left
 :  move the cursor to the previous character
 |  cursor-up
-:  move the cursor to the previous character
-|  cursor-up
 :  scroll back one line in the editor
 |  cursor-down
 :  scroll forward one line in the editor
