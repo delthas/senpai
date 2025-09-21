@@ -283,10 +283,10 @@ _name_ is matched case-insensitively.  It can be one of the following:
 	This opens a temporary list, which can be closed with the escape key.
 
 *AWAY* [message]
-	Mark yourself as away, with an optional away message.
+	Mark yourself as away, with an optional away message. Use *BACK* to cancel.
 
 *BACK*
-	Mark yourself as back from being away.
+	Mark yourself as back from being away (see *AWAY*).
 
 *VERSION* [target]
 	Query the server software version.
