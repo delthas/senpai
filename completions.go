@@ -171,6 +171,7 @@ func (app *App) completionsMsg(cs []ui.Completion, cursorIdx int, text []rune) [
 				StartIdx:  5,
 				EndIdx:    cursorIdx,
 				Text:      c,
+				Display:   []rune(user),
 				CursorIdx: 5 + len(nickComp),
 			})
 		}
