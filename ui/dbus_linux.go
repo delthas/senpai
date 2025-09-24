@@ -1,17 +1,19 @@
 //go:build linux
-// +build linux
 
 package ui
 
 import (
+	"fmt"
+	"net/url"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
 )
 
-var notificationsLock sync.Mutex
-var notifications = make(map[int]*NotifyEvent)
 var dbusConn *dbus.Conn
+var dbusLock sync.Mutex
+
+var notifications = make(map[int]*NotifyEvent)
 
 func notifyDBus(title, content string) int {
 	conn, err := dbus.SessionBus()
@@ -38,9 +40,9 @@ func (ui *UI) notify(target NotifyEvent, title, content string) int {
 	if ui.config.LocalIntegrations {
 		id := notifyDBus(title, content)
 		if id > 0 {
-			notificationsLock.Lock()
+			dbusLock.Lock()
 			notifications[id] = &target
-			notificationsLock.Unlock()
+			dbusLock.Unlock()
 			return id
 		}
 	}
@@ -58,7 +60,23 @@ func notifyClose(id int) {
 	obj.Call("org.freedesktop.Notifications.CloseNotification", 0, uint32(id))
 }
 
-func NotifyStart(opened func(*NotifyEvent)) {
+func Screenshot() error {
+	conn, err := dbus.SessionBus()
+	if err != nil {
+		return fmt.Errorf("failed to connect to D-Bus: %v", err)
+	}
+	obj := conn.Object("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop")
+	c := obj.Call("org.freedesktop.portal.Screenshot.Screenshot", 0, "", map[string]dbus.Variant{
+		"modal":       dbus.MakeVariant(true),
+		"interactive": dbus.MakeVariant(true),
+	})
+	if c.Err != nil {
+		return fmt.Errorf("failed to take screenshot: %v", c.Err)
+	}
+	return nil
+}
+
+func DBusStart(callback func(any)) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
 		return
@@ -70,37 +88,55 @@ func NotifyStart(opened func(*NotifyEvent)) {
 	); err != nil {
 		return
 	}
+	if err := conn.AddMatchSignal(
+		dbus.WithMatchObjectPath("/org/freedesktop/portal/desktop"),
+		dbus.WithMatchInterface("org.freedesktop.portal.Request"),
+		dbus.WithMatchMember("Response"),
+	); err != nil {
+		return
+	}
 	c := make(chan *dbus.Signal, 64)
 	conn.Signal(c)
-	notificationsLock.Lock()
+	dbusLock.Lock()
 	dbusConn = conn
-	notificationsLock.Unlock()
+	dbusLock.Unlock()
 	go func() {
 		for v := range c {
 			switch v.Name {
 			case "org.freedesktop.Notifications.NotificationClosed":
 				id := int(v.Body[0].(uint32))
-				notificationsLock.Lock()
+				dbusLock.Lock()
 				delete(notifications, id)
-				notificationsLock.Unlock()
+				dbusLock.Unlock()
 			case "org.freedesktop.Notifications.ActionInvoked":
 				id := int(v.Body[0].(uint32))
-				notificationsLock.Lock()
+				dbusLock.Lock()
 				target, ok := notifications[id]
-				notificationsLock.Unlock()
+				dbusLock.Unlock()
 				if ok {
-					opened(target)
+					callback(target)
+				}
+			case "org.freedesktop.portal.Request.Response":
+				status := v.Body[0].(uint32)
+				results := v.Body[1].(map[string]dbus.Variant)
+				if status == 0 /* success */ {
+					uri := results["uri"].Value().(string)
+					if u, err := url.Parse(uri); err == nil && u.Scheme == "file" {
+						callback(&ScreenshotEvent{
+							Path: u.Path,
+						})
+					}
 				}
 			}
 		}
 	}()
 }
 
-func NotifyStop() {
-	notificationsLock.Lock()
+func DBusStop() {
+	dbusLock.Lock()
 	c := dbusConn
 	dbusConn = nil
-	notificationsLock.Unlock()
+	dbusLock.Unlock()
 	if c != nil {
 		c.Close()
 	}

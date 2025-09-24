@@ -230,6 +230,12 @@ _name_ is matched case-insensitively.  It can be one of the following:
 *UPLOAD* <file path>
 	Upload a local file to the bouncer.
 
+*SCREENSHOT*
+	Take and upload a screenshot to the bouncer.
+
+	Requires support for D-Bus and xdg-desktop-portal (e.g. Gnome, or
+	xdg-desktop-portal-wlr on sway).
+
 *QUOTE* <raw message>
 	Send _raw message_ verbatim.
 

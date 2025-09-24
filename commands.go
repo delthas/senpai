@@ -1,6 +1,7 @@
 package senpai
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -13,7 +14,6 @@ import (
 
 	"git.sr.ht/~rockorager/vaxis"
 	"github.com/delthas/go-libnp"
-	"golang.org/x/net/context"
 
 	"git.sr.ht/~delthas/senpai/irc"
 	"git.sr.ht/~delthas/senpai/ui"
@@ -82,6 +82,11 @@ func init() {
 			Usage:     "<file path>",
 			Desc:      "upload a local file to the bouncer",
 			Handle:    commandDoUpload,
+		},
+		"SCREENSHOT": {
+			AllowHome: true,
+			Desc:      "take and upload a screenshot to the bouncer",
+			Handle:    commandDoScreenshot,
 		},
 		"MSG": {
 			AllowHome: true,
@@ -539,6 +544,13 @@ func commandDoUpload(app *App, args []string) (err error) {
 
 	app.handleUpload(upload, f, fi.Size())
 	return nil
+}
+
+func commandDoScreenshot(app *App, args []string) (err error) {
+	if app.cfg.Transient || !app.cfg.LocalIntegrations {
+		return fmt.Errorf("usage of SCREENSHOT is disabled")
+	}
+	return ui.Screenshot()
 }
 
 func commandDoMsg(app *App, args []string) (err error) {

@@ -47,6 +47,15 @@ type Vaxis struct {
 	window vaxis.Window
 }
 
+type NotifyEvent struct {
+	NetID  string
+	Buffer string
+}
+
+type ScreenshotEvent struct {
+	Path string
+}
+
 type clickEvent struct {
 	xb    int
 	xe    int

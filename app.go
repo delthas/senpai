@@ -1,6 +1,7 @@
 package senpai
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -28,7 +29,6 @@ import (
 	"unicode/utf8"
 
 	"git.sr.ht/~rockorager/vaxis"
-	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
 
 	"git.sr.ht/~delthas/senpai/events"
@@ -223,7 +223,7 @@ func NewApp(cfg Config) (app *App, err error) {
 		return
 	}
 
-	ui.NotifyStart(func(ev *ui.NotifyEvent) {
+	ui.DBusStart(func(ev any) {
 		app.postEvent(event{
 			src:     "*",
 			content: ev,
@@ -248,7 +248,7 @@ func (app *App) Close() {
 	for _, session := range app.sessions {
 		session.Close()
 	}
-	ui.NotifyStop()
+	ui.DBusStop()
 	app.closing.Store(true)
 	go func() {
 		// drain remaining events
@@ -594,6 +594,18 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.win.SetColorTheme(ev.Mode)
 	case *ui.NotifyEvent:
 		app.win.JumpBufferNetwork(ev.NetID, ev.Buffer)
+	case *ui.ScreenshotEvent:
+		if err := commandDoUpload(app, []string{ev.Path}); err != nil {
+			netID, buffer := app.win.CurrentBuffer()
+			app.win.AddLine(netID, buffer, ui.Line{
+				At:        time.Now(),
+				Head:      "!!",
+				HeadColor: ui.ColorRed,
+				Notify:    ui.NotifyUnread,
+				Body:      ui.PlainSprintf("SCREENSHOT: %s", err),
+			})
+			break
+		}
 	case statusLine:
 		app.addStatusLine(ev.netID, ev.line)
 	case *events.EventClickNick:

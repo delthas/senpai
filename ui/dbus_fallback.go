@@ -1,5 +1,4 @@
 //go:build !linux
-// +build !linux
 
 package ui
 
@@ -10,6 +9,10 @@ func (ui *UI) notify(target NotifyEvent, title, content string) int {
 
 func notifyClose(id int) {}
 
-func NotifyStart(f func(event *NotifyEvent)) {}
+func Screenshot() error {
+	return fmt.Errorf("failed to take screenshot: D-Bus is disabled")
+}
 
-func NotifyStop() {}
+func DBusStart(callback func(any)) {}
+
+func DBusStop() {}
