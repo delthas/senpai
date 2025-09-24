@@ -2,6 +2,8 @@
 
 package ui
 
+import "fmt"
+
 func (ui *UI) notify(target NotifyEvent, title, content string) int {
 	ui.vx.Notify(title, content)
 	return -1
