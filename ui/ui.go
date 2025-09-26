@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"bytes"
 	"fmt"
 	"image"
+	"io"
 	"os"
 	"reflect"
 	"runtime"
@@ -13,6 +15,7 @@ import (
 	"git.sr.ht/~rockorager/vaxis"
 	"git.sr.ht/~rockorager/vaxis/widgets/align"
 	"github.com/containerd/console"
+	"github.com/disintegration/imaging"
 
 	"git.sr.ht/~delthas/senpai/events"
 	"git.sr.ht/~delthas/senpai/irc"
@@ -45,6 +48,8 @@ type ConfigColors struct {
 type Vaxis struct {
 	*vaxis.Vaxis
 	window vaxis.Window
+	xPixel int
+	yPixel int
 }
 
 type NotifyEvent struct {
@@ -693,6 +698,11 @@ func (ui *UI) InputBackSearch() {
 	ui.e.BackSearch()
 }
 
+func (ui *UI) SetWinPixels(xPixel int, yPixel int) {
+	ui.vx.xPixel = xPixel
+	ui.vx.yPixel = yPixel
+}
+
 func (ui *UI) Resize() {
 	ui.vx.window = ui.vx.Window() // Refresh window size
 	w, h := ui.vx.window.Size()
@@ -1016,4 +1026,61 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 
 		printString(vx, &x, y, name)
 	}
+}
+
+func (ui *UI) DecodeImage(r io.Reader) (image.Image, string, error) {
+	var b bytes.Buffer
+	tr := io.TeeReader(io.LimitReader(r, 1<<20), &b)
+	o := exifOrientation(tr)
+	r = io.MultiReader(&b, r)
+
+	img, format, err := image.Decode(r)
+	if err != nil {
+		return img, format, err
+	}
+
+	w, h := ui.vx.window.Size()
+	w = w * 9 / 10
+	h = h * 9 / 10
+	if w > 0 && h > 0 {
+		wp := img.Bounds().Dx()
+		hp := img.Bounds().Dy()
+		switch o {
+		case 6, 8:
+			wp, hp = hp, wp
+		}
+		cellPixW := ui.vx.xPixel / w
+		cellPixH := ui.vx.yPixel / h
+		columns := (wp + cellPixW - 1) / cellPixW
+		lines := (hp + cellPixH - 1) / cellPixH
+		if columns > w || lines > h {
+			sfX := float64(w) / float64(columns)
+			sfY := float64(h) / float64(lines)
+			nwp := wp
+			nhp := hp
+			switch {
+			case sfX < sfY:
+				nwp = int(sfX * float64(wp))
+				nhp = int(sfX * float64(hp))
+			case sfX > sfY:
+				nwp = int(sfY * float64(wp))
+				nhp = int(sfY * float64(hp))
+			}
+			switch o {
+			case 6, 8:
+				nwp, nhp = nhp, nwp
+			}
+			img = imaging.Resize(img, nwp, nhp, imaging.NearestNeighbor)
+		}
+	}
+
+	switch o {
+	case 3:
+		img = imaging.Rotate180(img)
+	case 6:
+		img = imaging.Rotate270(img)
+	case 8:
+		img = imaging.Rotate90(img)
+	}
+	return img, format, nil
 }

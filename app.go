@@ -568,6 +568,7 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 	// TODO: eat QuitEvent here?
 	switch ev := ev.(type) {
 	case vaxis.Resize:
+		app.win.SetWinPixels(ev.XPixel, ev.YPixel)
 		app.win.Resize()
 	case vaxis.PasteStartEvent:
 		app.pasting = true
@@ -1160,7 +1161,7 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	img, _, err := ui.DecodeImage(res.Body)
+	img, _, err := app.win.DecodeImage(res.Body)
 	res.Body.Close()
 	if err != nil {
 		return nil, err

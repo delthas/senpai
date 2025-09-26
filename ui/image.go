@@ -1,12 +1,8 @@
 package ui
 
 import (
-	"bytes"
 	"encoding/binary"
-	"image"
 	"io"
-
-	"github.com/disintegration/imaging"
 )
 
 func exifOrientation(r io.Reader) int {
@@ -128,26 +124,4 @@ func exifOrientation(r io.Reader) int {
 		return int(val)
 	}
 	return 0 // Missing orientation tag.
-}
-
-func DecodeImage(r io.Reader) (image.Image, string, error) {
-	var b bytes.Buffer
-	tr := io.TeeReader(io.LimitReader(r, 1<<20), &b)
-	o := exifOrientation(tr)
-	r = io.MultiReader(&b, r)
-
-	img, format, err := image.Decode(r)
-	if err != nil {
-		return img, format, err
-	}
-
-	switch o {
-	case 3:
-		img = imaging.Rotate180(img)
-	case 6:
-		img = imaging.Rotate270(img)
-	case 8:
-		img = imaging.Rotate90(img)
-	}
-	return img, format, nil
 }
