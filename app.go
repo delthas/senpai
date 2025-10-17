@@ -1038,6 +1038,14 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 	default:
 		return
 	}
+	if len(ev.Text) == 1 && ev.Text[0] < ' ' {
+		// Drop control characters text (sent by some terminal emulators)
+		ev.Text = ""
+	}
+	if ev.Modifiers&(vaxis.ModCtrl|vaxis.ModAlt|vaxis.ModSuper|vaxis.ModMeta) != 0 {
+		// Drop text when sent with modifiers preventing text
+		ev.Text = ""
+	}
 	if ev.Text != "" {
 		for _, r := range ev.Text {
 			app.win.InputRune(r)
