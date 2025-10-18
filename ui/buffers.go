@@ -1248,6 +1248,13 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 			xb, xe := printIdent(vx, x0+7, yi, nickColWidth, Styled(line.Head, identSt))
 
 			if !strings.HasSuffix(line.Head, "--") && !strings.HasSuffix(line.Head, "!!") {
+				nick := line.Head
+				if nick == "*" {
+					// set actual nick of ACTION message within line content
+					nick = line.Body.string[:strings.Index(line.Body.string, " ")]
+					xb = x1
+					xe = xb + len(nick)
+				}
 				ui.clickEvents = append(ui.clickEvents, clickEvent{
 					xb: xb,
 					xe: xe,
@@ -1257,7 +1264,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 							NetID:  b.netID,
 							Buffer: b.title,
 						},
-						Nick: line.Head,
+						Nick: nick,
 					},
 				})
 			}
