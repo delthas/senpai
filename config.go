@@ -115,6 +115,7 @@ type Config struct {
 
 	Colors ui.ConfigColors
 
+	OpenLink          string
 	Debug             bool
 	Transient         bool
 	LocalIntegrations bool

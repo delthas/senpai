@@ -6,16 +6,21 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net"
+	"net/url"
 	"os"
 	"os/signal"
 	"os/user"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
 	"time"
 
 	"git.sr.ht/~delthas/senpai"
+	"git.sr.ht/~delthas/senpai/varlinkservice"
+	"github.com/emersion/go-varlink"
 )
 
 func main() {
@@ -38,6 +43,26 @@ func main() {
 			fmt.Printf("senpai (unknown version)\n")
 		}
 		return
+	}
+
+	socketDir := os.Getenv("XDG_RUNTIME_DIR")
+	if socketDir == "" {
+		socketDir = os.TempDir()
+	}
+	socketDir = filepath.Join(socketDir, "senpai")
+
+	var link string
+	if _, err := url.Parse(flag.Arg(0)); err == nil {
+		link = flag.Arg(0)
+	}
+	if link != "" {
+		ok, err := sendOpenLink(socketDir, link)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to send open link to another instance: %v\n", err)
+		} else if ok {
+			// Sent link open command to another instance, exit.
+			return
+		}
 	}
 
 	var previousConfigPath string
@@ -171,6 +196,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
+	cfg.OpenLink = link
 	cfg.Debug = cfg.Debug || debug
 	if nickname != "" {
 		cfg.Nick = nickname
@@ -196,6 +222,14 @@ func main() {
 		<-sigCh
 		app.Close()
 	}()
+
+	if cfg.LocalIntegrations {
+		socketPath := filepath.Join(socketDir, fmt.Sprintf("%v.sock", os.Getpid()))
+		if err := listenVarlink(socketPath, app); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to send open link to another instance: %v\n", err)
+		}
+		defer os.Remove(socketPath)
+	}
 
 	app.Run()
 	app.Close()
@@ -308,4 +342,53 @@ func writeLastStamp(app *senpai.App) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write last stamp at %q: %s\n", lastStampPath, err)
 	}
+}
+
+func sendOpenLink(socketDir string, link string) (ok bool, err error) {
+	es, err := os.ReadDir(socketDir)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	for _, e := range es {
+		if filepath.Ext(e.Name()) != ".sock" {
+			continue
+		}
+		conn, err := net.Dial("unix", filepath.Join(socketDir, e.Name()))
+		if err != nil {
+			return false, err
+		}
+		c := varlinkservice.Client{Client: varlink.NewClient(conn)}
+		defer c.Close()
+		if _, err := c.OpenLink(&varlinkservice.OpenLinkIn{Link: link}); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+func listenVarlink(socketPath string, backend varlinkservice.Backend) error {
+	if err := os.MkdirAll(filepath.Dir(socketPath), 0700); err != nil {
+		return err
+	}
+	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	l, err := net.Listen("unix", socketPath)
+	if err != nil {
+		return err
+	}
+	server := varlink.NewServer()
+	server.Handler = varlinkservice.Handler{
+		Backend: backend,
+	}
+	go func() {
+		if err := server.Serve(l); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to serve varlink server: %v\n", err)
+		}
+	}()
+	return nil
 }

@@ -28,6 +28,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"git.sr.ht/~delthas/senpai/varlinkservice"
 	"git.sr.ht/~rockorager/vaxis"
 	"golang.org/x/net/proxy"
 
@@ -97,6 +98,10 @@ type event struct {
 	content interface{}
 }
 
+type linkEvent struct {
+	link string
+}
+
 type boundKey struct {
 	netID  string
 	target string
@@ -134,8 +139,8 @@ type App struct {
 
 	monitor map[string]map[string]struct{} // set of targets we want to monitor per netID, best-effort. netID->target->{}
 
-	networkLock sync.RWMutex        // locks networks
-	networks    map[string]struct{} // set of network IDs we want to connect to; to be locked with networkLock
+	networkLock sync.RWMutex                 // locks networks
+	networks    map[string]map[string]string // set of network IDs to attributes we want to connect to; to be locked with networkLock
 
 	pendingCompletions    map[string][]pendingCompletion
 	pendingCompletionsOff int
@@ -170,7 +175,7 @@ func NewApp(cfg Config) (app *App, err error) {
 	}
 
 	app = &App{
-		networks: map[string]struct{}{
+		networks: map[string]map[string]string{
 			"": {}, // add the master network by default
 		},
 		pendingCompletions: make(map[string][]pendingCompletion),
@@ -383,6 +388,41 @@ func (app *App) wantsNetwork(netID string) bool {
 	_, ok := app.networks[netID]
 	app.networkLock.RUnlock()
 	return ok
+}
+
+func (app *App) findNetworkByLink(link string) (host string, target string, netID string) {
+	// links often do not contain encoded #
+	link = strings.ReplaceAll(link, "#", "%23")
+
+	u, err := url.Parse(link)
+	if err != nil {
+		return "", "", ""
+	}
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		host = u.Host
+		port = "6697"
+	}
+	target = strings.TrimLeft(u.Path, "/")
+	if i := strings.IndexAny(target, "/,"); i >= 0 {
+		target = target[:i]
+	}
+	app.networkLock.Lock()
+	defer app.networkLock.Unlock()
+	for netID, attrs := range app.networks {
+		if attrs["host"] != host {
+			continue
+		}
+		p := attrs["port"]
+		if p == "" {
+			p = "6697"
+		}
+		if p != port {
+			continue
+		}
+		return u.Host, target, netID
+	}
+	return u.Host, target, ""
 }
 
 // ircLoop maintains a connection to the IRC server by connecting and then
@@ -644,6 +684,38 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 			})
 		} else {
 			app.uploadingProgress = &ev.Progress
+		}
+	case *events.EventOpenLink:
+		host, target, netID := app.findNetworkByLink(ev.Link)
+		if netID != "" {
+			if cNetID, _ := app.win.CurrentBuffer(); cNetID != netID {
+				app.win.JumpBufferNetwork(netID, "")
+			}
+			if target == "" {
+				break
+			}
+			if !app.win.JumpBufferNetwork(netID, target) {
+				if s := app.sessions[netID]; s != nil && s.IsChannel(target) {
+					cNetID, cTarget := app.win.CurrentBuffer()
+					app.win.AddLine(cNetID, cTarget, ui.Line{
+						At:   time.Now(),
+						Head: "--",
+						Body: ui.PlainString("An IRC link of a new channel was opened. Enter to add and join that channel."),
+					})
+					app.win.InputSet(fmt.Sprintf("/join %v", target))
+				} else {
+					i, _ := app.addUserBuffer(netID, target, time.Time{})
+					app.win.JumpBufferIndex(i)
+				}
+			}
+		} else {
+			netID, target := app.win.CurrentBuffer()
+			app.win.AddLine(netID, target, ui.Line{
+				At:   time.Now(),
+				Head: "--",
+				Body: ui.PlainString("An IRC link of a new network was opened. Enter to add and join that network."),
+			})
+			app.win.InputSet(fmt.Sprintf("/bouncer network create -addr %q", host))
 		}
 	default:
 		// TODO: missing event types
@@ -1456,6 +1528,37 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			// TODO: batch MONITOR +
 			s.MonitorAdd(target)
 		}
+
+		if netID == "" || app.cfg.OpenLink == "" {
+			break
+		}
+		_, target, foundNetID := app.findNetworkByLink(app.cfg.OpenLink)
+		if netID != foundNetID {
+			break
+		}
+		app.cfg.OpenLink = ""
+		app.lastNetID = ""
+		app.lastBuffer = ""
+		if cNetID, _ := app.win.CurrentBuffer(); cNetID != netID {
+			app.win.JumpBufferNetwork(netID, "")
+		}
+		if target == "" {
+			break
+		}
+		if !app.win.JumpBufferNetwork(netID, target) {
+			if s.IsChannel(target) {
+				cNetID, cTarget := app.win.CurrentBuffer()
+				app.win.AddLine(cNetID, cTarget, ui.Line{
+					At:   time.Now(),
+					Head: "--",
+					Body: ui.PlainString("An IRC link of a new channel was opened. Enter to add and join that channel."),
+				})
+				app.win.InputSet(fmt.Sprintf("/join %v", target))
+			} else {
+				i, _ := app.addUserBuffer(netID, target, time.Time{})
+				app.win.JumpBufferIndex(i)
+			}
+		}
 	case irc.SelfNickEvent:
 		if !app.cfg.StatusEnabled {
 			break
@@ -1707,11 +1810,17 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 	case irc.BouncerNetworkEvent:
 		if !ev.Delete {
-			_, added := app.win.AddBuffer(ev.ID, ev.Name, "")
+			app.networkLock.Lock()
+			if _, ok := app.networks[ev.ID]; !ok {
+				app.networks[ev.ID] = ev.Attrs
+			} else {
+				for k, v := range ev.Attrs {
+					app.networks[ev.ID][k] = v
+				}
+			}
+			app.networkLock.Unlock()
+			_, added := app.win.AddBuffer(ev.ID, ev.Attrs["name"], "")
 			if added {
-				app.networkLock.Lock()
-				app.networks[ev.ID] = struct{}{}
-				app.networkLock.Unlock()
 				go app.ircLoop(ev.ID)
 			}
 		} else {
@@ -1727,6 +1836,39 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			}
 			app.win.RemoveNetworkBuffers(ev.ID)
 		}
+	case irc.BouncerNetworkListEvent:
+		for _, ev := range ev {
+			app.networkLock.Lock()
+			if _, ok := app.networks[ev.ID]; !ok {
+				app.networks[ev.ID] = ev.Attrs
+			} else {
+				for k, v := range ev.Attrs {
+					app.networks[ev.ID][k] = v
+				}
+			}
+			app.networkLock.Unlock()
+			_, added := app.win.AddBuffer(ev.ID, ev.Attrs["name"], "")
+			if added {
+				go app.ircLoop(ev.ID)
+			}
+		}
+
+		if app.cfg.OpenLink == "" {
+			break
+		}
+		host, _, foundNetID := app.findNetworkByLink(app.cfg.OpenLink)
+		if foundNetID != "" {
+			// We will handle the link in the session for that network.
+			break
+		}
+		app.cfg.OpenLink = ""
+		netID, target := app.win.CurrentBuffer()
+		app.win.AddLine(netID, target, ui.Line{
+			At:   time.Now(),
+			Head: "--",
+			Body: ui.PlainString("An IRC link of a new network was opened. Enter to add and join that network."),
+		})
+		app.win.InputSet(fmt.Sprintf("/bouncer network create -addr %q", host))
 	case irc.ListEvent:
 		for _, item := range ev {
 			text := fmt.Sprintf("There are %4s users on channel %s", item.Count, item.Channel)
@@ -1757,7 +1899,6 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				Foreground: app.cfg.Colors.Status,
 			}),
 		})
-		return
 	case irc.ErrorEvent:
 		var head string
 		var body string
@@ -2442,6 +2583,16 @@ func (app *App) addUserBuffer(netID, buffer string, t time.Time) (i int, added b
 			Latest()
 	}
 	return
+}
+
+func (app *App) OpenLink(in *varlinkservice.OpenLinkIn) (*varlinkservice.OpenLinkOut, error) {
+	app.postEvent(event{
+		src: "*",
+		content: &events.EventOpenLink{
+			Link: in.Link,
+		},
+	})
+	return nil, nil
 }
 
 func keyNameMatch(name string) *keyMatch {

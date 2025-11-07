@@ -6,7 +6,7 @@ senpai - your everyday IRC student
 
 # SYNOPSIS
 
-*senpai* [options...]
+*senpai* [options...] [link]
 
 # OPTIONS
 
@@ -23,6 +23,9 @@ senpai - your everyday IRC student
 
 *-version*
 	Display version info.
+
+senpai can also be opened with an _irc://_ link to a server or target. In that
+case, the link is opened in an existing instance if available.
 
 # DESCRIPTION
 

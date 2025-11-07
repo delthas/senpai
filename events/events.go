@@ -45,3 +45,7 @@ type EventFileUpload struct {
 	Location string
 	Error    string
 }
+
+type EventOpenLink struct {
+	Link string
+}

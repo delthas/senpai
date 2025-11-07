@@ -129,14 +129,15 @@ type Session struct {
 	typings      *Typings               // incoming typing notifications.
 	typingStamps map[string]typingStamp // user typing instants.
 
-	nick   string
-	nickCf string // casemapped nickname.
-	user   string
-	real   string
-	acct   string
-	host   string
-	netID  string
-	auth   SASLClient
+	nick     string
+	nickCf   string // casemapped nickname.
+	user     string
+	real     string
+	acct     string
+	host     string
+	netID    string
+	netAttrs map[string]string
+	auth     SASLClient
 
 	availableCaps map[string]string
 	enabledCaps   map[string]struct{}
@@ -157,17 +158,19 @@ type Session struct {
 	listMask      bool
 	upload        string
 
-	users          map[string]*User        // known users.
-	channels       map[string]Channel      // joined channels.
-	metadata       map[string]Metadata     // known target metadata.
-	chBatches      map[string]HistoryEvent // channel history batches being processed.
-	chReqs         map[string]struct{}     // set of targets for which history is currently requested.
-	targetsBatchID string                  // ID of the channel history targets batch being processed.
-	targetsBatch   HistoryTargetsEvent     // channel history targets batch being processed.
-	searchBatchID  string                  // ID of the search targets batch being processed.
-	searchBatch    SearchEvent             // search batch being processed.
-	monitors       map[string]struct{}     // set of users we want to monitor (and keep even if they are disconnected).
-	pendingList    ListEvent               // current list response being received (flushed on list end).
+	users                  map[string]*User        // known users.
+	channels               map[string]Channel      // joined channels.
+	metadata               map[string]Metadata     // known target metadata.
+	chBatches              map[string]HistoryEvent // channel history batches being processed.
+	chReqs                 map[string]struct{}     // set of targets for which history is currently requested.
+	targetsBatchID         string                  // ID of the channel history targets batch being processed.
+	targetsBatch           HistoryTargetsEvent     // channel history targets batch being processed.
+	searchBatchID          string                  // ID of the search targets batch being processed.
+	searchBatch            SearchEvent             // search batch being processed.
+	bouncerNetworksBatchID string                  // ID of the bouncer network batch being processed.
+	bouncerNetworksBatch   BouncerNetworkListEvent // bouncer network batch being processed.
+	monitors               map[string]struct{}     // set of users we want to monitor (and keep even if they are disconnected).
+	pendingList            ListEvent               // current list response being received (flushed on list end).
 
 	pendingChannels map[string]time.Time // set of join requests stamps for channels.
 
@@ -781,6 +784,15 @@ func (s *Session) handleRegistered(msg Message) (Event, error) {
 			}
 			if ev, ok := ev.(MessageEvent); ok {
 				s.searchBatch.Messages = append(s.searchBatch.Messages, ev)
+				return nil, nil
+			}
+		} else if id == s.bouncerNetworksBatchID {
+			ev, err := s.handleMessageRegistered(msg, true)
+			if err != nil {
+				return nil, err
+			}
+			if ev, ok := ev.(BouncerNetworkEvent); ok {
+				s.bouncerNetworksBatch = append(s.bouncerNetworksBatch, ev)
 				return nil, nil
 			}
 		} else if b, ok := s.chBatches[id]; ok {
@@ -1444,6 +1456,9 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			case "soju.im/search":
 				s.searchBatchID = id
 				s.searchBatch = SearchEvent{}
+			case "soju.im/bouncer-networks":
+				s.bouncerNetworksBatchID = id
+				s.bouncerNetworksBatch = BouncerNetworkListEvent{}
 			}
 		} else {
 			if b, ok := s.chBatches[id]; ok {
@@ -1457,6 +1472,9 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			} else if s.searchBatchID == id {
 				s.searchBatchID = ""
 				return s.searchBatch, nil
+			} else if s.bouncerNetworksBatchID == id {
+				s.bouncerNetworksBatchID = ""
+				return s.bouncerNetworksBatch, nil
 			}
 		}
 	case "NICK":
@@ -1564,8 +1582,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			ID: id,
 		}
 		if msg.Params[2] != "*" {
-			attrs := parseTags(msg.Params[2])
-			event.Name = attrs["name"]
+			event.Attrs = parseTags(msg.Params[2])
 		} else {
 			event.Delete = true
 		}

@@ -126,6 +126,8 @@ type MetadataChangeEvent struct {
 
 type BouncerNetworkEvent struct {
 	ID     string
-	Name   string
+	Attrs  map[string]string
 	Delete bool
 }
+
+type BouncerNetworkListEvent []BouncerNetworkEvent

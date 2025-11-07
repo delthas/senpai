@@ -8,6 +8,7 @@ Keywords=Chat;IRC;IM;Messaging
 Categories=Network;InstantMessaging;Chat;IRCClient;ConsoleOnly
 
 Type=Application
+MimeType=x-scheme-handler/irc;x-scheme-handler/ircs
 Icon=senpai
 Terminal=true
-Exec=senpai
+Exec=senpai %u

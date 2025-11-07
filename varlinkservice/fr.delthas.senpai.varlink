@@ -1,0 +1,3 @@
+interface fr.delthas.senpai
+
+method OpenLink(link: string) -> ()
