@@ -491,10 +491,10 @@ func (ui *UI) AddLine(netID, buffer string, line Line) {
 	focused := ui.bs.focused && curNetID == netID && curBuffer == buffer
 	if b != nil && line.Notify == NotifyHighlight && !focused {
 		var header string
-		if buffer != line.Head {
-			header = fmt.Sprintf("%s — %s", buffer, line.Head)
+		if buffer != line.Head.String() {
+			header = fmt.Sprintf("%s — %s", buffer, line.Head.String())
 		} else {
-			header = line.Head
+			header = line.Head.String()
 		}
 		id := ui.notify(NotifyEvent{
 			NetID:  netID,

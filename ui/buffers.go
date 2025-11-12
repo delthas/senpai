@@ -42,9 +42,8 @@ const (
 
 type Line struct {
 	At        time.Time
-	Head      string
+	Head      StyledString
 	Body      StyledString
-	HeadColor vaxis.Color
 	Notify    NotifyType
 	Highlight bool
 	Readable  bool
@@ -1239,15 +1238,25 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 		}
 
 		if yi >= y0 {
-			identSt := vaxis.Style{
-				Foreground: line.HeadColor,
+			head := line.Head
+			if line.Highlight && len(line.Head.styles) > 0 {
+				var sb StyledStringBuilder
+				sb.WriteString(head.string)
+				for _, st := range line.Head.styles {
+					s := st.Style
+					s.Attribute |= vaxis.AttrReverse
+					sb.AddStyle(st.Start, s)
+				}
+				head = sb.StyledString()
 			}
-			if line.Highlight {
-				identSt.Attribute |= vaxis.AttrReverse
-			}
-			xb, xe := printIdent(vx, x0+7, yi, nickColWidth, Styled(line.Head, identSt))
+			xb, xe := printIdent(vx, x0+7, yi, nickColWidth, head)
 
-			if !strings.HasSuffix(line.Head, "--") && !strings.HasSuffix(line.Head, "!!") {
+			lastHead := line.Head.string
+			if len(line.Head.styles) > 0 {
+				lastHead = lastHead[line.Head.styles[len(line.Head.styles)-1].Start:]
+			}
+
+			if !strings.HasSuffix(lastHead, "--") && !strings.HasSuffix(lastHead, "!!") {
 				ui.clickEvents = append(ui.clickEvents, clickEvent{
 					xb: xb,
 					xe: xe,
@@ -1257,7 +1266,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 							NetID:  b.netID,
 							Buffer: b.title,
 						},
-						Nick: line.Head,
+						Nick: lastHead,
 					},
 				})
 			}

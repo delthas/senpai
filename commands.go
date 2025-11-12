@@ -429,7 +429,7 @@ func commandDoHelp(app *App, args []string) (err error) {
 	if len(args) == 0 {
 		app.win.AddLine(netID, buffer, ui.Line{
 			At:   t,
-			Head: "--",
+			Head: ui.PlainString("--"),
 			Body: ui.PlainString("Available commands:"),
 		})
 
@@ -442,7 +442,7 @@ func commandDoHelp(app *App, args []string) (err error) {
 		search := strings.ToUpper(args[0])
 		app.win.AddLine(netID, buffer, ui.Line{
 			At:   t,
-			Head: "--",
+			Head: ui.PlainString("--"),
 			Body: ui.PlainSprintf("Commands that match \"%s\":", search),
 		})
 
@@ -589,10 +589,9 @@ func commandDoNames(app *App, args []string) (err error) {
 	body := sb.StyledString()
 	// TODO remove last space
 	app.win.AddLine(netID, buffer, ui.Line{
-		At:        time.Now(),
-		Head:      "--",
-		HeadColor: app.cfg.Colors.Status,
-		Body:      body,
+		At:   time.Now(),
+		Head: ui.ColorString("--", app.cfg.Colors.Status),
+		Body: body,
 	})
 	return nil
 }

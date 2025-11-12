@@ -74,6 +74,10 @@ func PlainSprintf(format string, a ...interface{}) StyledString {
 	return PlainString(fmt.Sprintf(format, a...))
 }
 
+func ColorString(s string, fg vaxis.Color) StyledString {
+	return Styled(s, vaxis.Style{Foreground: fg})
+}
+
 func Styled(s string, style vaxis.Style) StyledString {
 	rStyle := rangedStyle{
 		Start: 0,

@@ -145,6 +145,7 @@ type Session struct {
 
 	serverName    string
 	defaultPrefix *Prefix
+
 	// ISUPPORT features
 	casemap       func(string) string
 	chanmodes     [4]string
@@ -153,6 +154,7 @@ type Session struct {
 	historyLimit  int
 	prefixSymbols string
 	prefixModes   string
+	statusmsg     string
 	monitor       bool
 	whox          bool
 	listMask      bool
@@ -1378,7 +1380,7 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 			return nil, err
 		}
 
-		targetCf := s.casemap(target)
+		targetCf := strings.TrimLeft(s.casemap(target), s.statusmsg)
 		nickCf := s.casemap(msg.Prefix.Name)
 		if !playback {
 			s.typings.Done(targetCf, nickCf)
@@ -2123,22 +2125,33 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 }
 
 func (s *Session) newMessageEvent(msg Message) (ev MessageEvent, err error) {
-	var target, content string
-	if err := msg.ParseParams(&target, &content); err != nil {
+	var rawTarget, content string
+	if err := msg.ParseParams(&rawTarget, &content); err != nil {
 		return ev, err
 	}
 
+	i := strings.IndexFunc(rawTarget, func(r rune) bool {
+		return !strings.ContainsRune(s.statusmsg, r)
+	})
+	if i < 0 {
+		i = len(rawTarget)
+	}
+	prefix := rawTarget[:i]
+	target := rawTarget[i:]
+
 	ev = MessageEvent{
-		User:    msg.Prefix.Name, // TODO correctly casemap
-		Target:  target,          // TODO correctly casemap
-		Command: msg.Command,
-		Content: content,
-		Time:    msg.TimeOrNow(),
+		User:         msg.Prefix.Name, // TODO correctly casemap
+		Target:       target,          // TODO correctly casemap
+		TargetPrefix: prefix,
+		Command:      msg.Command,
+		Content:      content,
+		Time:         msg.TimeOrNow(),
 	}
 
 	if s.IsMe(target) {
 		if context := msg.Tags["+draft/channel-context"]; context != "" {
 			target = context
+			ev.TargetPrefix = "*"
 		}
 	}
 	targetCf := s.Casemap(target)
@@ -2246,6 +2259,8 @@ func (s *Session) updateFeatures(features []string) {
 			numPrefixes := len(value)/2 - 1
 			s.prefixModes = value[1 : numPrefixes+1]
 			s.prefixSymbols = value[numPrefixes+2:]
+		case "STATUSMSG":
+			s.statusmsg = value
 		case "WHOX":
 			s.whox = true
 		case "SOJU.IM/FILEHOST":

@@ -484,7 +484,7 @@ func (app *App) ircLoop(netID string) {
 			if app.cfg.Debug {
 				app.queueStatusLine(netID, ui.Line{
 					At:   time.Now(),
-					Head: "IN --",
+					Head: ui.PlainString("IN --"),
 					Body: ui.PlainString(msg.String()),
 				})
 			}
@@ -498,16 +498,15 @@ func (app *App) ircLoop(netID string) {
 			content: nil,
 		})
 		app.queueStatusLine(netID, ui.Line{
-			Head:      "!!",
-			HeadColor: ui.ColorRed,
-			Body:      ui.PlainString("Connection lost"),
+			Head: ui.ColorString("!!", ui.ColorRed),
+			Body: ui.PlainString("Connection lost"),
 		})
 	}
 }
 
 func (app *App) connect(netID string) net.Conn {
 	app.queueStatusLine(netID, ui.Line{
-		Head: "--",
+		Head: ui.PlainString("--"),
 		Body: ui.PlainSprintf("Connecting to %s...", app.cfg.Addr),
 	})
 	conn, err := app.tryConnect()
@@ -515,9 +514,8 @@ func (app *App) connect(netID string) net.Conn {
 		return conn
 	}
 	app.queueStatusLine(netID, ui.Line{
-		Head:      "!!",
-		HeadColor: ui.ColorRed,
-		Body:      ui.PlainSprintf("Connection failed: %v", err),
+		Head: ui.ColorString("!!", ui.ColorRed),
+		Body: ui.PlainSprintf("Connection failed: %v", err),
 	})
 	return nil
 }
@@ -582,7 +580,7 @@ func (app *App) debugOutputMessages(netID string, out chan<- irc.Message) chan<-
 			}
 			app.queueStatusLine(netID, ui.Line{
 				At:   time.Now(),
-				Head: "OUT --",
+				Head: ui.PlainString("OUT --"),
 				Body: ui.PlainString(d.String()),
 			})
 			out <- msg
@@ -639,11 +637,10 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		if err := commandDoUpload(app, []string{ev.Path}); err != nil {
 			netID, buffer := app.win.CurrentBuffer()
 			app.win.AddLine(netID, buffer, ui.Line{
-				At:        time.Now(),
-				Head:      "!!",
-				HeadColor: ui.ColorRed,
-				Notify:    ui.NotifyUnread,
-				Body:      ui.PlainSprintf("SCREENSHOT: %s", err),
+				At:     time.Now(),
+				Head:   ui.ColorString("!!", ui.ColorRed),
+				Notify: ui.NotifyUnread,
+				Body:   ui.PlainSprintf("SCREENSHOT: %s", err),
 			})
 			break
 		}
@@ -669,7 +666,7 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 				netID, buffer := app.win.CurrentBuffer()
 				app.win.AddLine(netID, buffer, ui.Line{
 					At:   time.Now(),
-					Head: "--",
+					Head: ui.PlainString("--"),
 					Body: ui.PlainString(fmt.Sprintf("File uploaded at: %v", ev.Location)),
 				})
 			}
@@ -677,10 +674,9 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 			app.uploadingProgress = nil
 			netID, buffer := app.win.CurrentBuffer()
 			app.win.AddLine(netID, buffer, ui.Line{
-				At:        time.Now(),
-				Head:      "!!",
-				HeadColor: ui.ColorRed,
-				Body:      ui.PlainString(fmt.Sprintf("File upload failed: %v", ev.Error)),
+				At:   time.Now(),
+				Head: ui.ColorString("!!", ui.ColorRed),
+				Body: ui.PlainString(fmt.Sprintf("File upload failed: %v", ev.Error)),
 			})
 		} else {
 			app.uploadingProgress = &ev.Progress
@@ -699,7 +695,7 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 					cNetID, cTarget := app.win.CurrentBuffer()
 					app.win.AddLine(cNetID, cTarget, ui.Line{
 						At:   time.Now(),
-						Head: "--",
+						Head: ui.PlainString("--"),
 						Body: ui.PlainString("An IRC link of a new channel was opened. Enter to add and join that channel."),
 					})
 					app.win.InputSet(fmt.Sprintf("/join %v", target))
@@ -712,7 +708,7 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 			netID, target := app.win.CurrentBuffer()
 			app.win.AddLine(netID, target, ui.Line{
 				At:   time.Now(),
-				Head: "--",
+				Head: ui.PlainString("--"),
 				Body: ui.PlainString("An IRC link of a new network was opened. Enter to add and join that network."),
 			})
 			app.win.InputSet(fmt.Sprintf("/bouncer network create -addr %q", host))
@@ -807,10 +803,9 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 				if failed {
 					netID, buffer := app.win.CurrentBuffer()
 					app.win.AddLine(netID, buffer, ui.Line{
-						At:        time.Now(),
-						Head:      "!!",
-						HeadColor: ui.ColorRed,
-						Body:      ui.PlainString(errNotSupported.Error()),
+						At:   time.Now(),
+						Head: ui.ColorString("!!", ui.ColorRed),
+						Body: ui.PlainString(errNotSupported.Error()),
 					})
 				}
 			} else {
@@ -857,20 +852,19 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 					case 2:
 						if _, err := getBouncerService(app); err != nil {
 							app.win.AddLine(netID, target, ui.Line{
-								At:        time.Now(),
-								Head:      "--",
-								HeadColor: ui.ColorRed,
-								Body:      ui.PlainSprintf("Adding networks is not available: %v", err),
+								At:   time.Now(),
+								Head: ui.ColorString("--", ui.ColorRed),
+								Body: ui.PlainSprintf("Adding networks is not available: %v", err),
 							})
 						} else {
 							app.win.AddLine(netID, target, ui.Line{
 								At:   time.Now(),
-								Head: "--",
+								Head: ui.PlainString("--"),
 								Body: ui.PlainString("To join a network/server, use /bouncer network create -addr <address> [-name <name>]"),
 							})
 							app.win.AddLine(netID, target, ui.Line{
 								At:   time.Now(),
-								Head: "--",
+								Head: ui.PlainString("--"),
 								Body: ui.PlainString("For details, see /bouncer help network create"),
 							})
 							app.win.InputSet("/bouncer network create -addr ")
@@ -878,14 +872,14 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 					case 4:
 						app.win.AddLine(netID, target, ui.Line{
 							At:   time.Now(),
-							Head: "--",
+							Head: ui.PlainString("--"),
 							Body: ui.PlainString("To join a channel, use /join <#channel> [<password>]"),
 						})
 						app.win.InputSet("/join ")
 					case 6:
 						app.win.AddLine(netID, target, ui.Line{
 							At:   time.Now(),
-							Head: "--",
+							Head: ui.PlainString("--"),
 							Body: ui.PlainString("To message a user, use /query <user> [<message>]"),
 						})
 						app.win.InputSet("/query ")
@@ -1000,11 +994,10 @@ func (app *App) handleAction(action string, args ...string) {
 			for _, part := range strings.Split(input, "\n") {
 				if err = app.handleInput(buffer, part); err != nil {
 					app.win.AddLine(netID, buffer, ui.Line{
-						At:        time.Now(),
-						Head:      "!!",
-						HeadColor: ui.ColorRed,
-						Notify:    ui.NotifyUnread,
-						Body:      ui.PlainSprintf("%q: %s", input, err),
+						At:     time.Now(),
+						Head:   ui.ColorString("!!", ui.ColorRed),
+						Notify: ui.NotifyUnread,
+						Body:   ui.PlainSprintf("%q: %s", input, err),
 					})
 					break
 				}
@@ -1030,11 +1023,10 @@ func (app *App) handleAction(action string, args ...string) {
 	default:
 		netID, buffer := app.win.CurrentBuffer()
 		app.win.AddLine(netID, buffer, ui.Line{
-			At:        time.Now(),
-			Head:      "!!",
-			HeadColor: ui.ColorRed,
-			Notify:    ui.NotifyUnread,
-			Body:      ui.PlainSprintf("shortcut: action %q does not exist", action),
+			At:     time.Now(),
+			Head:   ui.ColorString("!!", ui.ColorRed),
+			Notify: ui.NotifyUnread,
+			Body:   ui.PlainSprintf("shortcut: action %q does not exist", action),
 		})
 	}
 }
@@ -1453,10 +1445,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	ev, err := s.HandleMessage(msg)
 	if err != nil {
 		app.win.AddLine(netID, "", ui.Line{
-			Head:      "!!",
-			HeadColor: ui.ColorRed,
-			Notify:    ui.NotifyUnread,
-			Body:      ui.PlainSprintf("Received corrupt message %q: %s", msg.String(), err),
+			Head:   ui.ColorString("!!", ui.ColorRed),
+			Notify: ui.NotifyUnread,
+			Body:   ui.PlainSprintf("Received corrupt message %q: %s", msg.String(), err),
 		})
 		return
 	}
@@ -1505,7 +1496,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 		app.addStatusLine(netID, ui.Line{
 			At:   msg.TimeOrNow(),
-			Head: "--",
+			Head: ui.PlainString("--"),
 			Body: ui.PlainString(body),
 		})
 		if !app.shownBouncerNotice && !s.IsBouncer() {
@@ -1519,7 +1510,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			} {
 				app.addStatusLine(netID, ui.Line{
 					At:   msg.TimeOrNow(),
-					Head: "Bouncer --",
+					Head: ui.PlainString("Bouncer --"),
 					Body: ui.IRCString(line),
 				})
 			}
@@ -1550,7 +1541,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				cNetID, cTarget := app.win.CurrentBuffer()
 				app.win.AddLine(cNetID, cTarget, ui.Line{
 					At:   time.Now(),
-					Head: "--",
+					Head: ui.PlainString("--"),
 					Body: ui.PlainString("An IRC link of a new channel was opened. Enter to add and join that channel."),
 				})
 				app.win.InputSet(fmt.Sprintf("/join %v", target))
@@ -1574,8 +1565,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		body.AddStyle(body.Len()-len(s.Nick()), textStyle)
 		app.addStatusLine(netID, ui.Line{
 			At:        msg.TimeOrNow(),
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
+			Head:      ui.ColorString("--", app.cfg.Colors.Status),
 			Body:      body.StyledString(),
 			Highlight: true,
 			Readable:  true,
@@ -1679,10 +1669,9 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			body = fmt.Sprintf("%s invited %s to join this channel", ev.Inviter, ev.Invitee)
 		}
 		app.win.AddLine(netID, buffer, ui.Line{
-			At:        msg.TimeOrNow(),
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
-			Notify:    notify,
+			At:     msg.TimeOrNow(),
+			Head:   ui.ColorString("--", app.cfg.Colors.Status),
+			Notify: notify,
 			Body: ui.Styled(body, vaxis.Style{
 				Foreground: app.cfg.Colors.Status,
 			}),
@@ -1865,7 +1854,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		netID, target := app.win.CurrentBuffer()
 		app.win.AddLine(netID, target, ui.Line{
 			At:   time.Now(),
-			Head: "--",
+			Head: ui.PlainString("--"),
 			Body: ui.PlainString("An IRC link of a new network was opened. Enter to add and join that network."),
 		})
 		app.win.InputSet(fmt.Sprintf("/bouncer network create -addr %q", host))
@@ -1876,9 +1865,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 				text += " -- " + item.Topic
 			}
 			app.addStatusLine(netID, ui.Line{
-				At:        msg.TimeOrNow(),
-				Head:      "List --",
-				HeadColor: app.cfg.Colors.Status,
+				At:   msg.TimeOrNow(),
+				Head: ui.ColorString("List --", app.cfg.Colors.Status),
 				Body: ui.Styled(text, vaxis.Style{
 					Foreground: app.cfg.Colors.Status,
 				}),
@@ -1892,9 +1880,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 			head = "--"
 		}
 		app.addStatusLine(netID, ui.Line{
-			At:        msg.TimeOrNow(),
-			Head:      head,
-			HeadColor: app.cfg.Colors.Status,
+			At:   msg.TimeOrNow(),
+			Head: ui.ColorString(head, app.cfg.Colors.Status),
 			Body: ui.Styled(ev.Message, vaxis.Style{
 				Foreground: app.cfg.Colors.Status,
 			}),
@@ -1905,9 +1892,8 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		switch ev.Severity {
 		case irc.SeverityNote:
 			app.addStatusLine(netID, ui.Line{
-				At:        msg.TimeOrNow(),
-				Head:      fmt.Sprintf("(%s) --", ev.Code),
-				HeadColor: app.cfg.Colors.Status,
+				At:   msg.TimeOrNow(),
+				Head: ui.ColorString(fmt.Sprintf("(%s) --", ev.Code), app.cfg.Colors.Status),
 				Body: ui.Styled(ev.Message, vaxis.Style{
 					Foreground: app.cfg.Colors.Status,
 				}),
@@ -1924,7 +1910,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		}
 		app.addStatusLine(netID, ui.Line{
 			At:   msg.TimeOrNow(),
-			Head: head,
+			Head: ui.PlainString(head),
 			Body: ui.PlainString(body),
 		})
 	}
@@ -1997,10 +1983,9 @@ func (app *App) notifyHighlight(buffer, nick, content string, current bool) {
 		if app.cfg.OnHighlightPath != "" {
 			body := fmt.Sprintf("Unable to find on-highlight command at path: %q", path)
 			app.addStatusLine(netID, ui.Line{
-				At:        time.Now(),
-				Head:      "!!",
-				HeadColor: ui.ColorRed,
-				Body:      ui.PlainString(body),
+				At:   time.Now(),
+				Head: ui.ColorString("!!", ui.ColorRed),
+				Body: ui.PlainString(body),
 			})
 		}
 		return
@@ -2020,10 +2005,9 @@ func (app *App) notifyHighlight(buffer, nick, content string, current bool) {
 	if err != nil {
 		body := fmt.Sprintf("Failed to invoke on-highlight command at path: %v. Output: %q", err, string(output))
 		app.addStatusLine(netID, ui.Line{
-			At:        time.Now(),
-			Head:      "!!",
-			HeadColor: ui.ColorRed,
-			Body:      ui.PlainString(body),
+			At:   time.Now(),
+			Head: ui.ColorString("!!", ui.ColorRed),
+			Body: ui.PlainString(body),
 		})
 	}
 }
@@ -2113,8 +2097,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		body.AddStyle(body.Len()-len(ev.User), textStyle)
 		return ui.Line{
 			At:        ev.Time,
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
+			Head:      ui.ColorString("--", app.cfg.Colors.Status),
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -2133,8 +2116,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
+			Head:      ui.ColorString("--", app.cfg.Colors.Status),
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -2153,8 +2135,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
+			Head:      ui.ColorString("--", app.cfg.Colors.Status),
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -2173,8 +2154,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		body.WriteString(ev.User)
 		return ui.Line{
 			At:        ev.Time,
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
+			Head:      ui.ColorString("--", app.cfg.Colors.Status),
 			Body:      body.StyledString(),
 			Mergeable: true,
 			Data:      []irc.Event{ev},
@@ -2185,10 +2165,9 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 		who := ui.IRCString(ev.Who).String()
 		body := fmt.Sprintf("Topic changed by %s to: %s", who, topic)
 		return ui.Line{
-			At:        ev.Time,
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
-			Notify:    ui.NotifyUnread,
+			At:     ev.Time,
+			Head:   ui.ColorString("--", app.cfg.Colors.Status),
+			Notify: ui.NotifyUnread,
 			Body: ui.Styled(body, vaxis.Style{
 				Foreground: app.cfg.Colors.Status,
 			}),
@@ -2197,9 +2176,8 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 	case irc.ModeChangeEvent:
 		body := fmt.Sprintf("[%s]", ev.Mode)
 		return ui.Line{
-			At:        ev.Time,
-			Head:      "--",
-			HeadColor: app.cfg.Colors.Status,
+			At:   ev.Time,
+			Head: ui.ColorString("--", app.cfg.Colors.Status),
 			Body: ui.Styled(body, vaxis.Style{
 				Foreground: app.cfg.Colors.Status,
 			}),
@@ -2318,12 +2296,21 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		notification = ui.NotifyUnread
 	}
 
-	head := ev.User
-	var headColor vaxis.Color
+	var head ui.StyledStringBuilder
+	if ev.TargetPrefix != "" {
+		head.WriteStyledString(ui.ColorString(ev.TargetPrefix, ui.ColorGreen))
+	}
+
 	if isAction || isNotice {
-		head = "*"
+		if head.Len() == 0 {
+			head.WriteStyledString(ui.PlainString("*"))
+		}
 	} else {
-		headColor = app.win.IdentColor(app.cfg.Colors.Nicks, head, isFromSelf)
+		if head.Len() > 0 {
+			head.WriteStyledString(ui.PlainString(" "))
+		}
+		c := app.win.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
+		head.WriteStyledString(ui.ColorString(ev.User, c))
 	}
 
 	var body ui.StyledStringBuilder
@@ -2351,8 +2338,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 
 	line = ui.Line{
 		At:        ev.Time,
-		Head:      head,
-		HeadColor: headColor,
+		Head:      head.StyledString(),
 		Notify:    notification,
 		Body:      body.StyledString(),
 		Highlight: hlLine,
@@ -2549,9 +2535,8 @@ func (app *App) printTopic(netID, buffer string) (ok bool) {
 		body = fmt.Sprintf("Topic (set by %s on %s): %s", who.Name, at.Local().Format("January 2 2006 at 15:04:05"), topic)
 	}
 	app.win.AddLine(netID, buffer, ui.Line{
-		At:        time.Now(),
-		Head:      "--",
-		HeadColor: app.cfg.Colors.Status,
+		At:   time.Now(),
+		Head: ui.ColorString("--", app.cfg.Colors.Status),
 		Body: ui.Styled(body, vaxis.Style{
 			Foreground: app.cfg.Colors.Status,
 		}),

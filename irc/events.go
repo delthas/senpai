@@ -87,6 +87,7 @@ type MessageEvent struct {
 	User            string
 	Target          string
 	TargetIsChannel bool
+	TargetPrefix    string
 	Command         string
 	Content         string
 	Time            time.Time
