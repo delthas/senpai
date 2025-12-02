@@ -1438,7 +1438,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 	}
 	s, ok := app.sessions[netID]
 	if !ok {
-		panic(fmt.Sprintf("cannot found session %q for message %q", netID, msg.String()))
+		panic(fmt.Sprintf("cannot find session %q for message %q", netID, msg.String()))
 	}
 
 	// Mutate IRC state
