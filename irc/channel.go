@@ -31,6 +31,8 @@ func ChanInOut(conn net.Conn) (in <-chan Message, out chan<- Message) {
 		for r.Scan() {
 			line := r.Text()
 			line = strings.ToValidUTF8(line, string([]rune{unicode.ReplacementChar}))
+			// Workaround for https://bugs.unrealircd.org/view.php?id=6598
+			line = strings.TrimSuffix(line, "\r")
 			msg, err := ParseMessage(line)
 			if err != nil {
 				continue
