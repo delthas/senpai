@@ -1039,41 +1039,7 @@ func (ui *UI) DecodeImage(r io.Reader) (image.Image, string, error) {
 		return img, format, err
 	}
 
-	w, h := ui.vx.window.Size()
-	w = w * 9 / 10
-	h = h * 9 / 10
-	if w > 0 && h > 0 {
-		wp := img.Bounds().Dx()
-		hp := img.Bounds().Dy()
-		switch o {
-		case 6, 8:
-			wp, hp = hp, wp
-		}
-		cellPixW := ui.vx.xPixel / w
-		cellPixH := ui.vx.yPixel / h
-		columns := (wp + cellPixW - 1) / cellPixW
-		lines := (hp + cellPixH - 1) / cellPixH
-		if columns > w || lines > h {
-			sfX := float64(w) / float64(columns)
-			sfY := float64(h) / float64(lines)
-			nwp := wp
-			nhp := hp
-			switch {
-			case sfX < sfY:
-				nwp = int(sfX * float64(wp))
-				nhp = int(sfX * float64(hp))
-			case sfX > sfY:
-				nwp = int(sfY * float64(wp))
-				nhp = int(sfY * float64(hp))
-			}
-			switch o {
-			case 6, 8:
-				nwp, nhp = nhp, nwp
-			}
-			img = imaging.Resize(img, nwp, nhp, imaging.NearestNeighbor)
-		}
-	}
-
+	img = ui.maybeResizeImage(img, o)
 	switch o {
 	case 3:
 		img = imaging.Rotate180(img)
@@ -1083,4 +1049,46 @@ func (ui *UI) DecodeImage(r io.Reader) (image.Image, string, error) {
 		img = imaging.Rotate90(img)
 	}
 	return img, format, nil
+}
+
+func (ui *UI) maybeResizeImage(img image.Image, exifOrientation int) image.Image {
+	if ui.vx.xPixel <= 0 || ui.vx.yPixel <= 0 {
+		return img
+	}
+	w, h := ui.vx.window.Size()
+	w = w * 9 / 10
+	h = h * 9 / 10
+	if w <= 0 || h <= 0 {
+		return img
+	}
+	wp := img.Bounds().Dx()
+	hp := img.Bounds().Dy()
+	switch exifOrientation {
+	case 6, 8:
+		wp, hp = hp, wp
+	}
+	cellPixW := ui.vx.xPixel / w
+	cellPixH := ui.vx.yPixel / h
+	columns := (wp + cellPixW - 1) / cellPixW
+	lines := (hp + cellPixH - 1) / cellPixH
+	if columns <= w && lines <= h {
+		return img
+	}
+	sfX := float64(w) / float64(columns)
+	sfY := float64(h) / float64(lines)
+	nwp := wp
+	nhp := hp
+	switch {
+	case sfX < sfY:
+		nwp = int(sfX * float64(wp))
+		nhp = int(sfX * float64(hp))
+	case sfX > sfY:
+		nwp = int(sfY * float64(wp))
+		nhp = int(sfY * float64(hp))
+	}
+	switch exifOrientation {
+	case 6, 8:
+		nwp, nhp = nhp, nwp
+	}
+	return imaging.Resize(img, nwp, nhp, imaging.NearestNeighbor)
 }
