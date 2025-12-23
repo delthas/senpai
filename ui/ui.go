@@ -124,24 +124,30 @@ func New(config Config) (ui *UI, colors ConfigColors, err error) {
 		}
 	}
 	var vx *vaxis.Vaxis
-	vx, err = vaxis.New(vaxis.Options{
+	opts := vaxis.Options{
 		DisableMouse: !config.Mouse,
-		CSIuBitMask:  vaxis.CSIuDisambiguate | vaxis.CSIuReportEvents | vaxis.CSIuAlternateKeys | vaxis.CSIuAllKeys | vaxis.CSIuAssociatedText,
+		CSIuBitMask:  vaxis.CSIuDisambiguate | vaxis.CSIuReportEvents | vaxis.CSIuAlternateKeys | vaxis.CSIuAssociatedText, // | vaxis.CSIuAllKeys, // ,
 		WithTTY:      config.WithTTY,
 		WithConsole:  config.WithConsole,
-	})
+	}
+	vx, err = vaxis.New(opts)
 	if err != nil {
 		return
 	}
-	if strings.HasPrefix(vx.TerminalID(), "iTerm2") {
+	restart := true
+	switch {
+	case strings.HasPrefix(vx.TerminalID(), "iTerm2"):
 		// see: https://gitlab.com/gnachman/iterm2/-/issues/12177
+		opts.CSIuBitMask = vaxis.CSIuDisambiguate | vaxis.CSIuReportEvents | vaxis.CSIuAlternateKeys
+	case strings.HasPrefix(vx.TerminalID(), "ghostty"):
+		// see: https://github.com/ghostty-org/ghostty/discussions/10026
+		opts.CSIuBitMask = vaxis.CSIuDisambiguate | vaxis.CSIuReportEvents | vaxis.CSIuAlternateKeys | vaxis.CSIuAssociatedText
+	default:
+		restart = false
+	}
+	if restart {
 		vx.Close()
-		vx, err = vaxis.New(vaxis.Options{
-			DisableMouse: !config.Mouse,
-			CSIuBitMask:  vaxis.CSIuDisambiguate | vaxis.CSIuReportEvents | vaxis.CSIuAlternateKeys,
-			WithTTY:      config.WithTTY,
-			WithConsole:  config.WithConsole,
-		})
+		vx, err = vaxis.New(opts)
 		if err != nil {
 			return
 		}
