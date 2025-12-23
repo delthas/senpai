@@ -613,14 +613,20 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		app.pastingInputOnly = len(app.win.InputContent()) == 0
 	case vaxis.PasteEndEvent:
 		app.pasting = false
-		if app.pastingInputOnly {
-			app.pastingInputOnly = false
+		if !app.pastingInputOnly {
+			break
+		}
+		app.pastingInputOnly = false
 
-			path := string(app.win.InputContent())
-			if _, err := os.Stat(path); err == nil {
-				app.win.InputSet(fmt.Sprintf("/upload %v", path))
+		path := string(app.win.InputContent())
+		path = strings.TrimRight(path, "\n")
+		if _, err := os.Stat(path); err != nil {
+			path = dropBackslash(path)
+			if _, err := os.Stat(path); err != nil {
+				break
 			}
 		}
+		app.win.InputSet(fmt.Sprintf("/upload %v", path))
 	case vaxis.Mouse:
 		app.handleMouseEvent(ev)
 	case vaxis.Key:
@@ -1119,10 +1125,12 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 	}
 
 	if ev.EventType == vaxis.EventPaste {
-		for _, keycode := range []rune{'\n', '\r', vaxis.KeyKeyPadEnter} {
-			k := keyMatch{
-				keycode: keycode,
-			}
+		for _, k := range []keyMatch{
+			{keycode: '\n'},
+			{keycode: '\r'},
+			{keycode: vaxis.KeyKeyPadEnter},
+			{keycode: 'j', mods: vaxis.ModCtrl},
+		} {
 			for _, km := range keyMatches(ev) {
 				if km == k {
 					app.win.InputRune('\n')
@@ -2646,6 +2654,21 @@ func formatSize(v int64) string {
 		v /= 1024
 	}
 	panic("unreachable")
+}
+
+func dropBackslash(s string) string {
+	// Naive implementation, just enough to unescape file paths escaped by some terminals.
+	var sb strings.Builder
+	esc := false
+	for _, r := range s {
+		if !esc && r == '\\' {
+			esc = true
+			continue
+		}
+		sb.WriteRune(r)
+		esc = false
+	}
+	return sb.String()
 }
 
 func BuildVersion() (string, bool) {
