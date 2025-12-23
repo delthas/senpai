@@ -206,10 +206,11 @@ func (app *App) completionsUpload(cs []ui.Completion, cursorIdx int, text []rune
 			dirPath = "/"
 		}
 	} else {
+		isDir := strings.HasSuffix(path, string(filepath.Separator))
 		if home != "" && !filepath.IsAbs(path) {
 			path = filepath.Join(home, path)
 		}
-		if strings.HasSuffix(path, string(filepath.Separator)) {
+		if isDir {
 			dirPath = path
 		} else {
 			dirPath = filepath.Dir(path)
