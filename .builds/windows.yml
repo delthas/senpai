@@ -1,0 +1,15 @@
+image: alpine/latest
+packages:
+    - go
+    - scdoc
+sources:
+    - https://git.sr.ht/~delthas/senpai
+artifacts:
+    - senpai/senpai.exe
+tasks:
+    - build: |
+          cd senpai
+          GOOS=windows make
+    - gofmt: |
+          cd senpai
+          test -z $(GOOS=windows gofmt -l .)

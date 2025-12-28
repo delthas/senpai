@@ -1,0 +1,18 @@
+image: alpine/latest
+packages:
+    - go
+    - scdoc
+sources:
+    - https://git.sr.ht/~delthas/senpai
+artifacts:
+    - senpai/senpai
+tasks:
+    - build: |
+          cd senpai
+          make
+    - test: |
+          cd senpai
+          go test ./...
+    - gofmt: |
+          cd senpai
+          test -z $(gofmt -l .)
