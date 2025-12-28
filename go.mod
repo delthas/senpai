@@ -7,7 +7,7 @@ require (
 	git.sr.ht/~rockorager/vaxis v0.13.0
 	github.com/containerd/console v1.0.4
 	github.com/delthas/go-libnp v0.1.0
-	github.com/delthas/go-localeinfo v0.1.0
+	github.com/delthas/go-localeinfo v0.2.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/emersion/go-varlink v0.0.0-20251006073247-e7ad9f7950c7
 	github.com/godbus/dbus/v5 v5.1.0
