@@ -281,6 +281,28 @@ func (e *Editor) RemWord() (ok bool) {
 	return
 }
 
+func (e *Editor) RemWordForward() (ok bool) {
+	ok = e.cursorIdx < len(e.text[e.lineIdx].clusters)-1
+	if !ok {
+		return
+	}
+
+	for e.cursorIdx < len(e.text[e.lineIdx].clusters)-1 && e.text[e.lineIdx].runes[e.text[e.lineIdx].clusters[e.cursorIdx]] == ' ' {
+		e.remClusterAt(e.cursorIdx)
+	}
+
+	for e.cursorIdx < len(e.text[e.lineIdx].clusters)-1 {
+		if e.text[e.lineIdx].runes[e.text[e.lineIdx].clusters[e.cursorIdx]] == ' ' {
+			break
+		}
+		e.remClusterAt(e.cursorIdx)
+	}
+
+	e.autoCache = nil
+	e.backsearchEnd()
+	return
+}
+
 func (e *Editor) Flush() string {
 	l := e.text[e.lineIdx]
 	content := string(l.runes)

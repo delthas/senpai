@@ -964,6 +964,10 @@ func (app *App) handleAction(action string, args ...string) {
 		if app.win.InputDeleteWord() {
 			app.typing()
 		}
+	case "cursor-delete-next-word":
+		if app.win.InputDeleteNextWord() {
+			app.typing()
+		}
 	case "cursor-delete-previous":
 		if app.win.InputBackspace() {
 			app.typing()
@@ -1067,6 +1071,7 @@ var defaultCommands = map[string][]string{
 	"Alt+End":         {"buffer", "last"},
 	"End":             {"cursor-end"},
 	"Alt+BackSpace":   {"cursor-delete-previous-word"},
+	"Alt+Delete":      {"cursor-delete-next-word"},
 	"BackSpace":       {"cursor-delete-previous"},
 	"Shift+BackSpace": {"cursor-delete-previous"},
 	"Delete":          {"cursor-delete-next"},

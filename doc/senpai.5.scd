@@ -229,6 +229,8 @@ shortcuts {
 :  scroll forward one line in the editor
 |  cursor-delete-previous-word
 :  delete the previous word in the editor
+|  cursor-delete-next-word
+:  delete the next word in the editor
 |  cursor-delete-previous
 :  delete the previous character in the editor
 |  cursor-delete-next

@@ -684,6 +684,10 @@ func (ui *UI) InputDeleteWord() (ok bool) {
 	return ui.e.RemWord()
 }
 
+func (ui *UI) InputDeleteNextWord() (ok bool) {
+	return ui.e.RemWordForward()
+}
+
 func (ui *UI) InputAutoComplete() (ok bool) {
 	return ui.e.AutoComplete()
 }
