@@ -1,6 +1,6 @@
 module git.sr.ht/~delthas/senpai
 
-go 1.18
+go 1.21
 
 require (
 	codeberg.org/emersion/go-scfg v0.1.0
