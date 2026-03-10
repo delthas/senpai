@@ -281,7 +281,7 @@ func init() {
 			MinArgs:   0,
 			MaxArgs:   1,
 			Usage:     "[message]",
-			Desc:      "mark yourself as away",
+			Desc:      "mark yourself as away (use /BACK to unset away)",
 			Handle:    commandDoAway,
 		},
 		"BACK": {
