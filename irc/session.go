@@ -2211,11 +2211,19 @@ func (s *Session) updateFeatures(features []string) {
 		case "BOUNCER_NETID":
 			s.netID = value
 		case "CASEMAPPING":
+			oldNickCf := s.nickCf
 			switch value {
 			case "ascii":
 				s.casemap = CasemapASCII
 			default:
 				s.casemap = CasemapRFC1459
+			}
+			s.nickCf = s.casemap(s.nick)
+			if oldNickCf != s.nickCf {
+				if u, ok := s.users[oldNickCf]; ok {
+					delete(s.users, oldNickCf)
+					s.users[s.nickCf] = u
+				}
 			}
 		case "CHANMODES":
 			// We only care about the first four params
