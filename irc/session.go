@@ -160,6 +160,9 @@ type Session struct {
 	listMask      bool
 	upload        string
 
+	clientTagListIsAllow bool // whether clientTagList is an allowlist (true) or a blocklist (false)
+	clientTagList        map[string]struct{}
+
 	users                  map[string]*User        // known users.
 	channels               map[string]Channel      // joined channels.
 	metadata               map[string]Metadata     // known target metadata.
@@ -200,6 +203,7 @@ func NewSession(out chan<- Message, params SessionParams) *Session {
 		historyLimit:    100,
 		prefixSymbols:   "@+",
 		prefixModes:     "ov",
+		clientTagList:   map[string]struct{}{},
 		users:           map[string]*User{},
 		channels:        map[string]Channel{},
 		metadata:        map[string]Metadata{},
@@ -250,6 +254,11 @@ func (s *Session) Close() {
 func (s *Session) HasCapability(capability string) bool {
 	_, ok := s.enabledCaps[capability]
 	return ok
+}
+
+func (s *Session) CanSendTag(clientTagWithoutThePlus string) bool {
+	_, ok := s.clientTagList[clientTagWithoutThePlus]
+	return ok == s.clientTagListIsAllow
 }
 
 func (s *Session) IsBouncer() bool {
@@ -522,7 +531,7 @@ func (s *Session) PrivMsg(target, content string) {
 }
 
 func (s *Session) Typing(target string) {
-	if !s.HasCapability("message-tags") {
+	if !s.HasCapability("message-tags") || !s.CanSendTag("typing") {
 		return
 	}
 	targetCf := s.casemap(target)
@@ -544,7 +553,7 @@ func (s *Session) Typing(target string) {
 }
 
 func (s *Session) TypingStop(target string) {
-	if !s.HasCapability("message-tags") {
+	if !s.HasCapability("message-tags") || !s.CanSendTag("typing") {
 		return
 	}
 	targetCf := s.casemap(target)
@@ -2224,6 +2233,24 @@ func (s *Session) updateFeatures(features []string) {
 					delete(s.users, oldNickCf)
 					s.users[s.nickCf] = u
 				}
+			}
+		case "CLIENTTAGDENY":
+			clear(s.clientTagList)
+			s.clientTagListIsAllow = strings.HasPrefix(value, "*")
+			tags := strings.Split(value, ",")
+			if s.clientTagListIsAllow {
+				tags = tags[1:]
+			}
+			for _, tag := range tags {
+				if s.clientTagListIsAllow {
+					if !strings.HasPrefix(tag, "-") {
+						continue
+					}
+					tag = tag[1:]
+				} else if strings.HasPrefix(tag, "-") {
+					continue
+				}
+				s.clientTagList[tag] = struct{}{}
 			}
 		case "CHANMODES":
 			// We only care about the first four params
