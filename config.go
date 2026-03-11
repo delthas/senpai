@@ -98,8 +98,9 @@ type Config struct {
 
 	Channels []string
 
-	Typings bool
-	Mouse   bool
+	Typings    bool
+	Mouse      bool
+	SpellCheck bool
 
 	Highlights       []string
 	OnHighlightPath  string
@@ -144,6 +145,7 @@ func Defaults() Config {
 		Channels:         nil,
 		Typings:          true,
 		Mouse:            true,
+		SpellCheck:       false,
 		Highlights:       nil,
 		OnHighlightPath:  "",
 		OnHighlightBeep:  false,
@@ -383,6 +385,14 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			}
 
 			if cfg.Mouse, err = strconv.ParseBool(mouse); err != nil {
+				return err
+			}
+		case "spell-check":
+			var spellCheck string
+			if err := d.ParseParams(&spellCheck); err != nil {
+				return err
+			}
+			if cfg.SpellCheck, err = strconv.ParseBool(spellCheck); err != nil {
 				return err
 			}
 		case "colors":

@@ -158,6 +158,8 @@ type App struct {
 	shownBouncerNotice bool
 
 	closing atomic.Bool
+
+	harper *harperState
 }
 
 func NewApp(cfg Config) (app *App, err error) {
@@ -254,6 +256,7 @@ func (app *App) Close() {
 		session.Close()
 	}
 	ui.DBusStop()
+	app.harperClose()
 	app.closing.Store(true)
 	go func() {
 		// drain remaining events
@@ -276,6 +279,7 @@ func (app *App) Run() {
 	if app.lastCloseTime.IsZero() {
 		app.lastCloseTime = time.Now()
 	}
+	app.harperInit()
 	go app.uiLoop()
 	go app.ircLoop("")
 	app.eventLoop()
@@ -687,6 +691,16 @@ func (app *App) handleUIEvent(ev interface{}) bool {
 		} else {
 			app.uploadingProgress = &ev.Progress
 		}
+	case *events.EventSpellCheck:
+		text := string(app.win.InputContent())
+		typos := make([]events.TypoRange, len(ev.Typos))
+		for i, t := range ev.Typos {
+			typos[i] = events.TypoRange{
+				Start: utf16OffsetToRuneIndex(text, t.Start),
+				End:   utf16OffsetToRuneIndex(text, t.End),
+			}
+		}
+		app.win.SetTypos(typos)
 	case *events.EventOpenLink:
 		host, target, netID := app.findNetworkByLink(ev.Link)
 		if netID != "" {
@@ -844,11 +858,13 @@ func (app *App) handleMouseEvent(ev vaxis.Mouse) {
 			if i := app.win.VerticalBufferOffset(y); i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
 				app.clearBufferCommand()
+				app.spellCheck()
 			}
 		} else if app.win.ChannelWidth() == 0 && y == h-1 {
 			if i := app.win.HorizontalBufferOffset(x); i >= 0 && i == app.win.ClickedBuffer() {
 				app.win.GoToBufferNo(i)
 				app.clearBufferCommand()
+				app.spellCheck()
 			}
 		} else if x > w-app.win.MemberWidth() && y < h-memberItems*2 {
 			if i := y - 2 + app.win.MemberOffset(); i >= 0 && i == app.win.ClickedMember() {
@@ -919,6 +935,7 @@ func (app *App) handleAction(action string, args ...string) {
 	case "quit":
 		if app.win.InputClear() {
 			app.typing()
+			app.spellCheck()
 		} else {
 			app.win.InputSet("/quit")
 		}
@@ -939,15 +956,19 @@ func (app *App) handleAction(action string, args ...string) {
 	case "buffer-next":
 		app.win.NextBuffer()
 		app.win.ScrollToBuffer()
+		app.spellCheck()
 	case "buffer-previous":
 		app.win.PreviousBuffer()
 		app.win.ScrollToBuffer()
+		app.spellCheck()
 	case "buffer-next-unread":
 		app.win.NextUnreadBuffer()
 		app.win.ScrollToBuffer()
+		app.spellCheck()
 	case "buffer-previous-unread":
 		app.win.PreviousUnreadBuffer()
 		app.win.ScrollToBuffer()
+		app.spellCheck()
 	case "cursor-right-word":
 		app.win.InputRightWord()
 	case "cursor-left-word":
@@ -963,32 +984,39 @@ func (app *App) handleAction(action string, args ...string) {
 	case "cursor-delete-previous-word":
 		if app.win.InputDeleteWord() {
 			app.typing()
+			app.spellCheck()
 		}
 	case "cursor-delete-next-word":
 		if app.win.InputDeleteNextWord() {
 			app.typing()
+			app.spellCheck()
 		}
 	case "cursor-delete-previous":
 		if app.win.InputBackspace() {
 			app.typing()
+			app.spellCheck()
 		}
 	case "cursor-delete-next":
 		if app.win.InputDelete() {
 			app.typing()
+			app.spellCheck()
 		}
 	case "cursor-delete-before":
 		if app.win.InputDeleteBefore() {
 			app.typing()
+			app.spellCheck()
 		}
 	case "cursor-delete-after":
 		if app.win.InputDeleteAfter() {
 			app.typing()
+			app.spellCheck()
 		}
 	case "search-editor":
 		app.win.InputBackSearch()
 	case "auto-complete":
 		if app.win.InputAutoComplete() {
 			app.typing()
+			app.spellCheck()
 		}
 	case "close-overlay":
 		app.win.CloseOverlay()
@@ -1028,6 +1056,7 @@ func (app *App) handleAction(action string, args ...string) {
 				maxInt := int(^uint(0) >> 1)
 				app.win.GoToBufferNo(maxInt)
 			}
+			app.spellCheck()
 		}
 	case "none":
 	default:
@@ -1127,6 +1156,7 @@ func (app *App) handleKeyEvent(ev vaxis.Key) {
 			app.win.InputRune(r)
 		}
 		app.typing()
+		app.spellCheck()
 		return
 	}
 

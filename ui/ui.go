@@ -627,6 +627,10 @@ func (ui *UI) InputRune(r rune) {
 	ui.e.PutRune(r)
 }
 
+func (ui *UI) SetTypos(typos []events.TypoRange) {
+	ui.e.SetTypos(typos)
+}
+
 // InputEnter returns true if the event was eaten
 func (ui *UI) InputEnter() bool {
 	return ui.e.Enter()

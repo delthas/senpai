@@ -49,3 +49,12 @@ type EventFileUpload struct {
 type EventOpenLink struct {
 	Link string
 }
+
+type TypoRange struct {
+	Start int
+	End   int
+}
+
+type EventSpellCheck struct {
+	Typos []TypoRange
+}

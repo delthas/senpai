@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 
+	"git.sr.ht/~delthas/senpai/events"
 	"git.sr.ht/~rockorager/vaxis"
 )
 
@@ -73,6 +74,8 @@ type Editor struct {
 	// oldest (lowest) index in text of lines that were changed.
 	// used as an optimization to reduce copying when flushing lines.
 	oldestTextChange int
+
+	typos []events.TypoRange
 }
 
 // NewEditor returns a new Editor.
@@ -323,6 +326,7 @@ func (e *Editor) Flush() string {
 	e.cursorIdx = 0
 	e.offsetIdx = 0
 	e.autoCache = nil
+	e.typos = nil
 	e.backsearchEnd()
 	e.oldestTextChange = len(e.text) - 1
 	return content
@@ -582,6 +586,10 @@ func (e *Editor) bumpOldestChange() {
 	}
 }
 
+func (e *Editor) SetTypos(typos []events.TypoRange) {
+	e.typos = typos
+}
+
 func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 	var st vaxis.Style
 
@@ -614,6 +622,15 @@ func (e *Editor) Draw(vx *Vaxis, x0, y int, hint string) {
 		}
 		if i >= autoStart && i < autoEnd {
 			s.UnderlineStyle = vaxis.UnderlineSingle
+		}
+		if s.UnderlineStyle == vaxis.UnderlineOff {
+			for _, t := range e.typos {
+				if i >= t.Start && i < t.End {
+					s.UnderlineStyle = vaxis.UnderlineCurly
+					s.UnderlineColor = e.ui.config.Colors.Gray
+					break
+				}
+			}
 		}
 		if i == autoStart {
 			autoX = x
