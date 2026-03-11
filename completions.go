@@ -2,8 +2,10 @@ package senpai
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -31,6 +33,9 @@ func (m members) Swap(i, j int) {
 type completionAsync func(e irc.Event) []ui.Completion
 
 func (app *App) completionsChannelMembers(cs []ui.Completion, cursorIdx int, text []rune) []ui.Completion {
+	if hasPrefix(text, []rune("/msg ")) {
+		return cs
+	}
 	var start int
 	for start = cursorIdx - 1; 0 <= start; start-- {
 		if text[start] == ' ' {
@@ -158,7 +163,9 @@ func (app *App) completionsMsg(cs []ui.Completion, cursorIdx int, text []rune) [
 	if word == "" {
 		return cs
 	}
-	for _, user := range s.Users() {
+	users := s.Users()
+	sort.Strings(users)
+	for _, user := range users {
 		if strings.HasPrefix(s.Casemap(user), word) {
 			nickComp := append([]rune(user), ' ')
 			c := make([]rune, len(text)+5+len(nickComp)-cursorIdx)
@@ -269,7 +276,7 @@ func (app *App) completionsCommands(cs []ui.Completion, cursorIdx int, text []ru
 	}
 
 	uText := strings.ToUpper(string(text[1:cursorIdx]))
-	for name := range commands {
+	for _, name := range slices.Sorted(maps.Keys(commands)) {
 		if strings.HasPrefix(name, uText) {
 			c := make([]rune, len(text)+len(name)-len(uText))
 			copy(c[:1], []rune("/"))
