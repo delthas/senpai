@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"math/rand"
 	"net"
@@ -209,10 +211,11 @@ func main() {
 		return
 	}
 
+	cfgHash := configPathHash(configPath)
 	if !cfg.Transient {
-		lastNetID, lastBuffer := getLastBuffer()
+		lastNetID, lastBuffer := getLastBuffer(cfgHash)
 		app.SwitchToBuffer(lastNetID, lastBuffer)
-		app.SetLastClose(getLastStamp())
+		app.SetLastClose(getLastStamp(cfgHash))
 	}
 
 	sigCh := make(chan os.Signal, 1)
@@ -234,8 +237,8 @@ func main() {
 	app.Run()
 	app.Close()
 	if !cfg.Transient {
-		writeLastBuffer(app)
-		writeLastStamp(app)
+		writeLastBuffer(app, cfgHash)
+		writeLastStamp(app, cfgHash)
 	}
 }
 
@@ -287,13 +290,33 @@ func cachePath() string {
 	return cache
 }
 
-func lastBufferPath() string {
-	return path.Join(cachePath(), "lastbuffer.txt")
+func configPathHash(configPath string) string {
+	abs, err := filepath.Abs(configPath)
+	if err != nil {
+		abs = configPath
+	}
+	h := fnv.New32a()
+	h.Write([]byte(abs))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
-func getLastBuffer() (netID, buffer string) {
-	buf, err := os.ReadFile(lastBufferPath())
-	if err != nil {
+func lastBufferPath(hash string) string {
+	name := "lastbuffer.txt"
+	if hash != "" {
+		name = "lastbuffer-" + hash + ".txt"
+	}
+	return path.Join(cachePath(), name)
+}
+
+func getLastBuffer(hash string) (netID, buffer string) {
+	p := lastBufferPath(hash)
+	buf, err := os.ReadFile(p)
+	if err != nil && hash != "" {
+		buf, err = os.ReadFile(lastBufferPath(""))
+		if err != nil {
+			return "", ""
+		}
+	} else if err != nil {
 		return "", ""
 	}
 
@@ -305,22 +328,32 @@ func getLastBuffer() (netID, buffer string) {
 	return fields[0], fields[1]
 }
 
-func writeLastBuffer(app *senpai.App) {
-	lastBufferPath := lastBufferPath()
+func writeLastBuffer(app *senpai.App, hash string) {
+	p := lastBufferPath(hash)
 	lastNetID, lastBuffer := app.CurrentBuffer()
-	err := os.WriteFile(lastBufferPath, []byte(fmt.Sprintf("%s %s", lastNetID, lastBuffer)), 0666)
+	err := os.WriteFile(p, []byte(fmt.Sprintf("%s %s", lastNetID, lastBuffer)), 0666)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write last buffer at %q: %s\n", lastBufferPath, err)
+		fmt.Fprintf(os.Stderr, "failed to write last buffer at %q: %s\n", p, err)
 	}
 }
 
-func lastStampPath() string {
-	return path.Join(cachePath(), "laststamp.txt")
+func lastStampPath(hash string) string {
+	name := "laststamp.txt"
+	if hash != "" {
+		name = "laststamp-" + hash + ".txt"
+	}
+	return path.Join(cachePath(), name)
 }
 
-func getLastStamp() time.Time {
-	buf, err := os.ReadFile(lastStampPath())
-	if err != nil {
+func getLastStamp(hash string) time.Time {
+	p := lastStampPath(hash)
+	buf, err := os.ReadFile(p)
+	if err != nil && hash != "" {
+		buf, err = os.ReadFile(lastStampPath(""))
+		if err != nil {
+			return time.Time{}
+		}
+	} else if err != nil {
 		return time.Time{}
 	}
 
@@ -332,15 +365,15 @@ func getLastStamp() time.Time {
 	return t
 }
 
-func writeLastStamp(app *senpai.App) {
-	lastStampPath := lastStampPath()
+func writeLastStamp(app *senpai.App, hash string) {
+	p := lastStampPath(hash)
 	last := app.LastMessageTime()
 	if last.IsZero() {
 		return
 	}
-	err := os.WriteFile(lastStampPath, []byte(last.UTC().Format(time.RFC3339Nano)), 0666)
+	err := os.WriteFile(p, []byte(last.UTC().Format(time.RFC3339Nano)), 0666)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write last stamp at %q: %s\n", lastStampPath, err)
+		fmt.Fprintf(os.Stderr, "failed to write last stamp at %q: %s\n", p, err)
 	}
 }
 
