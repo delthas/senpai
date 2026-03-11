@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -35,8 +34,6 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "show raw protocol data in the home buffer")
 	flag.BoolVar(&version, "version", false, "show version info")
 	flag.Parse()
-
-	rand.Seed(time.Now().UnixNano())
 
 	if version {
 		if v, ok := senpai.BuildVersion(); ok {
