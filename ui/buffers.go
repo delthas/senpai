@@ -1256,7 +1256,7 @@ func (bs *BufferList) DrawTimeline(ui *UI, x0, y0, nickColWidth int) {
 				lastHead = lastHead[line.Head.styles[len(line.Head.styles)-1].Start:]
 			}
 
-			if !strings.HasSuffix(lastHead, "--") && !strings.HasSuffix(lastHead, "!!") {
+			if !strings.HasSuffix(lastHead, "--") && !strings.HasSuffix(lastHead, "!!") && lastHead != "*" {
 				ui.clickEvents = append(ui.clickEvents, clickEvent{
 					xb: xb,
 					xe: xe,
