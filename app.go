@@ -98,10 +98,6 @@ type event struct {
 	content interface{}
 }
 
-type linkEvent struct {
-	link string
-}
-
 type boundKey struct {
 	netID  string
 	target string
@@ -538,7 +534,8 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 		}
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	dialer := &net.Dialer{
 		Timeout: 10 * time.Second,
@@ -2502,13 +2499,13 @@ func (app *App) mergeLine(former *ui.Line, addition ui.Line) {
 					mode := string(modeStr[i+1])
 					if set {
 						if strings.Contains(f.modeUnset, mode) {
-							f.modeUnset = strings.Replace(f.modeUnset, mode, "", -1)
+							f.modeUnset = strings.ReplaceAll(f.modeUnset, mode, "")
 						} else if !strings.Contains(f.modeSet, mode) {
 							f.modeSet += mode
 						}
 					} else {
 						if strings.Contains(f.modeSet, mode) {
-							f.modeSet = strings.Replace(f.modeSet, mode, "", -1)
+							f.modeSet = strings.ReplaceAll(f.modeSet, mode, "")
 						} else if !strings.Contains(f.modeUnset, mode) {
 							f.modeUnset += mode
 						}
