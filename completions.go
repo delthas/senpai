@@ -2,10 +2,8 @@ package senpai
 
 import (
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 
@@ -276,7 +274,12 @@ func (app *App) completionsCommands(cs []ui.Completion, cursorIdx int, text []ru
 	}
 
 	uText := strings.ToUpper(string(text[1:cursorIdx]))
-	for _, name := range slices.Sorted(maps.Keys(commands)) {
+	names := make([]string, 0, len(commands))
+	for name := range commands {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
 		if strings.HasPrefix(name, uText) {
 			c := make([]rune, len(text)+len(name)-len(uText))
 			copy(c[:1], []rune("/"))
