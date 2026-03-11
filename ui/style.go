@@ -97,7 +97,7 @@ var urlRegex *regexp.Regexp
 
 func init() {
 	urlRegex, _ = xurls.StrictMatchingScheme(xurls.AnyScheme)
-	urlRegex = regexp.MustCompile(urlRegex.String() + `|#[\p{L}0-9#.-]*[\p{L}0-9]`)
+	urlRegex = regexp.MustCompile(urlRegex.String() + `|#[\p{L}0-9#._-]*[\p{L}0-9]`)
 	urlRegex.Longest()
 }
 
