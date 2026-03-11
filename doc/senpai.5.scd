@@ -124,7 +124,7 @@ pane-widths {
 
 *spell-check*
 	Enable spell checking using harper-ls. Requires harper-ls to be installed.
-	Defaults to false.
+	English only for now. Defaults to false.
 
 *colors* { ... }
 	Settings for colors of different UI elements.
