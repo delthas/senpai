@@ -1737,7 +1737,7 @@ func (app *App) handleIRCEvent(netID string, ev interface{}) {
 		app.win.AddLine(netID, buffer, line)
 		if line.Notify == ui.NotifyHighlight {
 			curNetID, curBuffer := app.win.CurrentBuffer()
-			current := app.win.Focused() && curNetID == netID && curBuffer == buffer
+			current := app.win.Focused() && curNetID == netID && s.Casemap(curBuffer) == s.Casemap(buffer)
 			app.notifyHighlight(buffer, ev.User, line.Body.String(), current)
 		}
 		if !ev.TargetIsChannel && !s.IsMe(ev.User) {
