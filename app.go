@@ -243,7 +243,7 @@ func NewApp(cfg Config) (app *App, err error) {
 }
 
 func (app *App) Close() {
-	app.win.Exit()       // tell all instances of app.ircLoop to stop when possible
+	app.win.Exit() // tell all instances of app.ircLoop to stop when possible
 	app.postEvent(event{ // tell app.eventLoop to stop
 		src:     "*",
 		content: nil,
@@ -1204,6 +1204,11 @@ var patternOpenGraphImage = regexp.MustCompile(`<meta property="og:image" conten
 var patternOpenGraphVideo = regexp.MustCompile(`<meta property="og:video"`)
 
 func (app *App) fetchImage(link string) (image.Image, error) {
+	userAgent := "senpai"
+	if v, ok := BuildVersion(); ok {
+		userAgent = "senpai/" + v
+	}
+
 	if u, err := url.Parse(link); err == nil {
 		changed := true
 		switch u.Host {
@@ -1220,10 +1225,16 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 	cHead := http.Client{
 		Timeout: 1500 * time.Millisecond,
 	}
-	res, err := cHead.Head(link)
+	req, err := http.NewRequest("HEAD", link, nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", userAgent)
+	res, err := cHead.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
@@ -1244,11 +1255,12 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 		if err != nil {
 			return nil, err
 		}
+		req.Header.Set("User-Agent", userAgent)
 		var previewSize int64 = 10 * 1024
 		if res.Header.Get("Accept-Ranges") == "bytes" {
 			req.Header.Set("Range", fmt.Sprintf("bytes=0-%v", previewSize))
 		}
-		res, err = cHead.Get(link)
+		res, err = cHead.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -1270,7 +1282,12 @@ func (app *App) fetchImage(link string) (image.Image, error) {
 	cGet := http.Client{
 		Timeout: 5 * time.Second,
 	}
-	res, err = cGet.Get(link)
+	req, err = http.NewRequest("GET", link, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	res, err = cGet.Do(req)
 	if err != nil {
 		return nil, err
 	}
