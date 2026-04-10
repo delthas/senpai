@@ -63,6 +63,6 @@ uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/$(ICONDIR)/hicolor/scalable/apps/senpai.svg
 
 emoji:
-	curl -sSfL -o emoji.json "https://raw.githubusercontent.com/rhysd/gemoji/refs/heads/unicode-16.0/db/emoji.json"
+	curl -sSfL -o emoji.json "https://raw.githubusercontent.com/delthas/gemoji-json/master/emoji.json"
 
 .PHONY: all senpai doc res clean install uninstall emoji
