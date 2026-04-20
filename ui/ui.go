@@ -936,10 +936,6 @@ func (ui *UI) drawVerticalMemberList(vx *Vaxis, x0, y0, width, height int, b *bu
 		return
 	}
 
-	if ui.memberClicked >= len(members) {
-		ui.memberClicked = len(members) - 1
-	}
-
 	if len(members) > 0 {
 		var memberString string
 		if len(members) > 1 {
