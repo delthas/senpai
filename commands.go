@@ -77,10 +77,9 @@ func init() {
 		},
 		"UPLOAD": {
 			AllowHome: true,
-			MinArgs:   1,
 			MaxArgs:   1,
-			Usage:     "<file path>",
-			Desc:      "upload a local file to the bouncer",
+			Usage:     "[file path]",
+			Desc:      "upload a local file to the bouncer, or the current clipboard content if no path is given",
 			Handle:    commandDoUpload,
 		},
 		"SCREENSHOT": {
@@ -528,6 +527,16 @@ func commandDoUpload(app *App, args []string) (err error) {
 	if upload == "" {
 		return fmt.Errorf("file upload is not supported on this server; try using soju and enabling file upload")
 	}
+
+	if len(args) == 0 {
+		rc, mimetype, err := readClipboard()
+		if err != nil {
+			return err
+		}
+		app.handleUpload(upload, rc, -1, "", mimetype, rc)
+		return nil
+	}
+
 	path := args[0]
 	if home, err := os.UserHomeDir(); err == nil && !filepath.IsAbs(path) {
 		path = filepath.Join(home, path)
@@ -542,7 +551,7 @@ func commandDoUpload(app *App, args []string) (err error) {
 		return fmt.Errorf("opening file: %v", err)
 	}
 
-	app.handleUpload(upload, f, fi.Size())
+	app.handleUpload(upload, f, fi.Size(), filepath.Base(path), "", f)
 	return nil
 }
 

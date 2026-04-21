@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -152,6 +151,7 @@ type App struct {
 	uploadingProgress *float64
 
 	shownBouncerNotice bool
+	shownPasteHint     bool
 
 	closing atomic.Bool
 
@@ -243,7 +243,7 @@ func NewApp(cfg Config) (app *App, err error) {
 }
 
 func (app *App) Close() {
-	app.win.Exit() // tell all instances of app.ircLoop to stop when possible
+	app.win.Exit()       // tell all instances of app.ircLoop to stop when possible
 	app.postEvent(event{ // tell app.eventLoop to stop
 		src:     "*",
 		content: nil,
@@ -1055,6 +1055,16 @@ func (app *App) handleAction(action string, args ...string) {
 			}
 			app.spellCheck()
 		}
+	case "paste-hint":
+		if !app.shownPasteHint {
+			app.shownPasteHint = true
+			netID, _ := app.win.CurrentBuffer()
+			app.addStatusLine(netID, ui.Line{
+				At:   time.Now(),
+				Head: ui.PlainString("--"),
+				Body: ui.PlainString("Use Control+Shift+V to paste text, or Control+Alt+V to upload clipboard content (e.g. images)"),
+			})
+		}
 	case "none":
 	default:
 		netID, buffer := app.win.CurrentBuffer()
@@ -1071,6 +1081,8 @@ var defaultCommands = map[string][]string{
 	"Control+c":       {"quit"},
 	"Control+f":       {"set-editor", "/search "},
 	"Control+k":       {"set-editor", "/buffer "},
+	"Control+v":       {"paste-hint"},
+	"Control+Alt+v":   {"set-editor", "/upload"},
 	"Control+a":       {"cursor-start"},
 	"Control+e":       {"cursor-end"},
 	"Control+l":       {"redraw"},
@@ -1349,15 +1361,17 @@ func (app *App) handleLinkEvent(ev *events.EventClickLink) {
 	}()
 }
 
-func (app *App) upload(url string, f *os.File, size int64) (string, error) {
-	defer f.Close()
+func (app *App) upload(url string, r io.Reader, size int64, filename, mimetype string) (string, error) {
 	c := http.Client{
 		Timeout: 30 * time.Second,
 	}
-	r := ReadProgress{
-		Reader: f,
+	rp := ReadProgress{
+		Reader: r,
 		period: 250 * time.Millisecond,
 		f: func(n int64) {
+			if size <= 0 {
+				return
+			}
 			app.postEvent(event{
 				src: "*",
 				content: &events.EventFileUpload{
@@ -1366,17 +1380,24 @@ func (app *App) upload(url string, f *os.File, size int64) (string, error) {
 			})
 		},
 	}
-	req, err := http.NewRequest("POST", url, &r)
+	req, err := http.NewRequest("POST", url, &rp)
 	if err != nil {
 		return "", fmt.Errorf("creating upload request: %v", err)
 	}
 	if app.cfg.Password != nil {
 		req.SetBasicAuth(app.cfg.User, *app.cfg.Password)
 	}
-	req.ContentLength = size
-	req.Header.Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
-		"filename": filepath.Base(f.Name()),
-	}))
+	if size >= 0 {
+		req.ContentLength = size
+	}
+	if filename != "" {
+		req.Header.Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+			"filename": filename,
+		}))
+	}
+	if mimetype != "" {
+		req.Header.Set("Content-Type", mimetype)
+	}
 	res, err := c.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("uploading: %v", err)
@@ -1393,8 +1414,10 @@ func (app *App) upload(url string, f *os.File, size int64) (string, error) {
 				maxSize = v
 			}
 		}
-		if maxSize > 0 {
+		if maxSize > 0 && size >= 0 {
 			return "", fmt.Errorf("uploading: file too large: maximum %v per file (file was %v)", formatSize(maxSize), formatSize(size))
+		} else if maxSize > 0 {
+			return "", fmt.Errorf("uploading: file too large: maximum %v per file", formatSize(maxSize))
 		} else {
 			return "", fmt.Errorf("uploading: file too large")
 		}
@@ -1409,11 +1432,14 @@ func (app *App) upload(url string, f *os.File, size int64) (string, error) {
 	return location.String(), nil
 }
 
-func (app *App) handleUpload(url string, f *os.File, size int64) {
+func (app *App) handleUpload(url string, r io.Reader, size int64, filename, mimetype string, closer io.Closer) {
 	var progress float64 = 0
 	app.uploadingProgress = &progress
 	go func() {
-		location, err := app.upload(url, f, size)
+		if closer != nil {
+			defer closer.Close()
+		}
+		location, err := app.upload(url, r, size, filename, mimetype)
 		if err != nil {
 			app.postEvent(event{
 				src: "*",

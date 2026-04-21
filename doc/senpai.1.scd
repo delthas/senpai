@@ -111,6 +111,9 @@ These shortcuts can be customized in the configuration, see senpai(5).
 *CTRL-K*
 	Prepare for jumping to a buffer: add /buffer to input line.
 
+*CTRL-ALT-V*
+	Prepare for uploading the clipboard: add /upload to input line.
+
 *CTRL-U*, *PgUp*
 	Go up in the timeline.
 
@@ -230,8 +233,10 @@ _name_ is matched case-insensitively.  It can be one of the following:
 	Send the current song that is being played on the system. Uses DBus/MPRIS
 	internally.
 
-*UPLOAD* <file path>
-	Upload a local file to the bouncer.
+*UPLOAD* [file path]
+	Upload a local file to the bouncer. If no path is given, upload the
+	current clipboard content instead (requires *wl-paste* on Wayland or
+	*xclip* on X11; Linux only).
 
 *SCREENSHOT*
 	Take and upload a screenshot to the bouncer.
