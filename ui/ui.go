@@ -113,6 +113,11 @@ func New(config Config) (ui *UI, colors ConfigColors, err error) {
 		ui.memberWidth = config.MemberColWidth
 	}
 
+	if os.Getenv("TERM_PROGRAM") == "Apple_Terminal" {
+		if os.Getenv("VAXIS_FORCE_LEGACY_SGR") == "" {
+			os.Setenv("VAXIS_FORCE_LEGACY_SGR", "true")
+		}
+	}
 	if runtime.GOOS == "windows" {
 		// Work around broken RGB colors on Windows Terminal.
 		// Sadly the Windows Terminal does not support TerminalID, so we rely on GOOS here.
