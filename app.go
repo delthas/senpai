@@ -2339,7 +2339,6 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer string, line ui.Line) {
 	isFromSelf := s.IsMe(ev.User)
 	isToSelf := s.IsMe(ev.Target)
-	isHighlight := ev.TargetIsChannel && app.isHighlight(s, ev.Content)
 	isQuery := !ev.TargetIsChannel && ev.Command == "PRIVMSG"
 	isNotice := ev.Command == "NOTICE"
 
@@ -2360,6 +2359,9 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		}
 		content = parts[1]
 	}
+
+	styledContent := ui.IRCString(content)
+	isHighlight := ev.TargetIsChannel && app.isHighlight(s, styledContent.String())
 
 	if !ev.TargetIsChannel && (isNotice || ev.User == s.BouncerService()) {
 		curNetID, curBuffer := app.win.CurrentBuffer()
@@ -2408,7 +2410,7 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		body.WriteString(ev.User)
 		body.SetStyle(vaxis.Style{})
 		body.WriteString(": ")
-		body.WriteStyledString(ui.IRCString(content))
+		body.WriteStyledString(styledContent)
 	} else if isAction {
 		color := app.win.IdentColor(app.cfg.Colors.Nicks, ev.User, isFromSelf)
 		body.SetStyle(vaxis.Style{
@@ -2417,9 +2419,9 @@ func (app *App) formatMessage(s *irc.Session, ev irc.MessageEvent) (buffer strin
 		body.WriteString(ev.User)
 		body.SetStyle(vaxis.Style{})
 		body.WriteString(" ")
-		body.WriteStyledString(ui.IRCString(content))
+		body.WriteStyledString(styledContent)
 	} else {
-		body.WriteStyledString(ui.IRCString(content))
+		body.WriteStyledString(styledContent)
 	}
 
 	line = ui.Line{
