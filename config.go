@@ -2,6 +2,8 @@ package senpai
 
 import (
 	"fmt"
+	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"os/exec"
@@ -94,6 +96,7 @@ type Config struct {
 	Password      *string
 	TLS           bool
 	TLSSkipVerify bool
+	LocalAddr     *net.TCPAddr
 
 	Channels []string
 
@@ -242,6 +245,16 @@ func unmarshal(filename string, cfg *Config) (err error) {
 			if err := d.ParseParams(&cfg.Addr); err != nil {
 				return err
 			}
+		case "local-address":
+			var localAddr string
+			if err := d.ParseParams(&localAddr); err != nil {
+				return err
+			}
+			addr, err := netip.ParseAddr(localAddr)
+			if err != nil {
+				return fmt.Errorf("invalid local-address %q: %v", localAddr, err)
+			}
+			cfg.LocalAddr = net.TCPAddrFromAddrPort(netip.AddrPortFrom(addr, 0))
 		case "nickname":
 			if err := d.ParseParams(&cfg.Nick); err != nil {
 				return err

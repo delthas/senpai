@@ -538,7 +538,8 @@ func (app *App) tryConnect() (conn net.Conn, err error) {
 	defer cancel()
 
 	dialer := &net.Dialer{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
+		LocalAddr: app.cfg.LocalAddr,
 	}
 	conn, err = proxy.FromEnvironmentUsing(dialer).(proxy.ContextDialer).DialContext(ctx, "tcp", addr)
 	if err != nil {

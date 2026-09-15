@@ -115,6 +115,13 @@ pane-widths {
 *tls*
 	Enable TLS encryption.  Defaults to true.
 
+*local-address*
+	Advanced.
+	The local IP address to connect from, e.g. _192.0.2.1_, _2001:db8::1_,
+	_fe80::1%eth0_.
+	This is only needed in specific cases where senpai will only work from
+	a specific interface. By default, the OS chooses.
+
 *typings*
 	Send typing notifications which let others know when you are typing a
 	message. Defaults to true.
