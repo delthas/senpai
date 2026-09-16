@@ -3,9 +3,13 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"net/url"
+	"slices"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -15,6 +19,9 @@ var dbusLock sync.Mutex
 
 var notifications = make(map[int]*NotifyEvent)
 
+var dbusMarkupOnce sync.Once
+var dbusMarkup bool
+
 func notifyDBus(title, content string) int {
 	conn, err := dbus.SessionBus()
 	if err != nil {
@@ -22,6 +29,19 @@ func notifyDBus(title, content string) int {
 	}
 	var r uint32
 	obj := conn.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
+	dbusMarkupOnce.Do(func() {
+		dbusMarkup = true
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		var caps []string
+		if err := obj.CallWithContext(ctx, "org.freedesktop.Notifications.GetCapabilities", 0).Store(&caps); err != nil {
+			return
+		}
+		dbusMarkup = slices.Contains(caps, "body-markup")
+	})
+	if dbusMarkup {
+		content = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace(content)
+	}
 	err = obj.Call("org.freedesktop.Notifications.Notify", 0, "senpai", uint32(0), "senpai", title, content, []string{
 		"default", "Open",
 	}, map[string]dbus.Variant{
