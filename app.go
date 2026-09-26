@@ -2299,7 +2299,7 @@ func (app *App) formatEvent(ev irc.Event) ui.Line {
 				}
 				if ev.modeUnset != "" {
 					body.WriteByte('-')
-					body.WriteString(ev.modeSet)
+					body.WriteString(ev.modeUnset)
 				}
 				body.WriteByte(']')
 			}
