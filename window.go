@@ -15,6 +15,7 @@ func (app *App) initWindow() {
 		version = "(unknown version)"
 	}
 	app.win.AddBuffer("", "(home)", "")
+	app.win.SetTopic("", "", ui.PlainString(fmt.Sprintf("senpai %v - https://sr.ht/~delthas/senpai/", version)).ParseURLs())
 	app.win.AddLine("", "", ui.Line{
 		Head: ui.PlainString("--"),
 		Body: ui.PlainString(fmt.Sprintf("Welcome to senpai %v! To get started, use the Help buttons, or enter /help for a list of commands.", version)),
