@@ -969,25 +969,10 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		case "NAK":
 			// do nothing
 		case "LS", "NEW":
-			var reqs []string
 			for _, c := range ParseCaps(caps) {
 				s.availableCaps[c.Name] = c.Value
-				immediate, ok := SupportedCapabilities[c.Name]
-				if !ok {
-					continue
-				}
-				if subcommand == "LS" && (immediate || s.netID != "") {
-					// Already sent CAP, ignore
-					continue
-				}
-				if _, ok := s.enabledCaps[c.Name]; ok {
-					continue
-				}
-				reqs = append(reqs, c.Name)
 			}
-			if len(reqs) > 0 {
-				s.out <- NewMessage("CAP", "REQ", strings.Join(reqs, " "))
-			}
+			s.reconcileCaps()
 		case "DEL":
 			for _, c := range ParseCaps(caps) {
 				delete(s.availableCaps, c.Name)
@@ -998,6 +983,14 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 					}
 				}
 			}
+			// In itself CAP DEL only removes caps, so there would be no reasons to reconcile here again (nothing new
+			// to ask for). But this is used to settle a tricky case, e.g.:
+			// - soju sends CAP LS, in flight
+			// - soju sends CAP DEL, in flight (it drops caps after welcoming)
+			// - senpai receives CAP LS, sends a big atomic CAP REQ
+			// - soju receives the CAP REQ, but one of the caps was already deleted, so the whole batch is NAK'd
+			// - senpai receives CAP DEL -> !!! notices some caps must have been changed, so it reconciles.
+			s.reconcileCaps()
 		}
 	case "JOIN":
 		var channel string
@@ -2311,6 +2304,23 @@ func (s *Session) updateFeatures(features []string) {
 			s.upload = value
 		}
 	}
+}
+
+func (s *Session) reconcileCaps() {
+	var reqs []string
+	for c := range s.availableCaps {
+		if _, ok := SupportedCapabilities[c]; !ok {
+			continue
+		}
+		if _, ok := s.enabledCaps[c]; ok {
+			continue
+		}
+		reqs = append(reqs, c)
+	}
+	if len(reqs) == 0 {
+		return
+	}
+	s.out <- NewMessage("CAP", "REQ", strings.Join(reqs, " "))
 }
 
 func (s *Session) endRegistration() {
