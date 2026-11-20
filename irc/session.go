@@ -937,6 +937,9 @@ func (s *Session) handleMessageRegistered(msg Message, playback bool) (Event, er
 		switch subcommand {
 		case "ACK":
 			for _, c := range ParseCaps(caps) {
+				if _, enabled := s.enabledCaps[c.Name]; c.Enable == enabled {
+					continue
+				}
 				if c.Enable {
 					s.enabledCaps[c.Name] = struct{}{}
 				} else {
